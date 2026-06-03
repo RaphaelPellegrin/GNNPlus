@@ -1,0 +1,10 @@
+scikit-learn==1.4.0
+fsspec
+rdkit
+pytorch-lightning
+yacs
+torchmetrics
+networkx
+tensorboardX
+ogb
+wandb
