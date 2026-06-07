@@ -7,7 +7,10 @@
 #   cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 #   bash bash_interface/cluster/create_gnnplus_env.sh
 #
-# Uses README deps (PyTorch 2.2 + PyG 2.3.1) with cu121 wheels for cuda/12.9.
+# Env + package cache on holylabs (NOT $HOME):
+#   env:  .../conda/envs/gnnplus
+#   pkgs: .../conda/pkgs
+#   pip/tmp caches: .../conda/cache/
 # =============================================================================
 
 set -euo pipefail
@@ -17,7 +20,20 @@ export CONDA_ENVS_PATH="${CONDA_ENVS_PATH:-/n/holylabs/LABS/mweber_lab/Everyone/
 export CONDA_PKGS_DIRS="${CONDA_PKGS_DIRS:-/n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/conda/pkgs}"
 ENV_PREFIX="${CONDA_ENVS_PATH}/${ENV_NAME}"
 
+# Keep pip/conda temp and caches off $HOME (FASRC home quota is often small/full).
+LAB_CACHE_ROOT="${GNNPLUS_CACHE_ROOT:-/n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/conda/cache}"
+export TMPDIR="${TMPDIR:-${LAB_CACHE_ROOT}/tmp}"
+export PIP_CACHE_DIR="${PIP_CACHE_DIR:-${LAB_CACHE_ROOT}/pip}"
+export XDG_CACHE_HOME="${XDG_CACHE_HOME:-${LAB_CACHE_ROOT}/xdg}"
+mkdir -p "${TMPDIR}" "${PIP_CACHE_DIR}" "${XDG_CACHE_HOME}"
+
+if df -h "${HOME}" 2>/dev/null | tail -1 | grep -q ' 100%'; then
+    echo "WARNING: \$HOME is full ($(df -h "${HOME}" | tail -1)). Caches redirected to ${LAB_CACHE_ROOT}"
+    echo "         Free home space: du -sh ~/* ~/.cache/* 2>/dev/null | sort -h | tail -20"
+fi
+
 echo "Creating GNNPlus env at: ${ENV_PREFIX}"
+echo "TMPDIR=${TMPDIR}  PIP_CACHE_DIR=${PIP_CACHE_DIR}"
 
 if command -v module &> /dev/null; then
     module load python/3.10.12-fasrc01 2>/dev/null || true

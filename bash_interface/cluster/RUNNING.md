@@ -79,6 +79,16 @@ No model code changes required — jobs call `python main.py --cfg configs/...` 
 
 ## 7. Troubleshooting
 
-- **`GNNPlus import check failed`**: run `create_gnnplus_env.sh` or set `ENV_NAME` to an existing env.
+- **`[Errno 28] No space left on device` during env create**: check `df -h $HOME`. If home is **100% full**, conda/pip fail even when the env path is on holylabs. Fix:
+  ```bash
+  du -sh ~/* ~/.cache/* 2>/dev/null | sort -h | tail -20   # find large dirs
+  rm -rf ~/.cache/pip ~/.cache/wandb   # often safe if reproducible
+  export TMPDIR=/n/netscratch/mweber_lab/Lab/rpellegrinext/cache/tmp
+  export PIP_CACHE_DIR=/n/netscratch/mweber_lab/Lab/rpellegrinext/cache/pip
+  rm -rf /n/holylabs/.../conda/envs/gnnplus   # remove broken partial env
+  bash bash_interface/cluster/create_gnnplus_env.sh
+  ```
+  `create_gnnplus_env.sh` now redirects `TMPDIR` / `PIP_CACHE_DIR` off `$HOME` by default.
+- **`GNNPlus import check failed`**: run `create_gnnplus_env.sh` or set `ENV_NAME=moe_fresh` to reuse an existing env.
 - **CUDA / PyG mismatch**: recreate env with `create_gnnplus_env.sh` (cu121 wheels for cuda/12.9).
 - **Dataset download slow**: set `GNNPLUS_DATASET_DIR` to lab scratch (see above).
