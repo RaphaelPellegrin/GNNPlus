@@ -24,6 +24,8 @@ rsync -avz --exclude '.git' --exclude 'results' \
 ```bash
 salloc --partition test --nodes=1 --cpus-per-task=4 --mem=16GB --time=0-04:00:00
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull origin harvard_cluster
+bash bash_interface/cluster/clean_gnnplus_env.sh   # if reinstalling
 bash bash_interface/cluster/create_gnnplus_env.sh
 ```
 
@@ -88,7 +90,8 @@ No model code changes required — jobs call `python main.py --cfg configs/...` 
   rm -rf /n/holylabs/.../conda/envs/gnnplus   # remove broken partial env
   bash bash_interface/cluster/create_gnnplus_env.sh
   ```
-  `create_gnnplus_env.sh` now redirects `TMPDIR` / `PIP_CACHE_DIR` off `$HOME` by default.
-- **`GNNPlus import check failed`**: run `create_gnnplus_env.sh` or set `ENV_NAME=moe_fresh` to reuse an existing env.
+  `create_gnnplus_env.sh` redirects caches off `$HOME` and aborts if pip uses `~/.local`.
+- **`Defaulting to user installation` / torch in `~/.local`**: run `clean_gnnplus_env.sh` then recreate. Verify with `PYTHONNOUSERSITE=1 python -c "import torch; print(torch.__file__)"` — path must be under `.../conda/envs/gnnplus/`.
+- **`GNNPlus import check failed`**: run `clean_gnnplus_env.sh` + `create_gnnplus_env.sh`.
 - **CUDA / PyG mismatch**: recreate env with `create_gnnplus_env.sh` (cu121 wheels for cuda/12.9).
 - **Dataset download slow**: set `GNNPLUS_DATASET_DIR` to lab scratch (see above).

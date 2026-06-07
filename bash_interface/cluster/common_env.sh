@@ -60,7 +60,14 @@ fi
 
 # Editable install (no model changes; ensures imports resolve)
 python -m pip install -e . --no-deps --quiet 2>/dev/null || true
-python -c "import GNNPlus; from GNNPlus.network.custom_gnn import CustomGNN" || {
-    log_message "GNNPlus import check failed"
+python -c "
+import GNNPlus
+from GNNPlus.network.custom_gnn import CustomGNN
+import torch
+prefix = '${CONDA_ENVS_PATH}/${ENV_NAME}'
+assert torch.__file__.startswith(prefix), f'torch not in env: {torch.__file__}'
+print('GNNPlus + torch import OK from', prefix)
+" || {
+    log_message "GNNPlus import check failed (is gnnplus env installed in holylabs, not ~/.local?)"
     exit 1
 }
