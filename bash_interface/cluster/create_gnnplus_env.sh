@@ -60,22 +60,39 @@ else
 fi
 
 # shellcheck source=/dev/null
-source activate "${ENV_PREFIX}"
+conda activate "${ENV_PREFIX}"
 
-pip install --upgrade pip
-pip install torch==2.2.0 torchvision==0.17.0 torchaudio==2.2.0 \
+export PYTHONNOUSERSITE=1
+export PIP_USER=0
+export PIP_NO_CACHE_DIR=0
+
+PYTHON="${ENV_PREFIX}/bin/python"
+PIP="${PYTHON} -m pip"
+if [ ! -x "${PYTHON}" ]; then
+    echo "ERROR: expected env python missing: ${PYTHON}"
+    exit 1
+fi
+echo "Using python: $("${PYTHON}" -c "import sys; print(sys.executable)")"
+echo "sys.prefix: $("${PYTHON}" -c "import sys; print(sys.prefix)")"
+if ! "${PYTHON}" -c "import sys; assert sys.prefix.startswith('${ENV_PREFIX}')"; then
+    echo "ERROR: python is not from ${ENV_PREFIX} (pip would install to \$HOME/.local)"
+    exit 1
+fi
+
+${PIP} install --upgrade pip
+${PIP} install torch==2.2.0 torchvision==0.17.0 torchaudio==2.2.0 \
     --index-url https://download.pytorch.org/whl/cu121
-pip install torch_geometric==2.3.1
-pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv \
+${PIP} install torch_geometric==2.3.1
+${PIP} install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv \
     -f https://data.pyg.org/whl/torch-2.2.0+cu121.html
 
-pip install -r requirements-cluster.txt
+${PIP} install -r requirements-cluster.txt
 
 PROJECT_ROOT="${GNNPLUS_PROJECT_ROOT:-/n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus}"
 cd "${PROJECT_ROOT}"
-pip install -e . --no-deps
+${PIP} install -e . --no-deps
 
-python - <<'PY'
+"${PYTHON}" - <<'PY'
 import torch
 import torch_geometric
 import wandb

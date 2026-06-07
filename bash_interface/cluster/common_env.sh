@@ -21,8 +21,7 @@ export WANDB_DISABLE_CODE=true
 export WANDB_SYNC_MODE="now"
 mkdir -p "${WANDB_TMP_DIR}" logs logs_gnnplus
 export PYTHONNOUSERSITE=1
-
-# --- CUDA / Python module ---
+export PIP_USER=0
 if command -v module &> /dev/null; then
     module load cuda/12.9.1-fasrc01 2>/dev/null || module load cuda 2>/dev/null || true
     module load python/3.10.12-fasrc01 2>/dev/null || true
