@@ -49,6 +49,19 @@ sbatch bash_interface/cluster/smoke_test_cifar10_gatedgcn.sh
 
 # Paper CIFAR10 baselines: gcn + gine + gatedgcn × 2 seeds (array 1–6)
 sbatch bash_interface/cluster/cifar10_paper_baselines.sh
+
+# Or submit the full paper suite (README repeat counts, auto-downloads datasets):
+#   bash bash_interface/cluster/submit_paper_suite.sh --dry-run   # preview
+#   bash bash_interface/cluster/submit_paper_suite.sh             # all below
+#   bash bash_interface/cluster/submit_paper_suite.sh mnist coco voc peptides-func
+#
+# | Dataset        | Config        | Seeds | Epochs (yaml) | Download source        |
+# |----------------|---------------|-------|---------------|------------------------|
+# | CIFAR10        | cifar10       | 2     | 200           | data.pyg.org           |
+# | MNIST          | mnist         | 2     | 200           | data.pyg.org           |
+# | Peptides-func  | peptides-func | 4     | 300           | Dropbox (OGB loader)   |
+# | COCO-SP        | coco          | 2     | 300           | PyG COCOSuperpixels    |
+# | Pascal VOC-SP  | voc           | 2     | 200           | PyG VOCSuperpixels     |
 ```
 
 Check queue: `squeue -u $USER`
