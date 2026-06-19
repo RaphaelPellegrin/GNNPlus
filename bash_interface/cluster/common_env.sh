@@ -9,7 +9,10 @@ log_message() {
 }
 
 # --- Weights & Biases (Harvard GeoML team) ---
-export WANDB_API_KEY="${WANDB_API_KEY:-ea7c6eeb5a095b531ef60cc784bfeb87d47ea0b0}"
+# Set WANDB_API_KEY before sbatch, e.g. source ~/.gnnplus_env (chmod 600, not in git).
+if [ -z "${WANDB_API_KEY:-}" ]; then
+    log_message "WARNING: WANDB_API_KEY is not set — W&B logging will fail if wandb.use True"
+fi
 export WANDB_ENTITY="${WANDB_ENTITY:-weber-geoml-harvard-university}"
 export WANDB_PROJECT="${WANDB_PROJECT:-GNNPlus}"
 _wandb_job="${SLURM_ARRAY_JOB_ID:-${SLURM_JOB_ID:-$$}}"

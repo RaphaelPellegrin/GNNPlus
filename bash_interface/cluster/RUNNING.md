@@ -2,6 +2,8 @@
 
 Cluster layout mirrors `Heterogeneity_Profile/bash_interface/cluster/` (same conda paths, W&B entity, `mweber_gpu` partition).
 
+**AWS alternative:** see [`bash_interface/aws/RUNNING.md`](../aws/RUNNING.md) (Docker + EC2).
+
 ## 1. Clone / sync repo on cluster
 
 ```bash
@@ -57,13 +59,27 @@ Check queue: `squeue -u $USER`
 |----------|---------|
 | `WANDB_ENTITY` | `weber-geoml-harvard-university` |
 | `WANDB_PROJECT` | `GNNPlus` (override e.g. `MOE_6` if you prefer) |
-| `WANDB_API_KEY` | same default as Heterogeneity_Profile scripts |
+| `WANDB_API_KEY` | **Required** — export before `sbatch` (see below); not stored in git |
 
 Runs appear under the Harvard team entity. Config overrides on the CLI enable W&B without editing YAML:
 
 ```bash
 wandb.use True wandb.entity weber-geoml-harvard-university wandb.project GNNPlus
 ```
+
+On the cluster, set your key once (not in the repo):
+
+```bash
+cat > ~/.gnnplus_env <<'EOF'
+export WANDB_API_KEY="paste-from-https://wandb.ai/authorize"
+export WANDB_ENTITY="weber-geoml-harvard-university"
+export WANDB_PROJECT="GNNPlus"
+EOF
+chmod 600 ~/.gnnplus_env
+source ~/.gnnplus_env   # or add to ~/.bashrc
+```
+
+`sbatch` inherits env vars from your login shell if you `export` before submitting, or use `#SBATCH --export=ALL` (already set in job scripts).
 
 ## 5. Logs
 
