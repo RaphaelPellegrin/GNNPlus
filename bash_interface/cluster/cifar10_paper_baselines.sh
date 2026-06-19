@@ -25,7 +25,10 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# sbatch copies this script to /var/slurmd/spool/... — use submit dir, not BASH_SOURCE.
+REPO_ROOT="${SLURM_SUBMIT_DIR:-${GNNPLUS_PROJECT_ROOT:-/n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus}}"
+cd "${REPO_ROOT}"
+SCRIPT_DIR="${REPO_ROOT}/bash_interface/cluster"
 # shellcheck source=common_env.sh
 source "${SCRIPT_DIR}/common_env.sh"
 
