@@ -44,8 +44,12 @@ cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
 mkdir -p "$GNNPLUS_DATASET_DIR"
 
+# Pre-download GNNBenchmark datasets once (avoids corrupt MNIST/CIFAR zips in arrays):
+#   bash bash_interface/cluster/prep_gnnplus_datasets.sh mnist cifar10
+
 # Quick sanity check (~5 epochs)
 sbatch bash_interface/cluster/smoke_test_cifar10_gatedgcn.sh
+sbatch bash_interface/cluster/smoke_test_hybrid_mnist.sh
 
 # Paper CIFAR10 baselines: gcn + gine + gatedgcn × 2 seeds (array 1–6)
 sbatch bash_interface/cluster/cifar10_paper_baselines.sh
