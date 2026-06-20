@@ -1,0 +1,61 @@
+# Gated hybrid on ogbg-molhiv (OGB graph classification)
+out_dir: results
+metric_best: auc
+wandb:
+  use: False
+  project: molhiv
+  tags:
+    - gnnplus
+    - hybrid_gnn
+dataset:
+  format: OGB
+  name: ogbg-molhiv
+  task: graph
+  task_type: classification
+  transductive: False
+  node_encoder: True
+  node_encoder_name: Atom
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: Bond
+  edge_encoder_bn: False
+train:
+  mode: custom
+  batch_size: 32
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: hybrid_gnn
+  loss_fun: cross_entropy
+  edge_decoding: dot
+  graph_pooling: mean
+gnn:
+  head: default
+  layers_mp: 4
+  layers_pre_mp: 0
+  layers_post_mp: 2
+  dim_inner: 128
+  act: relu
+  dropout: 0.1
+  agg: mean
+  ffn: True
+  residual: True
+  hybrid:
+    num_attn_heads: 2
+    num_gnn_heads: 2
+    d_h: 16
+    attn_mask: full
+    gate: headwise
+    norm: layernorm
+    gnn_types: "GCN,GINE"
+    attn_dropout: 0.1
+    mp_dropout: 0.1
+    block_bn: false
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 1e-5
+  base_lr: 0.0001
+  max_epoch: 100
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 5

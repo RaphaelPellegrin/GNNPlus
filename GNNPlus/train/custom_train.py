@@ -15,6 +15,16 @@ from torch_geometric.utils import to_dense_batch
 from GNNPlus.loss.subtoken_prediction_loss import subtoken_cross_entropy
 from GNNPlus.utils import cfg_to_dict, flatten_dict, make_wandb_name, dirichlet_energy, mean_average_distance, mean_norm
 
+
+def _parse_wandb_tags() -> list[str]:
+    """Return W&B tags from ``cfg.wandb.tags`` (list or comma-separated string)."""
+    raw = getattr(cfg.wandb, 'tags', None)
+    if raw is None or raw == '' or raw == []:
+        return []
+    if isinstance(raw, (list, tuple)):
+        return [str(tag).strip() for tag in raw if str(tag).strip()]
+    return [part.strip() for part in str(raw).split(',') if part.strip()]
+
 def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation):
     model.train()
     optimizer.zero_grad()
@@ -125,8 +135,15 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
             wandb_name = make_wandb_name(cfg)
         else:
             wandb_name = cfg.wandb.name
-        run = wandb.init(entity=cfg.wandb.entity, project=cfg.wandb.project,
-                         name=wandb_name)
+        wandb_kwargs: dict[str, object] = {
+            'entity': cfg.wandb.entity,
+            'project': cfg.wandb.project,
+            'name': wandb_name,
+        }
+        wandb_tags = _parse_wandb_tags()
+        if wandb_tags:
+            wandb_kwargs['tags'] = wandb_tags
+        run = wandb.init(**wandb_kwargs)
         run.config.update(cfg_to_dict(cfg))
 
     num_splits = len(loggers)

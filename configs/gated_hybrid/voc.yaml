@@ -1,0 +1,62 @@
+# Hybrid GNN on Pascal VOC-SP — outer hyperparams from configs/gcn/voc.yaml (paper gcne).
+out_dir: results
+metric_best: f1
+wandb:
+  use: False
+  project: MOE_6
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - cluster
+dataset:
+  format: PyG-VOCSuperpixels
+  name: edge_wt_region_boundary
+  slic_compactness: 30
+  task: graph
+  task_type: classification
+  transductive: False
+  node_encoder: True
+  node_encoder_name: VOCNode
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: VOCEdge
+  edge_encoder_bn: False
+posenc_RWSE:
+  enable: False
+train:
+  mode: custom
+  batch_size: 50
+  eval_period: 1
+  ckpt_period: 100
+  eval_smoothing_metrics: True
+model:
+  type: hybrid_gnn
+  loss_fun: weighted_cross_entropy
+gnn:
+  head: inductive_node
+  ffn: True
+  layers_pre_mp: 0
+  layers_mp: 14
+  layers_post_mp: 1
+  dim_inner: 85
+  act: gelu
+  residual: True
+  dropout: 0.1
+  hybrid:
+    num_attn_heads: 2
+    num_gnn_heads: 2
+    d_h: 16
+    attn_mask: full
+    gate: headwise
+    norm: layernorm
+    gnn_types: "GCN,GIN"
+    attn_dropout: 0.1
+    mp_dropout: 0.1
+    block_bn: false
+optim:
+  optimizer: adamW
+  weight_decay: 0.0
+  base_lr: 0.001
+  max_epoch: 200
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10
