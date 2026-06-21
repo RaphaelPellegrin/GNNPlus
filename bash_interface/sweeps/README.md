@@ -36,7 +36,23 @@ Each dataset sweep is named **`GNNplus_hybriddgatedGNN-<dataset>`** in W&B proje
 
 Python `parse_hybrid_gnn_types` pads or truncates the list to match `hybrid_num_gnn_heads`.
 
-**Gate metrics** (`gates/layer0/attn_0_gate_mean`, …): logged every epoch for `hybrid_gnn` when `log_gate_stats: true` (elementwise and headwise). In W&B: **Charts → Add panel → search `gates/`**.
+**Gate metrics** (`gates/layer0/attn_0_gate_mean`, …): logged every epoch for `hybrid_gnn` when `log_gate_stats: true` (elementwise and headwise). Sweeps force `gnn.hybrid.log_gate_stats True` in the wrapper. In W&B: **Charts → Add panel → search `gates/`**.
+
+**More runs on an existing sweep** (same W&B sweep id, no new sweep):
+
+```bash
+# 24 agents × 4 runs each = up to 96 new trials; auto lookup id from sweeps.log
+SWEEP_ARRAY_TASKS=24 RUNS_PER_AGENT=4 \
+  bash bash_interface/sweeps/relaunch_sweep_agents.sh tier1
+
+# Or explicit ids (from sweeps.log / .hybrid_sweep_ids):
+bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+  mnist weber-geoml-harvard-university/GNNPlus/mhc71f9c
+bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+  cifar10 weber-geoml-harvard-university/GNNPlus/0yksmizq
+```
+
+Pull latest code on cluster before relaunch so gate logging fixes are active.
 
 Outer training hyperparams (depth, width, LR, encoders) stay fixed per dataset in `configs/gated_hybrid/<dataset>.yaml` (from GNN+ `configs/gcn/`).
 

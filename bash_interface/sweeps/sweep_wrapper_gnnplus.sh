@@ -170,4 +170,5 @@ exec python main.py \
     wandb.use True \
     wandb.entity "${WANDB_ENTITY}" \
     wandb.project "${WANDB_PROJECT}" \
+    gnn.hybrid.log_gate_stats True \
     "${extra_args[@]}"
