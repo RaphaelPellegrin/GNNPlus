@@ -36,7 +36,7 @@ Each dataset sweep is named **`GNNplus_hybriddgatedGNN-<dataset>`** in W&B proje
 
 Python `parse_hybrid_gnn_types` pads or truncates the list to match `hybrid_num_gnn_heads`.
 
-**Gate metrics** (`gates/layer0/attn_0_gate_mean`, …): logged every epoch for `hybrid_gnn` when `log_gate_stats: true` (elementwise and headwise). Sweeps force `gnn.hybrid.log_gate_stats True` in the wrapper. In W&B: **Charts → Add panel → search `gates/`**.
+**Gate metrics** (`gates/layer0/attn_0_gate_mean`, …): logged every epoch for `hybrid_gnn` when `log_gate_stats: true` (headwise and elementwise). Sweeps force `gnn.hybrid.log_gate_stats True` in the wrapper. A dedicated W&B log call writes gates to **history and run summary** (search `gates/` in Charts or the run Overview → Summary). Cluster logs print `Hybrid gate stats: logging N W&B metrics` on epoch 0 when collection succeeds.
 
 **More runs on an existing sweep** (same W&B sweep id, no new sweep):
 

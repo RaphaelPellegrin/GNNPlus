@@ -18,4 +18,4 @@ def gated_hybrid_cfg(cfg: CN) -> None:
     cfg.gnn.hybrid.attn_dropout = 0.1
     cfg.gnn.hybrid.mp_dropout = 0.0  # 0 => use cfg.gnn.dropout
     cfg.gnn.hybrid.block_bn = False
-    cfg.gnn.hybrid.log_gate_stats = True  # W&B gates/layer*/attn_* (headwise only)
+    cfg.gnn.hybrid.log_gate_stats = True  # W&B gates/layer*/attn_* (headwise + elementwise)

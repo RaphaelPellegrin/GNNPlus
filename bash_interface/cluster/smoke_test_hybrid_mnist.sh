@@ -42,6 +42,7 @@ python main.py \
     wandb.use True \
     wandb.entity "${WANDB_ENTITY}" \
     wandb.project "${WANDB_PROJECT}" \
+    gnn.hybrid.log_gate_stats True \
     wandb.name "smoke_hybrid_mnist_ep${MAX_EPOCH}_gnnplus" \
     "${extra_args[@]}"
 

@@ -14,7 +14,11 @@ from torch_geometric.utils import to_dense_batch
 
 from GNNPlus.loss.subtoken_prediction_loss import subtoken_cross_entropy
 from GNNPlus.utils import cfg_to_dict, flatten_dict, make_wandb_name, dirichlet_energy, mean_average_distance, mean_norm
-from GNNPlus.hybrid_gate_tracking import log_hybrid_gate_stats
+from GNNPlus.hybrid_gate_tracking import (
+    build_hybrid_gate_wandb_log,
+    hybrid_gate_logging_enabled,
+    publish_gate_stats_to_wandb,
+)
 
 
 def _parse_wandb_tags() -> list[str]:
@@ -146,6 +150,9 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
             wandb_kwargs['tags'] = wandb_tags
         run = wandb.init(**wandb_kwargs)
         run.config.update(cfg_to_dict(cfg))
+        if hybrid_gate_logging_enabled():
+            wandb.define_metric('train/epoch')
+            wandb.define_metric('gates/*', step_metric='train/epoch')
 
     num_splits = len(loggers)
     split_names = ['val', 'test']
@@ -179,8 +186,9 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
 
         if cfg.wandb.use:
             wandb_log: dict[str, object] = flatten_dict(perf)
-            log_hybrid_gate_stats(model, loaders[0], wandb_log)
+            gate_log = build_hybrid_gate_wandb_log(model, loaders[0])
             run.log(wandb_log, step=cur_epoch)
+            publish_gate_stats_to_wandb(run, gate_log, cur_epoch)
 
         # Log current best stats on eval epoch.
         if is_eval_epoch(cur_epoch):
