@@ -6,12 +6,12 @@
 program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
 method: bayes
 metric:
-  goal: maximize
-  name: test/f1
+  goal: __METRIC_GOAL__
+  name: __METRIC_NAME__
 
 entity: weber-geoml-harvard-university
 project: GNNPlus
-name: GNNplus_hybriddgatedGNN-coco
+name: GNNplus_hybriddgatedGNN-__DATASET_SLUG__
 
 early_terminate:
   type: hyperband
@@ -23,8 +23,8 @@ command:
   - ${env}
   - bash
   - ${program}
-  - --cfg=configs/gated_hybrid/coco.yaml
-  - --molecular=false
+  - --cfg=configs/gated_hybrid/__DATASET_CFG__.yaml
+  - --molecular=__MOLECULAR__
   - ${args}
 
 parameters:
@@ -44,15 +44,4 @@ parameters:
     values: [elementwise, headwise]
   hybrid_norm:
     values: [layernorm, rmsnorm]
-  hybrid_gnn_types:
-    values:
-      - "GCN,GIN"
-      - "GCN,GIN,SAGE,GAT"
-      - "GINE,GIN"
-      - "GINE,SAGE"
-      - "GINE,GGNN"
-      - "GIN,SAGE"
-      - "SAGE,GAT"
-      - "GCN,SAGE"
-      - "GATEDGRAPH,GATEDGRAPH"
-      - "GATEDGCN,GATEDGCN"
+__GNN_TYPES_BLOCK__

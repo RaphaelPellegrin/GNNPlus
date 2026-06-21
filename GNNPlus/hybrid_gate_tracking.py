@@ -11,12 +11,10 @@ from torch_geometric.graphgym.config import cfg
 
 
 def hybrid_gate_logging_enabled() -> bool:
-    """Return whether headwise gate means should be logged this run."""
+    """Return whether gate means should be logged this run."""
     if not bool(getattr(cfg.wandb, 'use', False)):
         return False
     if str(getattr(cfg.model, 'type', '')) != 'hybrid_gnn':
-        return False
-    if str(getattr(cfg.gnn.hybrid, 'gate', 'headwise')) != 'headwise':
         return False
     return bool(getattr(cfg.gnn.hybrid, 'log_gate_stats', True))
 

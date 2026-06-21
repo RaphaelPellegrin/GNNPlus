@@ -179,8 +179,7 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
 
         if cfg.wandb.use:
             wandb_log: dict[str, object] = flatten_dict(perf)
-            if is_eval_epoch(cur_epoch):
-                log_hybrid_gate_stats(model, loaders[0], wandb_log)
+            log_hybrid_gate_stats(model, loaders[0], wandb_log)
             run.log(wandb_log, step=cur_epoch)
 
         # Log current best stats on eval epoch.

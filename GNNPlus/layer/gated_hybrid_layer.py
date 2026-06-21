@@ -501,9 +501,7 @@ class GatedHybridGraphLayer(nn.Module):
             mp_gate_vals.append(gamma)
 
         gate_stats: Dict[str, float] = {}
-        collect_stats = return_gate_stats and self.gate_mode == 'headwise'
-
-        if collect_stats:
+        if return_gate_stats:
             for m, gamma in enumerate(attn_gate_vals):
                 gate_stats[f'attn_{m}_gate_mean'] = gamma.detach().mean().item()
             for m, gamma in enumerate(mp_gate_vals):

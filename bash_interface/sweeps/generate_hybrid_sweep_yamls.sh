@@ -9,6 +9,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEMPLATE="${SCRIPT_DIR}/_hybrid_sweep_template.yaml"
+SUPERPIXEL_TEMPLATE="${SCRIPT_DIR}/_hybrid_sweep_superpixel_template.yaml"
 SNIPPET_GENERAL="${SCRIPT_DIR}/_gnn_types_general.yaml.snippet"
 SNIPPET_MOLECULAR="${SCRIPT_DIR}/_gnn_types_molecular.yaml.snippet"
 
@@ -24,6 +25,7 @@ write_sweep() {
     local metric_goal="$4"
     local metric_name="$5"
     local gnn_pool="$6"
+    local sweep_template="${7:-${TEMPLATE}}"
     local out="${SCRIPT_DIR}/${slug}_hybrid_gnnplus_sweep.yaml"
     local snippet
 
@@ -47,7 +49,7 @@ write_sweep() {
         -e "s|__MOLECULAR__|${molecular}|g" \
         -e "s|__METRIC_GOAL__|${metric_goal}|g" \
         -e "s|__METRIC_NAME__|${metric_name}|g" \
-        "${TEMPLATE}" > "${out}.tmp"
+        "${sweep_template}" > "${out}.tmp"
 
     awk -v block_file="${snippet}" '
         /__GNN_TYPES_BLOCK__/ {
@@ -66,9 +68,9 @@ write_sweep() {
 write_sweep mnist mnist false maximize test/accuracy general
 write_sweep cifar10 cifar10 false maximize test/accuracy general
 
-# Tier 2 — node segmentation
-write_sweep coco coco false maximize test/f1 general
-write_sweep voc voc false maximize test/f1 general
+# Tier 2 — node segmentation (GPU memory: attn heads 2/4, batch 8/16 in sweep yaml)
+write_sweep coco coco false maximize test/f1 general "${SUPERPIXEL_TEMPLATE}"
+write_sweep voc voc false maximize test/f1 general "${SUPERPIXEL_TEMPLATE}"
 
 # Tier 3 — OGB peptides
 write_sweep peptides-func peptides_func true maximize test/ap molecular

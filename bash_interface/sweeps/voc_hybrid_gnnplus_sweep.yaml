@@ -1,17 +1,7 @@
-# Template — copy per dataset; see create_hybrid_sweeps.sh
-# W&B Bayesian sweep: GNNPlus hybrid_gnn head / d_h / attn dropout
+# Superpixel (COCO-SP, VOC-SP) — smaller batch + capped attn heads (GPU memory).
 #
-# Swept (user request):
-#   hybrid_num_attn_heads: 2, 4, 8
-#   hybrid_num_gnn_heads:  2, 4, 8
-#   hybrid_d_h:            8, 16, 32, 64
-#   hybrid_attn_dropout:   0.1, 0.2, 0.5
-#   hybrid_attn_mask:      full, graph_restricted
-#   hybrid_gate:           elementwise, headwise
-#   hybrid_norm:           layernorm, rmsnorm
-#   hybrid_gnn_types:      dataset-specific MP head presets (see generate script)
-#
-# Fixed per dataset: configs/gated_hybrid/<DATASET>.yaml (GNN+ gcne outer hyperparams)
+#   hybrid_num_attn_heads: 2, 4  (no 8 — full attention OOMs on 140GB GPU)
+#   train.batch_size:      8, 16 (swept; yaml default 8)
 
 program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
 method: bayes
@@ -38,8 +28,10 @@ command:
   - ${args}
 
 parameters:
+  batch_size:
+    values: [8, 16]
   hybrid_num_attn_heads:
-    values: [2, 4, 8]
+    values: [2, 4]
   hybrid_num_gnn_heads:
     values: [2, 4, 8]
   hybrid_d_h:
@@ -47,7 +39,7 @@ parameters:
   hybrid_attn_dropout:
     values: [0.1, 0.2, 0.5]
   hybrid_attn_mask:
-    values: [full, graph_restricted]
+    values: [graph_restricted, full]
   hybrid_gate:
     values: [elementwise, headwise]
   hybrid_norm:

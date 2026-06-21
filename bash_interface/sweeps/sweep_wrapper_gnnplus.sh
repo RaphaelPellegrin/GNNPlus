@@ -108,6 +108,7 @@ while [ "$#" -gt 0 ]; do
                 hybrid_norm) _set_opt "gnn.hybrid.norm" "${val}" ;;
                 hybrid_mp_dropout) _set_opt "gnn.hybrid.mp_dropout" "${val}" ;;
                 hybrid_gnn_types) _set_opt "gnn.hybrid.gnn_types" "${val}" ;;
+                batch_size) _set_opt "train.batch_size" "${val}" ;;
                 *) _set_opt "${key}" "${val}" ;;
             esac
             ;;
@@ -129,6 +130,7 @@ while [ "$#" -gt 0 ]; do
                 hybrid_norm) _set_opt "gnn.hybrid.norm" "${val}" ;;
                 hybrid_mp_dropout) _set_opt "gnn.hybrid.mp_dropout" "${val}" ;;
                 hybrid_gnn_types) _set_opt "gnn.hybrid.gnn_types" "${val}" ;;
+                batch_size) _set_opt "train.batch_size" "${val}" ;;
                 *) _set_opt "${key}" "${val}" ;;
             esac
             ;;

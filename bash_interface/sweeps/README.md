@@ -22,6 +22,8 @@ Each dataset sweep is named **`GNNplus_hybriddgatedGNN-<dataset>`** in W&B proje
 
 `seed` is fixed at **0** in `sweep_wrapper_gnnplus.sh` (not swept).
 
+**COCO / VOC (superpixel):** separate sweep template — `hybrid_num_attn_heads` **2, 4 only**; swept `batch_size` **8, 16**; yaml default `batch_size: 8`.
+
 ### `hybrid_gnn_types` pools
 
 **General** (MNIST, CIFAR10, COCO, VOC, enzymes, mutag, mal, cluster, pattern):
@@ -33,6 +35,8 @@ Each dataset sweep is named **`GNNplus_hybriddgatedGNN-<dataset>`** in W&B proje
 - `GCN,GINE`, `GINE,GINE`, `GINE,GGNN`, **`GINE,SAGE`**, `GGNN,GINE`, `GIN,GINE`, `GCN,GIN,SAGE,GAT`, `GCN,GIN`, `SAGE,GAT`, `GATEDGRAPH,GATEDGRAPH`, `GATEDGCN,GATEDGCN`
 
 Python `parse_hybrid_gnn_types` pads or truncates the list to match `hybrid_num_gnn_heads`.
+
+**Gate metrics** (`gates/layer0/attn_0_gate_mean`, …): logged every epoch for `hybrid_gnn` when `log_gate_stats: true` (elementwise and headwise). In W&B: **Charts → Add panel → search `gates/`**.
 
 Outer training hyperparams (depth, width, LR, encoders) stay fixed per dataset in `configs/gated_hybrid/<dataset>.yaml` (from GNN+ `configs/gcn/`).
 
