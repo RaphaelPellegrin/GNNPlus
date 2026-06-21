@@ -105,6 +105,14 @@ def cfg_to_dict(cfg_node, key_list=[]):
         return cfg_dict
 
 
+def _posenc_enabled(cfg: CfgNode, name: str) -> bool:
+    """Return whether positional encoding ``name`` is enabled on ``cfg``."""
+    if not hasattr(cfg, name):
+        return False
+    pecfg = getattr(cfg, name)
+    return bool(getattr(pecfg, 'enable', False))
+
+
 def make_wandb_name(cfg):
     # Format dataset name.
     dataset_name = cfg.dataset.format
@@ -137,10 +145,10 @@ def make_wandb_name(cfg):
         model_name = f"GPS.{cfg.gt.layer_type}"
     model_name += f".{cfg.name_tag}" if cfg.name_tag else ""
 
-    if cfg.posenc_LapPE.enable:
+    if _posenc_enabled(cfg, 'posenc_LapPE'):
         model_name += "+LapPE"
 
-    if cfg.posenc_RWSE.enable:
+    if _posenc_enabled(cfg, 'posenc_RWSE'):
         model_name += "+RWSE"
 
     # Compose wandb run name.
