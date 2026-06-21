@@ -16,8 +16,8 @@
 #     bash_interface/cluster/run_hybrid_array.sh
 #
 # Env:
-#   DATASET    — yaml stem: mnist, cifar10, peptides-func, coco, voc
-#   NUM_SEEDS  — seeds per dataset (default 2; peptides-func: 4)
+#   DATASET    — yaml stem under configs/gated_hybrid/ (mnist, cifar10, …)
+#   NUM_SEEDS  — seeds for this array task (see submit_hybrid_suite.sh)
 # =============================================================================
 
 #SBATCH --job-name=gnnplus_hybrid

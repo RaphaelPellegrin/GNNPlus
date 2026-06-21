@@ -1,0 +1,55 @@
+# Template — copy per dataset; see create_hybrid_sweeps.sh
+# W&B Bayesian sweep: GNNPlus hybrid_gnn head / d_h / attn dropout
+#
+# Swept (user request):
+#   hybrid_num_attn_heads: 2, 4, 8
+#   hybrid_num_gnn_heads:  2, 4, 8
+#   hybrid_d_h:            8, 16, 32, 64
+#   hybrid_attn_dropout:   0.1, 0.2, 0.5
+#   hybrid_attn_mask:      full, graph_restricted
+#   hybrid_gate:           elementwise, headwise
+#   hybrid_norm:           layernorm, rmsnorm
+#   hybrid_gnn_types:      dataset-specific MP head presets (see generate script)
+#
+# Fixed per dataset: configs/gated_hybrid/<DATASET>.yaml (GNN+ gcne outer hyperparams)
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: __METRIC_GOAL__
+  name: __METRIC_NAME__
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_hybriddgatedGNN-__DATASET_SLUG__
+
+early_terminate:
+  type: hyperband
+  min_iter: 15
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/__DATASET_CFG__.yaml
+  - --molecular=__MOLECULAR__
+  - ${args}
+
+parameters:
+  hybrid_num_attn_heads:
+    values: [2, 4, 8]
+  hybrid_num_gnn_heads:
+    values: [2, 4, 8]
+  hybrid_d_h:
+    values: [8, 16, 32, 64]
+  hybrid_attn_dropout:
+    values: [0.1, 0.2, 0.5]
+  hybrid_attn_mask:
+    values: [full, graph_restricted]
+  hybrid_gate:
+    values: [elementwise, headwise]
+  hybrid_norm:
+    values: [layernorm, rmsnorm]
+__GNN_TYPES_BLOCK__

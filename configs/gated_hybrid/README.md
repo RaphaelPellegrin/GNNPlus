@@ -4,19 +4,12 @@ Attention + message-passing heads with sigmoid gating (ported from Heterogeneity
 
 ## Architecture (cluster default)
 
-- **2 attention heads** + **2 MP heads** (`num_attn_heads: 2`, `num_gnn_heads: 2`)
-- **MP types** (GNN+ layer stack): `GCN,GIN` on superpixels; `GCN,GINE` on peptides
-- **Outer hyperparams** (depth, width, optim, encoders): copied from `configs/gcn/<dataset>.yaml` (GNN+ paper gcne)
+- **2 attention heads** + **2 MP heads** (`a2g2`), gate `headwise`, `d_h: 16`
+- **MP types**: `GCN,GIN` (superpixels / TUDataset); `GCN,GINE` (OGB molecular)
+- **Outer hyperparams**: copied from `configs/gcn/<dataset>.yaml` (GNN+ paper gcne)
 - **W&B**: project `MOE_6`, tags `gnnplus`, `hybrid_gnn`, `cluster`
 
-## Local run
-
-```bash
-python main.py --cfg configs/gated_hybrid/mnist.yaml --repeat 2 seed 0 \
-  wandb.use True wandb.project MOE_6
-```
-
-## Cluster submit
+## Cluster submit (priority order)
 
 ```bash
 source ~/.gnnplus_env
@@ -28,19 +21,27 @@ cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 # Smoke (~5 epochs)
 sbatch bash_interface/cluster/smoke_test_hybrid_mnist.sh
 
-# Full paper datasets (parallel arrays)
-bash bash_interface/cluster/submit_hybrid_suite.sh
-bash bash_interface/cluster/submit_hybrid_suite.sh mnist cifar10   # subset
+# By priority tier (parallel within each sbatch call)
+bash bash_interface/cluster/submit_hybrid_suite.sh tier1    # MNIST, CIFAR10
+bash bash_interface/cluster/submit_hybrid_suite.sh tier2    # COCO, Pascal VOC
+bash bash_interface/cluster/submit_hybrid_suite.sh tier3    # peptides func + struct
+bash bash_interface/cluster/submit_hybrid_suite.sh tier4    # ENZYMES
+bash bash_interface/cluster/submit_hybrid_suite.sh tier5    # hiv, ppa, zinc, …
+
+# Or everything at once
+bash bash_interface/cluster/submit_hybrid_suite.sh all
 ```
 
-| Dataset | Config | Seeds | MP heads | Source gcn yaml |
-|---------|--------|-------|----------|-----------------|
-| MNIST | `mnist.yaml` | 2 | GCN, GIN | `configs/gcn/mnist.yaml` |
-| CIFAR10 | `cifar10.yaml` | 2 | GCN, GIN | `configs/gcn/cifar10.yaml` |
-| peptides-func | `peptides-func.yaml` | 4 | GCN, GINE | `configs/gcn/peptides-func.yaml` |
-| COCO-SP | `coco.yaml` | 2 | GCN, GIN | `configs/gcn/coco.yaml` (128GB) |
-| Pascal VOC | `voc.yaml` | 2 | GCN, GIN | `configs/gcn/voc.yaml` |
+| Tier | Datasets | Seeds | Notes |
+|------|----------|-------|-------|
+| 1 | mnist, cifar10 | 2 | GNNBenchmark superpixels |
+| 2 | coco, voc | 2 | COCO needs **128GB** mem |
+| 3 | peptides-func, peptides-struct | 4 | OGB; GCN+GINE heads |
+| 4 | enzymes | 2 | TUDataset; baseline `configs/gcn/enzymes.yaml` |
+| 5 | hiv, ppa, zinc, mutag, mal, pcba, code2, cluster, pattern | 1–5 | Remaining GNN+ paper suite |
 
-MP head types in code: `GCN`, `GIN`, `GINE`, `GGNN`, `GATEDGCN`, `SAGE`, `GAT` (`GNNPlus/layer/gated_hybrid_layer.py`).
+Configs live in `configs/gated_hybrid/<stem>.yaml` where `<stem>` matches `configs/gcn/` (e.g. `hiv` not `molhiv`).
+
+MP head types in code: `GCN`, `GIN`, `GINE`, `GGNN`, `GATEDGCN`, `SAGE`, `GAT`.
 
 Also available in **GraphGym** fork as `gnn.stage_type: gated_hybrid`.

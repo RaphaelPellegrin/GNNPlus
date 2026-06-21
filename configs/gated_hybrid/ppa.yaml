@@ -1,0 +1,62 @@
+# Hybrid GNN on ogbg-ppa — outer hyperparams from configs/gcn/ppa.yaml.
+out_dir: results
+metric_best: accuracy
+wandb:
+  use: False
+  project: MOE_6
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - cluster
+dataset:
+  format: OGB
+  name: ogbg-ppa
+  task: graph
+  task_type: classification
+  transductive: False
+  node_encoder: True
+  node_encoder_name: PPANode
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: PPAEdge
+  edge_encoder_bn: False
+train:
+  mode: custom
+  batch_size: 32
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: hybrid_gnn
+  loss_fun: cross_entropy
+  edge_decoding: dot
+  graph_pooling: mean
+gnn:
+  head: default
+  ffn: True
+  layers_mp: 4
+  layers_pre_mp: 0
+  layers_post_mp: 2
+  dim_inner: 512
+  act: relu
+  dropout: 0.2
+  agg: mean
+  residual: True
+  hybrid:
+    num_attn_heads: 2
+    num_gnn_heads: 2
+    d_h: 16
+    attn_mask: full
+    gate: headwise
+    norm: layernorm
+    gnn_types: "GCN,GINE"
+    attn_dropout: 0.1
+    mp_dropout: 0.2
+    block_bn: false
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 1e-5
+  base_lr: 0.0003
+  max_epoch: 400
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10
