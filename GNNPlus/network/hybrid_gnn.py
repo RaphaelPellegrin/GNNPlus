@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, cast
+from typing import Any, Dict, List, Optional, cast
 
 import torch
 import torch.nn as nn
@@ -105,18 +105,45 @@ class HybridGNN(torch.nn.Module):
         gnn_head = register.head_dict[cfg.gnn.head]
         self.post_mp = gnn_head(dim_in=cfg.gnn.dim_inner, dim_out=dim_out)
 
-    def forward(self, batch: Batch) -> Batch:
-        """Run encoder, hybrid blocks, optional FFN, and prediction head."""
+    def _encode_batch(self, batch: Batch) -> tuple[torch.Tensor, Batch, Any, Any]:
+        """Run encoders and return ``(x, batch, edge_index, edge_attr)``."""
         batch = self.encoder(batch)
         if hasattr(self, 'pre_mp'):
             batch = self.pre_mp(batch)
-
         edge_attr = getattr(batch, 'edge_attr', None)
-        x = batch.x
+        return batch.x, batch, batch.edge_index, edge_attr
+
+    def collect_gate_stats(self, batch: Batch) -> Dict[str, float]:
+        """Per-layer headwise gate means from one forward (no prediction head).
+
+        Keys match Heterogeneity_Profile: ``layer{i}/attn_{h}_gate_mean``,
+        ``layer{i}/gnn_{h}_gate_mean``.
+        """
+        x, batch, edge_index, edge_attr = self._encode_batch(batch)
+        all_stats: Dict[str, float] = {}
+        for layer_idx, layer in enumerate(self.layers):
+            layer_out = layer(
+                x,
+                edge_index,
+                batch.batch,
+                edge_attr,
+                return_gate_stats=True,
+            )
+            assert isinstance(layer_out, tuple)
+            x, layer_aux = layer_out
+            for key, val in layer_aux.get('gate_stats', {}).items():
+                all_stats[f'layer{layer_idx}/{key}'] = float(val)
+            if self.ffn_blocks is not None:
+                x = self.ffn_blocks[layer_idx](x)
+        return all_stats
+
+    def forward(self, batch: Batch) -> Batch:
+        """Run encoder, hybrid blocks, optional FFN, and prediction head."""
+        x, batch, edge_index, edge_attr = self._encode_batch(batch)
         for i, layer in enumerate(self.layers):
             x = cast(
                 torch.Tensor,
-                layer(x, batch.edge_index, batch.batch, edge_attr),
+                layer(x, edge_index, batch.batch, edge_attr),
             )
             if self.ffn_blocks is not None:
                 x = self.ffn_blocks[i](x)

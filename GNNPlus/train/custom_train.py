@@ -14,6 +14,7 @@ from torch_geometric.utils import to_dense_batch
 
 from GNNPlus.loss.subtoken_prediction_loss import subtoken_cross_entropy
 from GNNPlus.utils import cfg_to_dict, flatten_dict, make_wandb_name, dirichlet_energy, mean_average_distance, mean_norm
+from GNNPlus.utils.hybrid_gate_tracking import log_hybrid_gate_stats
 
 
 def _parse_wandb_tags() -> list[str]:
@@ -177,7 +178,10 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
             save_ckpt(model, optimizer, scheduler, cur_epoch)
 
         if cfg.wandb.use:
-            run.log(flatten_dict(perf), step=cur_epoch)
+            wandb_log: dict[str, object] = flatten_dict(perf)
+            if is_eval_epoch(cur_epoch):
+                log_hybrid_gate_stats(model, loaders[0], wandb_log)
+            run.log(wandb_log, step=cur_epoch)
 
         # Log current best stats on eval epoch.
         if is_eval_epoch(cur_epoch):
