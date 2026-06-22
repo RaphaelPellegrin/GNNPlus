@@ -1,6 +1,5 @@
 # Hybrid GNN on CIFAR10 — 1×GatedGCN MP + 1×attention (a1g1).
-# Outer hyperparams from configs/gatedgcn/cifar10.yaml (best single-head baseline).
-# max_epoch doubled (200→400) for fuller training / train-fit on CIFAR.
+# GATEDGCN MP head uses GatedGCNLayer; gnn.ffn false avoids double FFN.
 out_dir: results
 metric_best: accuracy
 wandb:
@@ -49,12 +48,12 @@ gnn:
   act: relu
   dropout: 0.15
   agg: mean
-  ffn: True
+  ffn: False
   residual: True
   hybrid:
     num_attn_heads: 1
     num_gnn_heads: 1
-    d_h: 16
+    d_h: 64
     attn_mask: full
     gate: headwise
     norm: layernorm

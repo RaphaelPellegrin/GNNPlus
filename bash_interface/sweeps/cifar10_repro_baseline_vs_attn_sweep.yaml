@@ -1,6 +1,5 @@
 # CIFAR10 repro sweep: exactly 2 runs — best GatedGCN baseline vs same + 1 attention head.
-# Baseline matches: configs/gatedgcn/cifar10.yaml, seed 0, custom_gnn.
-# Hybrid matches baseline outer hyperparams + 1×GATEDGCN MP + 1×attn (d_h=16 defaults).
+# Hybrid GATEDGCN MP uses GatedGCNLayer (edge-aware) at d_h=64; gnn.ffn false (FFN in MP head).
 #
 # Create:
 #   bash bash_interface/sweeps/create_sweep.sh \

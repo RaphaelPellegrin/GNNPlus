@@ -41,6 +41,8 @@ def _build_gin_conv(in_dim: int, out_dim: int) -> GINConv:
 
 
 from GNNPlus.layer.gcn_conv_layer_e import GCNConvWithEdges
+from GNNPlus.layer.gatedgcn_layer import GatedGCNLayer
+from torch_geometric.graphgym.config import cfg
 
 
 class _GCNEHybridMPHead(nn.Module):
@@ -129,7 +131,7 @@ class _GINEHybridMPHead(nn.Module):
 
 
 class _ResGatedHybridMPHead(nn.Module):
-    """MP head using PyG :class:`ResGatedGraphConv`."""
+    """MP head using PyG :class:`ResGatedGraphConv` (legacy ``GATEDGCN`` alias)."""
 
     def __init__(self, d_h: int, *, gnn_dropout: float = 0.0) -> None:
         super().__init__()
@@ -144,6 +146,76 @@ class _ResGatedHybridMPHead(nn.Module):
     ) -> Tensor:
         out = self.conv(x_h, edge_index)
         return F.dropout(out, p=self._gnn_dropout, training=self.training)
+
+
+class _GatedGCNHybridBatch:
+    """Minimal batch object for :class:`GatedGCNLayer` inside a hybrid MP head."""
+
+    x: Tensor
+    edge_index: Tensor
+    edge_attr: Tensor
+    pe_EquivStableLapPE: None
+
+    def __init__(
+        self,
+        x: Tensor,
+        edge_index: Tensor,
+        edge_attr: Tensor,
+    ) -> None:
+        self.x = x
+        self.edge_index = edge_index
+        self.edge_attr = edge_attr
+        self.pe_EquivStableLapPE = None
+
+
+class _GatedGCNHybridMPHead(nn.Module):
+    """MP head using GNN+ :class:`GatedGCNLayer` at width ``d_h`` (edge-aware)."""
+
+    def __init__(
+        self,
+        d_h: int,
+        *,
+        edge_dim: int,
+        dropout: float = 0.15,
+        residual: bool = True,
+        ffn: bool = True,
+        act: str = "relu",
+        gnn_dropout: float = 0.0,
+    ) -> None:
+        super().__init__()
+        self.d_h = d_h
+        self.edge_proj = nn.Linear(edge_dim, d_h)
+        self.layer = GatedGCNLayer(
+            d_h,
+            d_h,
+            dropout=dropout,
+            residual=residual,
+            ffn=ffn,
+            act=act,
+        )
+        self._gnn_dropout = float(gnn_dropout)
+
+    def forward(
+        self,
+        x_h: Tensor,
+        edge_index: Tensor,
+        edge_attr: Optional[Tensor] = None,
+    ) -> Tensor:
+        """Run GatedGCN+ message passing at ``d_h`` with encoded edge features."""
+        num_e = edge_index.size(1)
+        dev, dt = x_h.device, x_h.dtype
+        if edge_attr is None:
+            eh = torch.zeros((num_e, self.d_h), device=dev, dtype=dt)
+        else:
+            feat = edge_attr.float()
+            if feat.size(-1) == self.d_h:
+                eh = feat.to(dtype=dt)
+            else:
+                eh = self.edge_proj(feat).to(dtype=dt)
+        batch = _GatedGCNHybridBatch(x_h, edge_index, eh)
+        out = self.layer(batch)
+        result = out.x
+        return F.dropout(result, p=self._gnn_dropout, training=self.training)
 
 
 class _GatedGraphHybridMPHead(nn.Module):
@@ -234,7 +306,20 @@ class _ProjectedMPHead(nn.Module):
                     d_h, num_ggnn_internal_layers=1, gnn_dropout=gnn_dropout
                 ),
             )
-        elif self.kind in ('GATEDGCN', 'RESGATEDGCN'):
+        elif self.kind in ('GATEDGCN',):
+            self.conv = cast(
+                nn.Module,
+                _GatedGCNHybridMPHead(
+                    d_h,
+                    edge_dim=d_model,
+                    dropout=float(cfg.gnn.dropout),
+                    residual=bool(cfg.gnn.residual),
+                    ffn=True,
+                    act=str(cfg.gnn.act),
+                    gnn_dropout=gnn_dropout,
+                ),
+            )
+        elif self.kind in ('RESGATEDGCN',):
             self.conv = cast(
                 nn.Module,
                 _ResGatedHybridMPHead(d_h, gnn_dropout=gnn_dropout),
@@ -242,7 +327,7 @@ class _ProjectedMPHead(nn.Module):
         else:
             raise ValueError(
                 f'Unknown MP head type: {kind!r} '
-                '(expected GCN, GCNE, GIN, GINE, GGNN, GATEDGCN, SAGE, or GAT)'
+                '(expected GCN, GCNE, GIN, GINE, GGNN, GATEDGCN, RESGATEDGCN, SAGE, or GAT)'
             )
 
     def forward(
@@ -262,6 +347,7 @@ class _ProjectedMPHead(nn.Module):
             self.conv,
             (
                 _GCNEHybridMPHead,
+                _GatedGCNHybridMPHead,
                 _GINEHybridMPHead,
                 _GatedGraphHybridMPHead,
                 _ResGatedHybridMPHead,

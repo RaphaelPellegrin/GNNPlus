@@ -1,5 +1,6 @@
-# CIFAR10 hybrid repro: 1×GatedGCN MP + 1×attention on top of gatedgcn/cifar10.yaml.
-# Same outer hyperparams and training length as the best custom_gnn baseline (200 epochs).
+# CIFAR10 hybrid repro: 1×GatedGCN MP + 1×attention on gatedgcn/cifar10.yaml.
+# GATEDGCN MP head uses GatedGCNLayer (edge-aware, ffn+residual inside the head).
+# Set gnn.ffn: false so HybridGNN does not add a second per-block FFN.
 out_dir: results
 metric_best: accuracy
 wandb:
@@ -48,12 +49,12 @@ gnn:
   act: relu
   dropout: 0.15
   agg: mean
-  ffn: True
+  ffn: False
   residual: True
   hybrid:
     num_attn_heads: 1
     num_gnn_heads: 1
-    d_h: 16
+    d_h: 64
     attn_mask: full
     gate: headwise
     norm: layernorm
