@@ -255,6 +255,8 @@ def parse_hybrid_gnn_types(raw: Optional[str], num_heads: int) -> List[str]:
     parts = [p.strip().upper() for p in str(raw).split(',') if p.strip()]
     if len(parts) == 0:
         return [base[i % len(base)] for i in range(num_heads)]
+    if len(parts) == 1:
+        return [parts[0]] * num_heads
     if len(parts) < num_heads:
         for i in range(num_heads - len(parts)):
             parts.append(base[i % len(base)])

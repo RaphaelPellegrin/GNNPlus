@@ -1,0 +1,64 @@
+# CIFAR10 hybrid sweep anchored on best GatedGCN+ baseline
+# (configs/gatedgcn/cifar10.yaml, seed 0, lr=0.001, layers_mp=10, dim_inner=35, …).
+#
+# Swept only:
+#   hybrid_num_gnn_heads: 2, 3, 4
+#   hybrid_num_attn_heads: 0, 1, 2
+#   optim.base_lr
+#
+# Fixed: all-GATEDGCN MP experts, d_h=16, full mask, headwise gate, layernorm,
+# outer hyperparams from configs/gated_hybrid/cifar10-gatedgcn.yaml (= gatedgcn baseline).
+#
+# Create + launch (cluster login node):
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/cifar10_hybrid_gatedgcn_baseline_sweep.yaml
+#   SWEEP_ARRAY_TASKS=16 SWEEP_ARRAY_PARALLEL=8 RUNS_PER_AGENT=4 \
+#     bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+#       cifar10 weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: maximize
+  name: test/accuracy
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_hybriddgatedGNN-cifar10-gatedgcn-baseline-lr
+
+early_terminate:
+  type: hyperband
+  min_iter: 15
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/cifar10-gatedgcn.yaml
+  - --molecular=false
+  - --seed=0
+  - ${args}
+
+parameters:
+  hybrid_num_gnn_heads:
+    values: [2, 3, 4]
+  hybrid_num_attn_heads:
+    values: [0, 1, 2]
+  optim.base_lr:
+    distribution: log_uniform
+    min: 0.0002
+    max: 0.003
+  hybrid_gnn_types:
+    value: GATEDGCN
+  hybrid_d_h:
+    value: 16
+  hybrid_attn_dropout:
+    value: 0.1
+  hybrid_attn_mask:
+    value: full
+  hybrid_gate:
+    value: headwise
+  hybrid_norm:
+    value: layernorm

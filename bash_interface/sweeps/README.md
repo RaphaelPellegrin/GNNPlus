@@ -76,7 +76,14 @@ SWEEP_ARRAY_TASKS=8 SWEEP_ARRAY_PARALLEL=4 RUNS_PER_AGENT=4 \
 
 **Finding runs in W&B:** sweep trials often show as **stopped** or **crashed** when Hyperband prunes them (e.g. at epoch 15) — they still appear under the sweep. Filter **Runs** by created date, or open the sweep page directly. SLURM logs: `logs_gnnplus/sweep_agent_<JOBID>_<TASK>.log` (not `gnnplus_sweep_mnist_*`).
 
-**Gate metrics** (`gates/layer0/attn_0_gate_mean`, …): logged every epoch for `hybrid_gnn` when `log_gate_stats: true` (headwise and elementwise). Sweeps force `gnn.hybrid.log_gate_stats True` in the wrapper. A dedicated W&B log call writes gates to **history and run summary** (search `gates/` in Charts or the run Overview → Summary). Cluster logs print `Hybrid gate stats: logging N W&B metrics` on epoch 0 when collection succeeds.
+**Gate metrics** (`gates/layer0/attn_0_gate_mean`, …) — **confirmed working** on cluster (2026-06, `harvard_cluster` ≥ `644ff9b`):
+
+- Every epoch for `hybrid_gnn` when `log_gate_stats: true` (headwise and elementwise)
+- Sweeps force `gnn.hybrid.log_gate_stats True` in `sweep_wrapper_gnnplus.sh`
+- `GraphGymModule` unwrapped via `.model` before `collect_gate_stats`
+- Dedicated `run.log(gates/...)` + `run.summary.update` each epoch
+- W&B: Charts → search `gates/`; Summary → `gates/_num_metrics` > 0
+- Log sanity check: `grep 'Hybrid gate stats: logging' logs_gnnplus/sweep_agent_<JOBID>_1.log`
 
 **More runs on an existing sweep** (same W&B sweep id, no new sweep):
 
@@ -92,7 +99,13 @@ bash bash_interface/sweeps/relaunch_sweep_agents.sh \
   cifar10 weber-geoml-harvard-university/GNNPlus/0yksmizq
 ```
 
-Pull latest code on cluster before relaunch so gate logging fixes are active.
+**Specialized sweeps (recreate + launch):** `create_sweep.sh` on the `*_gatedgcn_mp_*` / `*_gcn_mp_*` yaml, then copy the printed `sbatch` block (not the `wandb:` log lines). Example ids (replace after recreate):
+
+| Dataset | W&B name | Example id |
+|---------|----------|------------|
+| MNIST GatedGCN-mp | `GNNplus_hybriddgatedGNN-mnist-gatedgcn-mp` | `nkwgduxb` |
+| CIFAR GatedGCN-mp | `GNNplus_hybriddgatedGNN-cifar10-gatedgcn-mp` | `yt923k6q` |
+| Peptides-func GCN-mp | `GNNplus_hybriddgatedGNN-peptides_func-gcn-mp` | `hrfmtir9` |
 
 Outer training hyperparams (depth, width, LR, encoders) stay fixed per dataset in `configs/gated_hybrid/<dataset>.yaml` (from GNN+ `configs/gcn/`).
 
@@ -109,7 +122,9 @@ bash_interface/sweeps/
 ├── run_wandb_sweep_agent.sh       # SLURM → wandb agent (gnnplus env)
 ├── launch_hybrid_sweeps.sh        # create + sbatch agents (tier1–4 default)
 ├── mnist_hybrid_gnnplus_sweep.yaml
-├── cifar10_hybrid_gnnplus_sweep.yaml
+├── mnist_hybrid_gatedgcn_mp_sweep.yaml
+├── cifar10_hybrid_gatedgcn_mp_sweep.yaml
+├── peptides_func_hybrid_gcn_mp_sweep.yaml
 └── ...
 ```
 

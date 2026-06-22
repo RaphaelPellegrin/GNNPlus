@@ -109,5 +109,5 @@ case "$1" in
 esac
 
 echo ""
-echo "Gate metrics: W&B Charts → search gates/layer0 (needs code with hybrid_gate_tracking fix)."
-echo "Verify import: grep log_gate_stats GNNPlus/train/custom_train.py"
+echo "Logs: logs_gnnplus/sweep_agent_<JOBID>_<TASK>.log"
+echo "Gate check: grep 'Hybrid gate stats: logging' logs_gnnplus/sweep_agent_<JOBID>_1.log"
