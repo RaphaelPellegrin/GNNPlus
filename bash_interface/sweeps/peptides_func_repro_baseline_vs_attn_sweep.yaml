@@ -1,0 +1,31 @@
+# Peptides-func repro sweep: exactly 2 runs — best GCN baseline vs same + 1 attention head.
+# Baseline matches: configs/gcn/peptides-func.yaml, seed 2, custom_gnn (gcne).
+# Hybrid matches baseline outer hyperparams + 1×GCN MP + 1×attn (d_h=16 defaults).
+#
+# Create:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/peptides_func_repro_baseline_vs_attn_sweep.yaml
+# Launch:
+#   SWEEP_ID=... SWEEP_DATASET=peptides_func RUNS_PER_AGENT=2 \
+#     sbatch --array=1-1 --time=96:00:00 ... run_wandb_sweep_agent.sh
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus_repro.sh
+method: grid
+metric:
+  goal: maximize
+  name: test/ap
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_repro-peptides_func-gcn-baseline-vs-attn1
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --dataset=peptides_func
+  - ${args}
+
+parameters:
+  repro_variant:
+    values: [baseline, hybrid_attn1]

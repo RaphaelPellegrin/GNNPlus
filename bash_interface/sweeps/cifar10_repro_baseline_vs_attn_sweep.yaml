@@ -1,0 +1,31 @@
+# CIFAR10 repro sweep: exactly 2 runs — best GatedGCN baseline vs same + 1 attention head.
+# Baseline matches: configs/gatedgcn/cifar10.yaml, seed 0, custom_gnn.
+# Hybrid matches baseline outer hyperparams + 1×GATEDGCN MP + 1×attn (d_h=16 defaults).
+#
+# Create:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/cifar10_repro_baseline_vs_attn_sweep.yaml
+# Launch (2 trials total; use RUNS_PER_AGENT=2 or 2 agents × 1):
+#   SWEEP_ID=... SWEEP_DATASET=cifar10 RUNS_PER_AGENT=2 \
+#     sbatch --array=1-1 --time=96:00:00 ... run_wandb_sweep_agent.sh
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus_repro.sh
+method: grid
+metric:
+  goal: maximize
+  name: test/accuracy
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_repro-cifar10-gatedgcn-baseline-vs-attn1
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --dataset=cifar10
+  - ${args}
+
+parameters:
+  repro_variant:
+    values: [baseline, hybrid_attn1]
