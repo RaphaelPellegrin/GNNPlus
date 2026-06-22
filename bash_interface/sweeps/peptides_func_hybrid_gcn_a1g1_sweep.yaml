@@ -1,0 +1,62 @@
+# Peptides-func: beat GCN+ baseline by adding ONE attention head to ONE GCN MP head.
+# Anchor: configs/gcn/peptides-func.yaml (L=3, dim=275, seed 2, lr=0.001).
+# Training: 600 epochs (2× baseline), Hyperband min_iter=50.
+#
+# Fixed architecture: hybrid_num_gnn_heads=1, hybrid_num_attn_heads=1, GCN MP.
+# Swept: attention + light MP tuning (d_h, dropout, mask, gate, norm, mp_dropout, LR).
+#
+# Create + launch (cluster login node):
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/peptides_func_hybrid_gcn_a1g1_sweep.yaml
+#   SWEEP_ARRAY_TASKS=16 SWEEP_ARRAY_PARALLEL=8 RUNS_PER_AGENT=4 \
+#     bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+#       peptides_func weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: maximize
+  name: test/ap
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_hybriddgatedGNN-peptides_func-gcn-a1g1
+
+early_terminate:
+  type: hyperband
+  min_iter: 50
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/peptides-func-gcn-a1g1.yaml
+  - --molecular=true
+  - --seed=2
+  - ${args}
+
+parameters:
+  hybrid_num_gnn_heads:
+    value: 1
+  hybrid_num_attn_heads:
+    value: 1
+  hybrid_gnn_types:
+    value: GCN
+  hybrid_d_h:
+    values: [8, 16, 32, 64]
+  hybrid_attn_dropout:
+    values: [0.0, 0.1, 0.2, 0.3]
+  hybrid_attn_mask:
+    values: [full, graph_restricted]
+  hybrid_gate:
+    values: [elementwise, headwise]
+  hybrid_norm:
+    values: [layernorm, rmsnorm]
+  hybrid_mp_dropout:
+    values: [0.1, 0.15, 0.2, 0.25]
+  optim.base_lr:
+    distribution: log_uniform_values
+    min: 0.0002
+    max: 0.003
