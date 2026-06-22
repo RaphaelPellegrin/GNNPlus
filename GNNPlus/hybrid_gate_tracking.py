@@ -25,11 +25,23 @@ def hybrid_gate_logging_enabled() -> bool:
 
 
 def _unwrap_model(model: nn.Module) -> nn.Module:
-    """Return the inner module when wrapped by ``DataParallel`` / ``DDP``."""
-    inner = getattr(model, 'module', None)
-    if isinstance(inner, nn.Module):
-        return inner
-    return model
+    """Return the inner ``HybridGNN`` through GraphGym / DDP wrappers."""
+    cur: nn.Module = model
+    for _ in range(8):
+        if hasattr(cur, 'collect_gate_stats'):
+            return cur
+        nxt: Optional[nn.Module] = None
+        inner = getattr(cur, 'module', None)
+        if isinstance(inner, nn.Module):
+            nxt = inner
+        else:
+            wrapped = getattr(cur, 'model', None)
+            if isinstance(wrapped, nn.Module):
+                nxt = wrapped
+        if nxt is None:
+            break
+        cur = nxt
+    return cur
 
 
 def _is_graph_batch(batch: Any) -> bool:
