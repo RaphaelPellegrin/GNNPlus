@@ -1,6 +1,5 @@
-# Peptides-func repro sweep: exactly 2 runs — best GCN baseline vs same + 1 attention head.
-# Baseline matches: configs/gcn/peptides-func.yaml, seed 2, custom_gnn (gcne).
-# Hybrid matches baseline outer hyperparams + 1×GCN MP + 1×attn (d_h=16 defaults).
+# Peptides-func repro sweep: exactly 2 runs — best GCN (gcne) baseline vs same + 1 attn.
+# Hybrid uses GCNE MP head (edge-aware, matches baseline) and d_h=64.
 #
 # Create:
 #   bash bash_interface/sweeps/create_sweep.sh \

@@ -40,6 +40,42 @@ def _build_gin_conv(in_dim: int, out_dim: int) -> GINConv:
     )
 
 
+from GNNPlus.layer.gcn_conv_layer_e import GCNConvWithEdges
+
+
+class _GCNEHybridMPHead(nn.Module):
+    """Edge-aware GCN MP head matching GNN+ ``gcne`` (:class:`GCNConvWithEdges`)."""
+
+    def __init__(
+        self,
+        d_h: int,
+        *,
+        edge_dim: int,
+        gnn_dropout: float = 0.0,
+    ) -> None:
+        super().__init__()
+        self.d_h = d_h
+        self.edge_proj = nn.Linear(edge_dim, d_h)
+        self.conv = GCNConvWithEdges(d_h, d_h, edge_dim=d_h, bias=True)
+        self._gnn_dropout = float(gnn_dropout)
+
+    def forward(
+        self,
+        x_h: Tensor,
+        edge_index: Tensor,
+        edge_attr: Optional[Tensor] = None,
+    ) -> Tensor:
+        """Run gcne-style message passing at hidden width ``d_h``."""
+        num_e = edge_index.size(1)
+        dev, dt = x_h.device, x_h.dtype
+        if edge_attr is None:
+            eh = torch.zeros((num_e, self.d_h), device=dev, dtype=dt)
+        else:
+            eh = self.edge_proj(edge_attr.float()).to(dtype=dt)
+        out = self.conv(x_h, edge_index, eh)
+        return F.dropout(out, p=self._gnn_dropout, training=self.training)
+
+
 class _GINEHybridMPHead(nn.Module):
     """Message-passing head using GINEConv in hidden width ``d_h``."""
 
@@ -184,6 +220,13 @@ class _ProjectedMPHead(nn.Module):
             self.conv = cast(
                 nn.Module, _GINEHybridMPHead(d_h, gnn_dropout=gnn_dropout)
             )
+        elif self.kind == 'GCNE':
+            self.conv = cast(
+                nn.Module,
+                _GCNEHybridMPHead(
+                    d_h, edge_dim=d_model, gnn_dropout=gnn_dropout
+                ),
+            )
         elif self.kind in ('GGNN', 'GATEDGRAPH', 'GATEDGRAPHCONV'):
             self.conv = cast(
                 nn.Module,
@@ -199,7 +242,7 @@ class _ProjectedMPHead(nn.Module):
         else:
             raise ValueError(
                 f'Unknown MP head type: {kind!r} '
-                '(expected GCN, GIN, GINE, GGNN, GATEDGCN, SAGE, or GAT)'
+                '(expected GCN, GCNE, GIN, GINE, GGNN, GATEDGCN, SAGE, or GAT)'
             )
 
     def forward(
@@ -217,7 +260,12 @@ class _ProjectedMPHead(nn.Module):
 
         if isinstance(
             self.conv,
-            (_GINEHybridMPHead, _GatedGraphHybridMPHead, _ResGatedHybridMPHead),
+            (
+                _GCNEHybridMPHead,
+                _GINEHybridMPHead,
+                _GatedGraphHybridMPHead,
+                _ResGatedHybridMPHead,
+            ),
         ):
             raw = self.conv(h, edge_index, edge_attr)
         else:

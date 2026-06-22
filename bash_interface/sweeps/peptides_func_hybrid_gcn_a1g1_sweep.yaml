@@ -43,7 +43,7 @@ parameters:
   hybrid_num_attn_heads:
     value: 1
   hybrid_gnn_types:
-    value: GCN
+    value: GCNE
   hybrid_d_h:
     values: [8, 16, 32, 64]
   hybrid_attn_dropout:

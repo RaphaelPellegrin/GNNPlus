@@ -52,11 +52,11 @@ gnn:
   hybrid:
     num_attn_heads: 1
     num_gnn_heads: 1
-    d_h: 16
+    d_h: 64
     attn_mask: full
     gate: headwise
     norm: layernorm
-    gnn_types: "GCN"
+    gnn_types: "GCNE"
     attn_dropout: 0.1
     mp_dropout: 0.2
     block_bn: false
