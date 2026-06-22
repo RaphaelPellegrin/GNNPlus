@@ -55,6 +55,25 @@ SWEEP_ARRAY_TASKS=8 SWEEP_ARRAY_PARALLEL=4 RUNS_PER_AGENT=4 \
     cifar10 weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
 ```
 
+**Peptides-func + GCN MP experts** (every preset includes GCN; molecular):
+
+| YAML | W&B sweep name |
+|------|----------------|
+| `peptides_func_hybrid_gcn_mp_sweep.yaml` | `GNNplus_hybriddgatedGNN-peptides_func-gcn-mp` |
+
+- `--molecular=true`, metric **`test/ap`** (maximize), `hybrid_num_gnn_heads`: **2, 4**
+- Presets: `GCN,GCN`, `GCN,GINE`, `GCN,GIN`, `GCN,SAGE`, `GCN,GAT`, `GCN,GATEDGCN`, … and 4-head mixes
+
+```bash
+bash bash_interface/sweeps/create_sweep.sh \
+  bash_interface/sweeps/peptides_func_hybrid_gcn_mp_sweep.yaml
+
+SWEEP_ARRAY_TASKS=8 SWEEP_ARRAY_PARALLEL=4 RUNS_PER_AGENT=4 \
+  SWEEP_SLURM_TIME=96:00:00 \
+  bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+    peptides_func weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+```
+
 **Finding runs in W&B:** sweep trials often show as **stopped** or **crashed** when Hyperband prunes them (e.g. at epoch 15) — they still appear under the sweep. Filter **Runs** by created date, or open the sweep page directly. SLURM logs: `logs_gnnplus/sweep_agent_<JOBID>_<TASK>.log` (not `gnnplus_sweep_mnist_*`).
 
 **Gate metrics** (`gates/layer0/attn_0_gate_mean`, …): logged every epoch for `hybrid_gnn` when `log_gate_stats: true` (headwise and elementwise). Sweeps force `gnn.hybrid.log_gate_stats True` in the wrapper. A dedicated W&B log call writes gates to **history and run summary** (search `gates/` in Charts or the run Overview → Summary). Cluster logs print `Hybrid gate stats: logging N W&B metrics` on epoch 0 when collection succeeds.

@@ -1,0 +1,19 @@
+  hybrid_gnn_types:
+    values:
+      # 2 MP heads — every preset includes at least one GCN expert
+      - "GCN,GCN"
+      - "GCN,GINE"
+      - "GCN,GIN"
+      - "GCN,SAGE"
+      - "GCN,GAT"
+      - "GCN,GATEDGCN"
+      - "GCN,GATEDGRAPH"
+      - "GCN,GGNN"
+      # 4 MP heads — explicit mixes (use when hybrid_num_gnn_heads=4)
+      - "GCN,GCN,GCN,GCN"
+      - "GCN,GINE,GCN,GINE"
+      - "GCN,GINE,GIN,SAGE"
+      - "GCN,GIN,GCN,GIN"
+      - "GCN,SAGE,GCN,SAGE"
+      - "GCN,GATEDGCN,GCN,GINE"
+      - "GCN,GCN,GINE,GINE"
