@@ -1,0 +1,66 @@
+# MNIST hybrid sweep: MP experts pair GatedGCN with GCN / GIN / SAGE / GAT.
+# Motivation: GatedGCN+ is the strongest classic GNN+ baseline on MNIST; this
+# sweep asks which second (or third/fourth) MP head type complements it.
+#
+# Note: if hybrid_num_gnn_heads > len(hybrid_gnn_types preset), parse_hybrid_gnn_types
+# pads with GCN,GIN,SAGE,GAT — prefer presets whose length matches num_gnn_heads.
+#
+# Create + launch (cluster login node):
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/mnist_hybrid_gatedgcn_mp_sweep.yaml
+#   SWEEP_ARRAY_TASKS=8 SWEEP_ARRAY_PARALLEL=4 RUNS_PER_AGENT=4 \
+#     bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+#       mnist <entity>/GNNPlus/<new_sweep_id>
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: maximize
+  name: test/accuracy
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_hybriddgatedGNN-mnist-gatedgcn-mp
+
+early_terminate:
+  type: hyperband
+  min_iter: 15
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/mnist.yaml
+  - --molecular=false
+  - ${args}
+
+parameters:
+  hybrid_num_attn_heads:
+    values: [2, 4, 8]
+  hybrid_num_gnn_heads:
+    values: [2, 4]
+  hybrid_d_h:
+    values: [8, 16, 32, 64]
+  hybrid_attn_dropout:
+    values: [0.1, 0.2, 0.5]
+  hybrid_attn_mask:
+    values: [full, graph_restricted]
+  hybrid_gate:
+    values: [elementwise, headwise]
+  hybrid_norm:
+    values: [layernorm, rmsnorm]
+  hybrid_gnn_types:
+    values:
+      - "GATEDGCN,GCN"
+      - "GATEDGCN,GIN"
+      - "GATEDGCN,SAGE"
+      - "GATEDGCN,GAT"
+      - "GATEDGCN,GATEDGCN"
+      - "GATEDGCN,GCN,GATEDGCN,GCN"
+      - "GATEDGCN,GIN,GATEDGCN,GIN"
+      - "GATEDGCN,SAGE,GATEDGCN,SAGE"
+      - "GATEDGCN,GCN,GIN,SAGE"
+      - "GATEDGCN,GATEDGCN,GCN,GIN"
+      - "GATEDGCN,GATEDGCN,GATEDGCN,GATEDGCN"

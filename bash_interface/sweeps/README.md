@@ -36,6 +36,27 @@ Each dataset sweep is named **`GNNplus_hybriddgatedGNN-<dataset>`** in W&B proje
 
 Python `parse_hybrid_gnn_types` pads or truncates the list to match `hybrid_num_gnn_heads`.
 
+**MNIST / CIFAR10 + GatedGCN MP experts** (pairs GatedGCN with GCN/GIN/SAGE/GAT):
+
+| Dataset | YAML | W&B sweep name |
+|---------|------|----------------|
+| MNIST | `mnist_hybrid_gatedgcn_mp_sweep.yaml` | `GNNplus_hybriddgatedGNN-mnist-gatedgcn-mp` |
+| CIFAR10 | `cifar10_hybrid_gatedgcn_mp_sweep.yaml` | `GNNplus_hybriddgatedGNN-cifar10-gatedgcn-mp` |
+
+- `hybrid_num_gnn_heads`: **2, 4 only** (presets match 2- or 4-head lists)
+- Presets: `GATEDGCN,GCN`, `GATEDGCN,GIN`, `GATEDGCN,SAGE`, `GATEDGCN,GAT`, `GATEDGCN,GATEDGCN`, and 4-head alternates
+
+```bash
+bash bash_interface/sweeps/create_sweep.sh \
+  bash_interface/sweeps/cifar10_hybrid_gatedgcn_mp_sweep.yaml
+
+SWEEP_ARRAY_TASKS=8 SWEEP_ARRAY_PARALLEL=4 RUNS_PER_AGENT=4 \
+  bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+    cifar10 weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+```
+
+**Finding runs in W&B:** sweep trials often show as **stopped** or **crashed** when Hyperband prunes them (e.g. at epoch 15) — they still appear under the sweep. Filter **Runs** by created date, or open the sweep page directly. SLURM logs: `logs_gnnplus/sweep_agent_<JOBID>_<TASK>.log` (not `gnnplus_sweep_mnist_*`).
+
 **Gate metrics** (`gates/layer0/attn_0_gate_mean`, …): logged every epoch for `hybrid_gnn` when `log_gate_stats: true` (headwise and elementwise). Sweeps force `gnn.hybrid.log_gate_stats True` in the wrapper. A dedicated W&B log call writes gates to **history and run summary** (search `gates/` in Charts or the run Overview → Summary). Cluster logs print `Hybrid gate stats: logging N W&B metrics` on epoch 0 when collection succeeds.
 
 **More runs on an existing sweep** (same W&B sweep id, no new sweep):

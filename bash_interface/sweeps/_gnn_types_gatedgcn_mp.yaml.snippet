@@ -1,0 +1,17 @@
+  hybrid_gnn_types:
+    values:
+      # 2 MP heads — one GatedGCN expert + one classic GNN+ layer type
+      - "GATEDGCN,GCN"
+      - "GATEDGCN,GIN"
+      - "GATEDGCN,SAGE"
+      - "GATEDGCN,GAT"
+      # 2-head homogeneous (paper GatedGCN+ baseline style)
+      - "GATEDGCN,GATEDGCN"
+      # 4 MP heads — explicit mixes (use when hybrid_num_gnn_heads=4)
+      - "GATEDGCN,GCN,GATEDGCN,GCN"
+      - "GATEDGCN,GIN,GATEDGCN,GIN"
+      - "GATEDGCN,SAGE,GATEDGCN,SAGE"
+      - "GATEDGCN,GCN,GIN,SAGE"
+      - "GATEDGCN,GATEDGCN,GCN,GIN"
+      # 4-head all GatedGCN
+      - "GATEDGCN,GATEDGCN,GATEDGCN,GATEDGCN"
