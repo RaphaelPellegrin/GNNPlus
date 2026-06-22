@@ -47,7 +47,7 @@ parameters:
   hybrid_num_attn_heads:
     values: [0, 1, 2]
   optim.base_lr:
-    distribution: log_uniform
+    distribution: log_uniform_values
     min: 0.0002
     max: 0.003
   hybrid_gnn_types:
