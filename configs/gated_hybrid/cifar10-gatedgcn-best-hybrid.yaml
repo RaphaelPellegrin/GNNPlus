@@ -1,0 +1,72 @@
+# CIFAR10 best-hybrid search — fair GatedGCN+ MP (post 2f8ad6b).
+# Anchor: gatedgcn/cifar10.yaml outer hyperparams; GATEDGCN MP head, gnn.ffn false.
+# Goal: beat ~0.76 test/accuracy from fair repro sweep o7tsb3k1.
+out_dir: results
+metric_best: accuracy
+wandb:
+  use: False
+  project: GNNPlus
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - cluster
+    - cifar10_best_hybrid
+dataset:
+  format: PyG-GNNBenchmarkDataset
+  name: CIFAR10
+  task: graph
+  task_type: classification
+  transductive: False
+  node_encoder: True
+  node_encoder_name: LinearNode
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: LinearEdge
+  edge_encoder_bn: False
+posenc_RWSE:
+  enable: False
+  kernel:
+    times_func: range(1,21)
+  model: Linear
+  raw_norm_type: BatchNorm
+train:
+  mode: custom
+  batch_size: 16
+  eval_period: 1
+  ckpt_period: 100
+  eval_smoothing_metrics: False
+model:
+  type: hybrid_gnn
+  loss_fun: cross_entropy
+  edge_decoding: dot
+  graph_pooling: mean
+gnn:
+  head: default
+  layers_mp: 10
+  layers_pre_mp: 0
+  layers_post_mp: 1
+  dim_inner: 35
+  act: relu
+  dropout: 0.15
+  agg: mean
+  ffn: False
+  residual: True
+  hybrid:
+    num_attn_heads: 1
+    num_gnn_heads: 1
+    d_h: 64
+    attn_mask: full
+    gate: headwise
+    norm: layernorm
+    gnn_types: "GATEDGCN"
+    attn_dropout: 0.1
+    mp_dropout: 0.15
+    block_bn: false
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 1e-5
+  base_lr: 0.001
+  max_epoch: 400
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10

@@ -108,6 +108,8 @@ while [ "$#" -gt 0 ]; do
                 hybrid_norm) _set_opt "gnn.hybrid.norm" "${val}" ;;
                 hybrid_mp_dropout) _set_opt "gnn.hybrid.mp_dropout" "${val}" ;;
                 hybrid_gnn_types) _set_opt "gnn.hybrid.gnn_types" "${val}" ;;
+                hybrid_layers_mp) _set_opt "gnn.layers_mp" "${val}" ;;
+                hybrid_max_epoch) _set_opt "optim.max_epoch" "${val}" ;;
                 base_lr|optim.base_lr) _set_opt "optim.base_lr" "${val}" ;;
                 batch_size) _set_opt "train.batch_size" "${val}" ;;
                 *) _set_opt "${key}" "${val}" ;;
@@ -131,6 +133,8 @@ while [ "$#" -gt 0 ]; do
                 hybrid_norm) _set_opt "gnn.hybrid.norm" "${val}" ;;
                 hybrid_mp_dropout) _set_opt "gnn.hybrid.mp_dropout" "${val}" ;;
                 hybrid_gnn_types) _set_opt "gnn.hybrid.gnn_types" "${val}" ;;
+                hybrid_layers_mp) _set_opt "gnn.layers_mp" "${val}" ;;
+                hybrid_max_epoch) _set_opt "optim.max_epoch" "${val}" ;;
                 base_lr|optim.base_lr) _set_opt "optim.base_lr" "${val}" ;;
                 batch_size) _set_opt "train.batch_size" "${val}" ;;
                 *) _set_opt "${key}" "${val}" ;;

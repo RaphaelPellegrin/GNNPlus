@@ -36,6 +36,18 @@ Each dataset sweep is named **`GNNplus_hybriddgatedGNN-<dataset>`** in W&B proje
 
 Python `parse_hybrid_gnn_types` pads or truncates the list to match `hybrid_num_gnn_heads`.
 
+**Fair repro sweeps** (grid, baseline vs +1 attn; use `sweep_wrapper_gnnplus_repro.sh`):
+
+| Dataset | YAML | W&B name | Notes |
+|---------|------|----------|-------|
+| CIFAR10 | `cifar10_repro_baseline_vs_attn_sweep.yaml` | `GNNplus_repro-cifar10-gatedgcn-baseline-vs-attn1` | e.g. `o7tsb3k1` |
+| MNIST | `mnist_repro_baseline_vs_attn_sweep.yaml` | `GNNplus_repro-mnist-gatedgcn-baseline-vs-attn1` | seed 1 |
+
+**CIFAR10 best-hybrid** (Bayes; `cifar10_best_hybrid_sweep.yaml` → `GNNplus_best_hybrid-cifar10`):
+
+- Base `cifar10-gatedgcn-best-hybrid.yaml` (fair `GATEDGCN` MP, 400 ep)
+- Sweeps `hybrid_num_attn_heads` / `hybrid_num_gnn_heads` in `{1,2,4}`, `hybrid_d_h`, `hybrid_layers_mp`, MP presets, mask/gate/norm, dropout, LR
+
 **MNIST / CIFAR10 + GatedGCN MP experts** (pairs GatedGCN with GCN/GIN/SAGE/GAT):
 
 | Dataset | YAML | W&B sweep name |
