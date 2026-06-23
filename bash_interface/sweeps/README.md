@@ -53,6 +53,7 @@ Python `parse_hybrid_gnn_types` pads or truncates the list to match `hybrid_num_
 | Dataset | YAML | W&B sweep name |
 |---------|------|----------------|
 | MNIST | `mnist_hybrid_gatedgcn_mp_sweep.yaml` | `GNNplus_hybriddgatedGNN-mnist-gatedgcn-mp` |
+| MNIST LR follow-up | `mnist_hybrid_gatedgcn_mp_lr_sweep.yaml` | `GNNplus_hybriddgatedGNN-mnist-gatedgcn-mp-lr` (18-grid: attn 4/8, d_h, lr) |
 | CIFAR10 | `cifar10_hybrid_gatedgcn_mp_sweep.yaml` | `GNNplus_hybriddgatedGNN-cifar10-gatedgcn-mp` |
 
 - `hybrid_num_gnn_heads`: **2, 4 only** (presets match 2- or 4-head lists)

@@ -67,9 +67,13 @@ printf '%s\n' "${SWEEP_PATH}" > "${LAST_FILE}"
 _yaml_stem="$(basename "${YAML_PATH}" .yaml)"
 # e.g. mnist_hybrid_gnnplus_sweep → mnist; peptides_func_hybrid_gcn_mp_sweep → peptides_func
 # repro yamls: cifar10_repro_baseline_vs_attn_sweep → cifar10
+# best-hybrid: cifar10_best_hybrid_sweep → cifar10
 if [[ "${_yaml_stem}" == *_repro_baseline_vs_attn_sweep ]]; then
     DATASET_SLUG="${_yaml_stem%%_repro_baseline_vs_attn_sweep}"
     REPRO_SWEEP=1
+elif [[ "${_yaml_stem}" == *_best_hybrid_sweep ]]; then
+    DATASET_SLUG="${_yaml_stem%%_best_hybrid_sweep}"
+    REPRO_SWEEP=0
 else
     DATASET_SLUG="${_yaml_stem%%_hybrid_*}"
     REPRO_SWEEP=0

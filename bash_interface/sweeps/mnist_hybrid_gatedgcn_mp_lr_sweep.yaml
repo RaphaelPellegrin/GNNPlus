@@ -1,0 +1,53 @@
+# MNIST follow-up from nkwgduxb (~0.986 test/acc, commit 2f8ad6b).
+# Anchors: myxaiuut (4 attn, d_h=32, lr=0.0005) + 8-attn variant.
+# Fixed: 2 GNN heads, elementwise gate, GATEDGCN+GCN MP, full mask, rmsnorm, attn_dropout=0.1.
+# Swept: hybrid_num_attn_heads {4,8}, hybrid_d_h {8,32,128}, optim.base_lr {0.0005,0.001,0.005}.
+# Grid: 2×3×3 = 18 trials.
+#
+# Note: GATEDGCN = GatedGCNLayer (post-2f8ad6b).
+#
+# Create:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/mnist_hybrid_gatedgcn_mp_lr_sweep.yaml
+# Launch:
+#   SWEEP_ID=... SWEEP_DATASET=mnist RUNS_PER_AGENT=18 \
+#     sbatch --array=1-1 --mem=64GB --time=96:00:00 ... run_wandb_sweep_agent.sh
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: grid
+metric:
+  goal: maximize
+  name: test/accuracy
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_hybriddgatedGNN-mnist-gatedgcn-mp-lr
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/mnist.yaml
+  - --molecular=false
+  - --seed=0
+  - ${args}
+
+parameters:
+  hybrid_num_attn_heads:
+    values: [4, 8]
+  hybrid_num_gnn_heads:
+    value: 2
+  hybrid_gate:
+    value: elementwise
+  hybrid_attn_mask:
+    value: full
+  hybrid_norm:
+    value: rmsnorm
+  hybrid_attn_dropout:
+    value: 0.1
+  hybrid_gnn_types:
+    value: "GATEDGCN,GCN,GIN,SAGE"
+  hybrid_d_h:
+    values: [8, 32, 128]
+  optim.base_lr:
+    values: [0.001, 0.005]
