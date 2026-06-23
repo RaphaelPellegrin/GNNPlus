@@ -1,8 +1,9 @@
 # MNIST follow-up from nkwgduxb (~0.986 test/acc, commit 2f8ad6b).
 # Anchors: myxaiuut (4 attn, d_h=32, lr=0.0005) + 8-attn variant.
 # Fixed: 2 GNN heads, elementwise gate, GATEDGCN+GCN MP, full mask, rmsnorm, attn_dropout=0.1.
-# Swept: hybrid_num_attn_heads {4,8}, hybrid_d_h {8,32,128}, optim.base_lr {0.0005,0.001,0.005}.
-# Grid: 2×3×3 = 18 trials.
+# Swept: hybrid_num_attn_heads {4,8}, hybrid_d_h {8,32,128},
+#        optim.base_lr {0.0005,0.001,0.005}, hybrid_max_epoch {200,300}.
+# Grid: 2×3×3×2 = 36 trials.
 #
 # Note: GATEDGCN = GatedGCNLayer (post-2f8ad6b).
 #
@@ -10,8 +11,8 @@
 #   bash bash_interface/sweeps/create_sweep.sh \
 #     bash_interface/sweeps/mnist_hybrid_gatedgcn_mp_lr_sweep.yaml
 # Launch:
-#   SWEEP_ID=... SWEEP_DATASET=mnist RUNS_PER_AGENT=18 \
-#     sbatch --array=1-1 --mem=64GB --time=96:00:00 ... run_wandb_sweep_agent.sh
+#   SWEEP_ID=... SWEEP_DATASET=mnist RUNS_PER_AGENT=36 \
+#     sbatch --array=1-1 --mem=64GB --time=120:00:00 ... run_wandb_sweep_agent.sh
 
 program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
 method: grid
@@ -50,4 +51,6 @@ parameters:
   hybrid_d_h:
     values: [8, 32, 128]
   optim.base_lr:
-    values: [0.001, 0.005]
+    values: [0.0005, 0.001, 0.005]
+  hybrid_max_epoch:
+    values: [200, 300]
