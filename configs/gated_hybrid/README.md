@@ -108,4 +108,6 @@ Matches Heterogeneity_Profile: use **`optim.optimizer: schedulefreeAdamW`** with
 | `mnist_hybrid_gatedgcn_mp_lr_schedulefree_sweep.yaml` | MNIST 36-trial LR grid |
 | `peptides_func_best_hybrid_schedulefree_sweep.yaml` | peptides-func Bayes best-hybrid |
 
+**ZINC fair GCNE hybrid** (`zinc_hybrid_gcne_attn_gnn_sweep.yaml`): attn {1,2} × gnn {1,2}, `GCNE` MP only, 4 trials, 2000 ep.
+
 Install `schedulefree` on cluster (`requirements-cluster.txt`).

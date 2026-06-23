@@ -1,0 +1,47 @@
+# ZINC fair hybrid sweep: native GCNE MP + attention, attn {1,2} × gnn {1,2} = 4 trials.
+# GCNE = full GCNConvLayer (matches configs/gcn/zinc.yaml gcne baseline).
+# hybrid_gnn_types=GCNE duplicates to num_gnn_heads (2×GCNE when gnn=2).
+#
+# Create:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/zinc_hybrid_gcne_attn_gnn_sweep.yaml
+# Launch (4 trials, 2000 ep each — use 192h):
+#   SWEEP_ID=... SWEEP_DATASET=zinc RUNS_PER_AGENT=4 \
+#     sbatch --array=1-1 --mem=64GB --time=192:00:00 ... run_wandb_sweep_agent.sh
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: grid
+metric:
+  goal: minimize
+  name: test/mae
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_hybrid-zinc-gcne-attn-gnn
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/zinc-gcne-hybrid.yaml
+  - --molecular=true
+  - --seed=0
+  - ${args}
+
+parameters:
+  hybrid_num_attn_heads:
+    values: [1, 2]
+  hybrid_num_gnn_heads:
+    values: [1, 2]
+  hybrid_gnn_types:
+    value: GCNE
+  hybrid_gate:
+    value: headwise
+  hybrid_attn_mask:
+    value: full
+  hybrid_norm:
+    value: layernorm
+  hybrid_d_h:
+    value: 32
+  hybrid_attn_dropout:
+    value: 0.1
