@@ -1,0 +1,31 @@
+# MNIST repro sweep: exactly 2 runs — best GatedGCN baseline vs same + 1 attention head.
+# Baseline: configs/gatedgcn/mnist.yaml, seed 1 (mnist_gatedgcn_seed1_cluster).
+# Hybrid GATEDGCN MP uses GatedGCNLayer (edge-aware) at d_h=64; gnn.ffn false (FFN in MP head).
+#
+# Create:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/mnist_repro_baseline_vs_attn_sweep.yaml
+# Launch (2 trials total):
+#   SWEEP_ID=... SWEEP_DATASET=mnist RUNS_PER_AGENT=2 \
+#     sbatch --array=1-1 --time=96:00:00 ... run_wandb_sweep_agent.sh
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus_repro.sh
+method: grid
+metric:
+  goal: maximize
+  name: test/accuracy
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_repro-mnist-gatedgcn-baseline-vs-attn1
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --dataset=mnist
+  - ${args}
+
+parameters:
+  repro_variant:
+    values: [baseline, hybrid_attn1]

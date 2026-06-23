@@ -7,7 +7,7 @@
 #   repro_variant=baseline     → original GNN+ yaml (custom_gnn)
 #   repro_variant=hybrid_attn1   → gated_hybrid *-repro-a1.yaml (1 MP + 1 attn)
 #
-# Leading arg: --dataset=cifar10 | peptides_func
+# Leading arg: --dataset=cifar10 | mnist | peptides_func
 # W&B passes:  --repro_variant=baseline | hybrid_attn1
 # =============================================================================
 
@@ -73,6 +73,25 @@ case "${DATASET}" in
                 ;;
             *)
                 echo "Unknown repro_variant for cifar10: ${VARIANT}" >&2
+                exit 2
+                ;;
+        esac
+        ;;
+    mnist)
+        case "${VARIANT}" in
+            baseline)
+                CFG="configs/gatedgcn/mnist.yaml"
+                SEED="1"
+                WANDB_NAME="mnist_gatedgcn_seed1_repro_baseline"
+                ;;
+            hybrid_attn1)
+                CFG="configs/gated_hybrid/mnist-gatedgcn-repro-a1.yaml"
+                SEED="1"
+                WANDB_NAME="mnist_gatedgcn_seed1_repro_hybrid_attn1"
+                EXTRA_ARGS+=(gnn.hybrid.log_gate_stats True)
+                ;;
+            *)
+                echo "Unknown repro_variant for mnist: ${VARIANT}" >&2
                 exit 2
                 ;;
         esac

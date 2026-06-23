@@ -171,6 +171,17 @@ bash bash_interface/sweeps/launch_hybrid_sweeps.sh --create-only all
 | hiv | `test/auc` | maximize |
 | cluster, pattern | `test/accuracy-SBM` | maximize |
 
-## Note on GatedGCN
+## Note on `GATEDGCN` (hybrid MP head semantics)
 
-This sweeps **`hybrid_gnn`** only — not the GNN+ paper baseline **`gatedgcn`** (`custom_gnn` + `layer_type: gatedgcn`).
+This repo sweeps **`hybrid_gnn`**, not the GNN+ paper baseline **`gatedgcn`** (`custom_gnn` + `layer_type: gatedgcn`).
+
+**Important:** the string `GATEDGCN` in `hybrid_gnn_types` / `gnn.hybrid.gnn_types` **changed meaning** at commit **`2f8ad6b`**:
+
+| | Pre-`2f8ad6b` | Post-`2f8ad6b` |
+|--|---------------|----------------|
+| `GATEDGCN` | `ResGatedGraphConv`, no edges | **`GatedGCNLayer`** (edge-aware GatedGCN+) |
+| Old behavior today | — | use **`RESGATEDGCN`** explicitly |
+
+When comparing W&B sweeps, check git SHA or sweep creation date. Pre-fix CIFAR repro sweep **`5q8upl19`** used the old (unfair) mapping. Recreate from `cifar10_repro_baseline_vs_attn_sweep.yaml` after pulling `2f8ad6b`.
+
+Full table: [`configs/gated_hybrid/README.md`](../../configs/gated_hybrid/README.md#gatedgcn-semantics-old-vs-new).

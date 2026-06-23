@@ -307,6 +307,8 @@ class _ProjectedMPHead(nn.Module):
                 ),
             )
         elif self.kind in ('GATEDGCN',):
+            # GatedGCN+ (GNNPlus GatedGCNLayer). Pre-2f8ad6b this string mapped to
+            # ResGatedGraphConv; use RESGATEDGCN for that legacy path.
             self.conv = cast(
                 nn.Module,
                 _GatedGCNHybridMPHead(

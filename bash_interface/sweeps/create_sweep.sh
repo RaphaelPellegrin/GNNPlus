@@ -66,16 +66,32 @@ printf '%s\n' "${SWEEP_PATH}" > "${LAST_FILE}"
 
 _yaml_stem="$(basename "${YAML_PATH}" .yaml)"
 # e.g. mnist_hybrid_gnnplus_sweep → mnist; peptides_func_hybrid_gcn_mp_sweep → peptides_func
-DATASET_SLUG="${_yaml_stem%%_hybrid_*}"
+# repro yamls: cifar10_repro_baseline_vs_attn_sweep → cifar10
+if [[ "${_yaml_stem}" == *_repro_baseline_vs_attn_sweep ]]; then
+    DATASET_SLUG="${_yaml_stem%%_repro_baseline_vs_attn_sweep}"
+    REPRO_SWEEP=1
+else
+    DATASET_SLUG="${_yaml_stem%%_hybrid_*}"
+    REPRO_SWEEP=0
+fi
 
 echo ""
 echo "Sweep created: ${SWEEP_PATH}"
 echo "Launch agents (copy as one block; do not paste wandb log lines into shell):"
-cat <<EOF
+if [ "${REPRO_SWEEP}" -eq 1 ]; then
+    cat <<EOF
+  SWEEP_ID=${SWEEP_PATH} SWEEP_DATASET=${DATASET_SLUG} RUNS_PER_AGENT=2 \\
+  sbatch --job-name=gnnplus_repro_${DATASET_SLUG} --array=1-1 --mem=64GB --time=96:00:00 \\
+    --export=ALL,SWEEP_ID=${SWEEP_PATH},SWEEP_DATASET=${DATASET_SLUG},RUNS_PER_AGENT=2,WANDB_PROJECT=${WANDB_PROJECT},ENV_NAME=${ENV_NAME:-gnnplus} \\
+    bash_interface/sweeps/run_wandb_sweep_agent.sh
+EOF
+else
+    cat <<EOF
   SWEEP_ID=${SWEEP_PATH} SWEEP_DATASET=${DATASET_SLUG} RUNS_PER_AGENT=4 \\
   sbatch --job-name=gnnplus_sweep_${DATASET_SLUG} --array=1-8%4 --mem=64GB --time=96:00:00 \\
     --export=ALL,SWEEP_ID=${SWEEP_PATH},SWEEP_DATASET=${DATASET_SLUG},RUNS_PER_AGENT=4,WANDB_PROJECT=${WANDB_PROJECT},ENV_NAME=${ENV_NAME:-gnnplus} \\
     bash_interface/sweeps/run_wandb_sweep_agent.sh
 EOF
+fi
 
 rm -f "${TMP_OUT}"
