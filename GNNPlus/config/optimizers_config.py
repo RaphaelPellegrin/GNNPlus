@@ -26,3 +26,8 @@ def extended_optim_cfg(cfg):
     # Clip gradient norms while training
     cfg.optim.clip_grad_norm = False
     cfg.optim.clip_grad_norm_value = 1.0
+
+    # ScheduleFreeAdamW (pair with optim.scheduler: schedulefree)
+    cfg.optim.schedulefree_beta1 = 0.9
+    cfg.optim.schedulefree_beta2 = 0.999
+    cfg.optim.schedulefree_warmup_steps = 0

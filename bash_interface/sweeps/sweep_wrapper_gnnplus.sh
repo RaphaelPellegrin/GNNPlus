@@ -111,6 +111,14 @@ while [ "$#" -gt 0 ]; do
                 hybrid_layers_mp) _set_opt "gnn.layers_mp" "${val}" ;;
                 hybrid_max_epoch) _set_opt "optim.max_epoch" "${val}" ;;
                 base_lr|optim.base_lr) _set_opt "optim.base_lr" "${val}" ;;
+                optim.optimizer) _set_opt "optim.optimizer" "${val}" ;;
+                optim.scheduler) _set_opt "optim.scheduler" "${val}" ;;
+                schedulefree_beta1|optim.schedulefree_beta1)
+                    _set_opt "optim.schedulefree_beta1" "${val}" ;;
+                schedulefree_beta2|optim.schedulefree_beta2)
+                    _set_opt "optim.schedulefree_beta2" "${val}" ;;
+                schedulefree_warmup_steps|optim.schedulefree_warmup_steps)
+                    _set_opt "optim.schedulefree_warmup_steps" "${val}" ;;
                 batch_size) _set_opt "train.batch_size" "${val}" ;;
                 *) _set_opt "${key}" "${val}" ;;
             esac
@@ -136,6 +144,14 @@ while [ "$#" -gt 0 ]; do
                 hybrid_layers_mp) _set_opt "gnn.layers_mp" "${val}" ;;
                 hybrid_max_epoch) _set_opt "optim.max_epoch" "${val}" ;;
                 base_lr|optim.base_lr) _set_opt "optim.base_lr" "${val}" ;;
+                optim.optimizer) _set_opt "optim.optimizer" "${val}" ;;
+                optim.scheduler) _set_opt "optim.scheduler" "${val}" ;;
+                schedulefree_beta1|optim.schedulefree_beta1)
+                    _set_opt "optim.schedulefree_beta1" "${val}" ;;
+                schedulefree_beta2|optim.schedulefree_beta2)
+                    _set_opt "optim.schedulefree_beta2" "${val}" ;;
+                schedulefree_warmup_steps|optim.schedulefree_warmup_steps)
+                    _set_opt "optim.schedulefree_warmup_steps" "${val}" ;;
                 batch_size) _set_opt "train.batch_size" "${val}" ;;
                 *) _set_opt "${key}" "${val}" ;;
             esac

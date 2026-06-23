@@ -19,6 +19,12 @@ from GNNPlus.hybrid_gate_tracking import (
     hybrid_gate_logging_enabled,
     publish_gate_stats_to_wandb,
 )
+from GNNPlus.optimizer.schedulefree_support import (
+    get_optimizer_logged_lr,
+    set_optimizer_eval_mode,
+    set_optimizer_train_mode,
+    uses_schedulefree_scheduler,
+)
 
 
 def _parse_wandb_tags() -> list[str]:
@@ -32,6 +38,7 @@ def _parse_wandb_tags() -> list[str]:
 
 def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation):
     model.train()
+    set_optimizer_train_mode(optimizer)
     optimizer.zero_grad()
     time_start = time.time()
     for iter, batch in enumerate(loader):
@@ -64,7 +71,7 @@ def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation)
         logger.update_stats(true=_true,
                             pred=_pred,
                             loss=loss.detach().cpu().item(),
-                            lr=scheduler.get_last_lr()[0],
+                            lr=get_optimizer_logged_lr(optimizer),
                             time_used=time.time() - time_start,
                             params=cfg.params,
                             dataset_name=cfg.dataset.name,
@@ -74,7 +81,8 @@ def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation)
 
 
 @torch.no_grad()
-def eval_epoch(logger, loader, model, split='val'):
+def eval_epoch(logger, loader, model, split='val', optimizer=None):
+    set_optimizer_eval_mode(optimizer)
     model.eval()
     time_start = time.time()
     for batch in loader:
@@ -167,7 +175,7 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
         if is_eval_epoch(cur_epoch):
             for i in range(1, num_splits):
                 eval_epoch(loggers[i], loaders[i], model,
-                           split=split_names[i - 1])
+                           split=split_names[i - 1], optimizer=optimizer)
                 perf[i].append(loggers[i].write_epoch(cur_epoch))
         else:
             for i in range(1, num_splits):
@@ -176,7 +184,7 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
         val_perf = perf[1]
         if cfg.optim.scheduler == 'reduce_on_plateau':
             scheduler.step(val_perf[-1]['loss'])
-        else:
+        elif not uses_schedulefree_scheduler(cfg.optim.scheduler):
             scheduler.step()
         full_epoch_times.append(time.perf_counter() - start_time)
         # Checkpoint with regular frequency (if enabled).

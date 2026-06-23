@@ -3,14 +3,17 @@ import torch
 import logging
 
 import GNNPlus  # noqa, register custom modules
-from GNNPlus.optimizer.extra_optimizers import ExtendedSchedulerConfig
+from GNNPlus.optimizer.extra_optimizers import (
+    ExtendedOptimizerConfig,
+    ExtendedSchedulerConfig,
+)
 
 from torch_geometric.graphgym.cmd_args import parse_args
 from torch_geometric.graphgym.config import (cfg, set_cfg, load_cfg)
 from torch_geometric.graphgym.loader import create_loader
 from torch_geometric.graphgym.logger import set_printing
 from torch_geometric.graphgym.optim import create_optimizer, \
-    create_scheduler, OptimizerConfig
+    create_scheduler
 from torch_geometric.graphgym.model_builder import create_model
 from torch_geometric.graphgym.train import GraphGymDataModule, train
 from torch_geometric.graphgym.utils.comp_budget import params_count
@@ -28,10 +31,17 @@ torch.backends.cudnn.allow_tf32 = True  # Default True
 
 
 def new_optimizer_config(cfg):
-    return OptimizerConfig(optimizer=cfg.optim.optimizer,
-                           base_lr=cfg.optim.base_lr,
-                           weight_decay=cfg.optim.weight_decay,
-                           momentum=cfg.optim.momentum)
+    return ExtendedOptimizerConfig(
+        optimizer=cfg.optim.optimizer,
+        base_lr=cfg.optim.base_lr,
+        weight_decay=cfg.optim.weight_decay,
+        momentum=cfg.optim.momentum,
+        schedulefree_beta1=float(getattr(cfg.optim, 'schedulefree_beta1', 0.9)),
+        schedulefree_beta2=float(getattr(cfg.optim, 'schedulefree_beta2', 0.999)),
+        schedulefree_warmup_steps=int(
+            getattr(cfg.optim, 'schedulefree_warmup_steps', 0)
+        ),
+    )
 
 
 def new_scheduler_config(cfg):

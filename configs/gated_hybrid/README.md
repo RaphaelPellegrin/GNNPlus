@@ -97,3 +97,15 @@ For peptides hybrid configs using `GCNE`, set **`gnn.ffn: false`** (FFN lives in
 | peptides-func | `configs/gcn/peptides-func.yaml` | `GCNE` (full `GCNConvLayer`) | `peptides_func_repro_gcne_dh_sweep.yaml` |
 
 For CIFAR hybrid configs using `GATEDGCN`, set **`gnn.ffn: false`** so FFN lives only inside `GatedGCNLayer` (same as the custom_gnn baseline stack).
+
+### ScheduleFree (`schedulefreeAdamW` + `optim.scheduler: schedulefree`)
+
+Matches Heterogeneity_Profile: use **`optim.optimizer: schedulefreeAdamW`** with **`optim.scheduler: schedulefree`** (no `cosine_with_warmup`). Warmup is in **optimizer steps** via `optim.schedulefree_warmup_steps`.
+
+| Sweep yaml | Dataset |
+|------------|---------|
+| `cifar10_best_hybrid_schedulefree_sweep.yaml` | CIFAR10 Bayes best-hybrid |
+| `mnist_hybrid_gatedgcn_mp_lr_schedulefree_sweep.yaml` | MNIST 36-trial LR grid |
+| `peptides_func_best_hybrid_schedulefree_sweep.yaml` | peptides-func Bayes best-hybrid |
+
+Install `schedulefree` on cluster (`requirements-cluster.txt`).

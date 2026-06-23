@@ -1,0 +1,58 @@
+# MNIST GatedGCN-mp LR grid + ScheduleFreeAdamW (same grid as mnist_hybrid_gatedgcn_mp_lr_sweep).
+# Fixed SF hyperparams anchored on Heterogeneity_Profile MNIST schedulefree runs.
+# Grid: 2×3×3×2 = 36 trials.
+#
+# Create:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/mnist_hybrid_gatedgcn_mp_lr_schedulefree_sweep.yaml
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: grid
+metric:
+  goal: maximize
+  name: test/accuracy
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_hybriddgatedGNN-mnist-gatedgcn-mp-lr-schedulefree
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/mnist.yaml
+  - --molecular=false
+  - --seed=0
+  - ${args}
+
+parameters:
+  optim.optimizer:
+    value: schedulefreeAdamW
+  optim.scheduler:
+    value: schedulefree
+  schedulefree_beta1:
+    value: 0.95
+  schedulefree_beta2:
+    value: 0.999
+  schedulefree_warmup_steps:
+    value: 5500
+  hybrid_num_attn_heads:
+    values: [4, 8]
+  hybrid_num_gnn_heads:
+    value: 2
+  hybrid_gate:
+    value: elementwise
+  hybrid_attn_mask:
+    value: full
+  hybrid_norm:
+    value: rmsnorm
+  hybrid_attn_dropout:
+    value: 0.1
+  hybrid_gnn_types:
+    value: "GATEDGCN,GCN,GIN,SAGE"
+  hybrid_d_h:
+    values: [8, 32, 128]
+  optim.base_lr:
+    values: [0.0005, 0.001, 0.005]
+  hybrid_max_epoch:
+    values: [200, 300]

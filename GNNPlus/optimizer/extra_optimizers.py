@@ -1,15 +1,21 @@
 import logging
 import math
-from typing import Iterator
 from dataclasses import dataclass
+from typing import Iterator
 
 import torch.optim as optim
 from torch.nn import Parameter
 from torch.optim import Adagrad, AdamW, Optimizer
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
+from torch_geometric.graphgym.optim import OptimizerConfig
 from torch_geometric.graphgym.optim import SchedulerConfig
 import torch_geometric.graphgym.register as register
+
+from GNNPlus.optimizer.schedulefree_support import (
+    AdamWScheduleFree,
+    ScheduleFreeScheduler,
+)
 
 
 @register.register_optimizer('adagrad')
@@ -24,6 +30,39 @@ def adamW_optimizer(params: Iterator[Parameter], base_lr: float,
     return AdamW(params, lr=base_lr, weight_decay=weight_decay)
 
 
+@register.register_optimizer('schedulefreeAdamW')
+def schedulefree_adamw_optimizer(
+    params: Iterator[Parameter],
+    base_lr: float,
+    weight_decay: float,
+    schedulefree_beta1: float = 0.9,
+    schedulefree_beta2: float = 0.999,
+    schedulefree_warmup_steps: int = 0,
+) -> Optimizer:
+    """AdamWScheduleFree optimizer (internal LR schedule; pair with ``schedulefree`` scheduler)."""
+    if AdamWScheduleFree is None:
+        raise ImportError(
+            "schedulefreeAdamW requires the 'schedulefree' package. "
+            "Install project dependencies from requirements-cluster.txt."
+        )
+    warmup_steps = max(0, int(schedulefree_warmup_steps))
+    return AdamWScheduleFree(
+        params,
+        lr=base_lr,
+        betas=(float(schedulefree_beta1), float(schedulefree_beta2)),
+        weight_decay=weight_decay,
+        warmup_steps=warmup_steps,
+    )
+
+
+@dataclass
+class ExtendedOptimizerConfig(OptimizerConfig):
+    """GNNPlus optimizer config including ScheduleFree hyperparameters."""
+
+    schedulefree_beta1: float = 0.9
+    schedulefree_beta2: float = 0.999
+    schedulefree_warmup_steps: int = 0
+
 
 @dataclass
 class ExtendedSchedulerConfig(SchedulerConfig):
@@ -33,6 +72,13 @@ class ExtendedSchedulerConfig(SchedulerConfig):
     num_warmup_epochs: int = 10
     train_mode: str = 'custom'
     eval_period: int = 1
+
+
+@register.register_scheduler('schedulefree')
+def schedulefree_scheduler(optimizer: Optimizer, max_epoch: int) -> ScheduleFreeScheduler:
+    """Placeholder scheduler when using ``schedulefreeAdamW`` (LR lives in the optimizer)."""
+    del max_epoch
+    return ScheduleFreeScheduler(optimizer)
 
 
 @register.register_scheduler('plateau')

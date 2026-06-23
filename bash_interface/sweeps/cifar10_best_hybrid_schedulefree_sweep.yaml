@@ -1,0 +1,73 @@
+# CIFAR10 best-hybrid + ScheduleFreeAdamW (same search space as cifar10_best_hybrid_sweep).
+# optim.scheduler: schedulefree (no cosine_with_warmup).
+#
+# Create:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/cifar10_best_hybrid_schedulefree_sweep.yaml
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: maximize
+  name: test/accuracy
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_best_hybrid-cifar10-schedulefree
+
+early_terminate:
+  type: hyperband
+  min_iter: 50
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/cifar10-gatedgcn-best-hybrid.yaml
+  - --molecular=false
+  - --seed=0
+  - ${args}
+
+parameters:
+  optim.optimizer:
+    value: schedulefreeAdamW
+  optim.scheduler:
+    value: schedulefree
+  schedulefree_beta2:
+    value: 0.999
+  hybrid_num_attn_heads:
+    values: [1, 2, 4]
+  hybrid_num_gnn_heads:
+    values: [1, 2, 4]
+  hybrid_gnn_types:
+    values:
+      - GATEDGCN
+      - "GATEDGCN,GATEDGCN"
+      - "GATEDGCN,GCN"
+      - "GATEDGCN,GIN"
+      - "GATEDGCN,GATEDGCN,GATEDGCN,GATEDGCN"
+      - "GATEDGCN,GCN,GATEDGCN,GCN"
+  hybrid_d_h:
+    values: [32, 64, 96, 128]
+  hybrid_layers_mp:
+    values: [8, 10, 12]
+  hybrid_attn_dropout:
+    values: [0.0, 0.1, 0.2, 0.3]
+  hybrid_mp_dropout:
+    values: [0.1, 0.15, 0.2]
+  hybrid_attn_mask:
+    values: [full, graph_restricted]
+  hybrid_gate:
+    values: [headwise, elementwise]
+  hybrid_norm:
+    values: [layernorm, rmsnorm]
+  optim.base_lr:
+    distribution: log_uniform_values
+    min: 0.0003
+    max: 0.003
+  schedulefree_beta1:
+    values: [0.9, 0.95]
+  schedulefree_warmup_steps:
+    values: [1000, 2750, 5500]

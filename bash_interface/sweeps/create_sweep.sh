@@ -87,6 +87,20 @@ elif [[ "${_yaml_stem}" == *_mp_only_sweep ]]; then
     ARRAY_SPEC="1-1"
     JOB_PREFIX="gnnplus_sanity"
     TIME_LIMIT="120:00:00"
+elif [[ "${_yaml_stem}" == *_hybrid_gatedgcn_mp_lr_schedulefree_sweep ]]; then
+    DATASET_SLUG="${_yaml_stem%%_hybrid_gatedgcn_mp_lr_schedulefree_sweep}"
+    RUNS_PER_AGENT=36
+    ARRAY_SPEC="1-1"
+    JOB_PREFIX="gnnplus_sweep"
+    TIME_LIMIT="120:00:00"
+elif [[ "${_yaml_stem}" == *_hybrid_gatedgcn_mp_lr_sweep ]]; then
+    DATASET_SLUG="${_yaml_stem%%_hybrid_gatedgcn_mp_lr_sweep}"
+    RUNS_PER_AGENT=36
+    ARRAY_SPEC="1-1"
+    JOB_PREFIX="gnnplus_sweep"
+    TIME_LIMIT="120:00:00"
+elif [[ "${_yaml_stem}" == *_best_hybrid_schedulefree_sweep ]]; then
+    DATASET_SLUG="${_yaml_stem%%_best_hybrid_schedulefree_sweep}"
 elif [[ "${_yaml_stem}" == *_best_hybrid_sweep ]]; then
     DATASET_SLUG="${_yaml_stem%%_best_hybrid_sweep}"
 else
