@@ -1,5 +1,5 @@
-# Peptides-func repro sweep: exactly 2 runs — best GCN (gcne) baseline vs same + 1 attn.
-# Hybrid uses GCNE MP head (edge-aware, matches baseline) and d_h=64.
+# Peptides-func repro sweep: baseline gcne vs hybrid (1 GCNE + 1 attn) at d_h=128.
+# For d_h grid {128,192,275} use peptides_func_repro_gcne_dh_sweep.yaml instead.
 #
 # Create:
 #   bash bash_interface/sweeps/create_sweep.sh \

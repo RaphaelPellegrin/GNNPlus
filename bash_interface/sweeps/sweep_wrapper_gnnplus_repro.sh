@@ -2,13 +2,13 @@
 # =============================================================================
 # Repro sweep wrapper: baseline custom_gnn OR same hyperparams + 1 attention head.
 #
-# Used with grid sweeps (exactly 2 trials: baseline | hybrid_attn1).
+# Used with grid sweeps (baseline | hybrid_attn1, optionally hybrid_d_h, etc.).
 #
 #   repro_variant=baseline     → original GNN+ yaml (custom_gnn)
-#   repro_variant=hybrid_attn1   → gated_hybrid *-repro-a1.yaml (1 MP + 1 attn)
+#   repro_variant=hybrid_attn1 → gated_hybrid *-repro-a1.yaml (1 MP + 1 attn)
 #
 # Leading arg: --dataset=cifar10 | mnist | peptides_func
-# W&B passes:  --repro_variant=baseline | hybrid_attn1
+# W&B may also pass: --hybrid_d_h=128, --optim.base_lr=..., etc.
 # =============================================================================
 
 set -euo pipefail
@@ -19,6 +19,15 @@ cd "${REPO_ROOT}"
 DATASET="${SWEEP_DATASET:-cifar10}"
 VARIANT="${REPRO_VARIANT:-baseline}"
 REPEAT=1
+HYBRID_DH=""
+
+declare -A OPTS=()
+
+_set_opt() {
+    local key="$1"
+    local value="$2"
+    OPTS["${key}"]="${value}"
+}
 
 while [ "$#" -gt 0 ]; do
     tok="$1"
@@ -45,6 +54,34 @@ while [ "$#" -gt 0 ]; do
             REPEAT="${1:?missing --repeat value}"
             shift
             ;;
+        --*=*)
+            key="${tok#--}"
+            key="${key%%=*}"
+            val="${tok#*=}"
+            case "${key}" in
+                hybrid_d_h) HYBRID_DH="${val}"; _set_opt "gnn.hybrid.d_h" "${val}" ;;
+                hybrid_num_attn_heads) _set_opt "gnn.hybrid.num_attn_heads" "${val}" ;;
+                hybrid_num_gnn_heads) _set_opt "gnn.hybrid.num_gnn_heads" "${val}" ;;
+                optim.base_lr|base_lr) _set_opt "optim.base_lr" "${val}" ;;
+                *) _set_opt "${key}" "${val}" ;;
+            esac
+            ;;
+        --*)
+            key="${tok#--}"
+            if [ "$#" -lt 1 ]; then
+                echo "[sweep_wrapper_gnnplus_repro] missing value for --${key}" >&2
+                exit 2
+            fi
+            val="$1"
+            shift
+            case "${key}" in
+                hybrid_d_h) HYBRID_DH="${val}"; _set_opt "gnn.hybrid.d_h" "${val}" ;;
+                hybrid_num_attn_heads) _set_opt "gnn.hybrid.num_attn_heads" "${val}" ;;
+                hybrid_num_gnn_heads) _set_opt "gnn.hybrid.num_gnn_heads" "${val}" ;;
+                optim.base_lr|base_lr) _set_opt "optim.base_lr" "${val}" ;;
+                *) _set_opt "${key}" "${val}" ;;
+            esac
+            ;;
         *)
             echo "[sweep_wrapper_gnnplus_repro] ignoring token: ${tok}" >&2
             ;;
@@ -53,7 +90,6 @@ done
 
 CFG=""
 SEED="0"
-MOLECULAR="false"
 WANDB_NAME=""
 EXTRA_ARGS=()
 
@@ -97,7 +133,6 @@ case "${DATASET}" in
         esac
         ;;
     peptides_func)
-        MOLECULAR="true"
         case "${VARIANT}" in
             baseline)
                 CFG="configs/gcn/peptides-func.yaml"
@@ -121,6 +156,14 @@ case "${DATASET}" in
         exit 2
         ;;
 esac
+
+if [ -n "${HYBRID_DH}" ] && [ "${VARIANT}" = "hybrid_attn1" ]; then
+    WANDB_NAME="${WANDB_NAME}_dh${HYBRID_DH}"
+fi
+
+for key in "${!OPTS[@]}"; do
+    EXTRA_ARGS+=("${key}" "${OPTS[$key]}")
+done
 
 if [ -n "${GNNPLUS_DATASET_DIR:-}" ]; then
     EXTRA_ARGS+=(dataset.dir "${GNNPLUS_DATASET_DIR}")

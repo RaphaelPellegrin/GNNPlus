@@ -52,7 +52,7 @@ gnn:
   hybrid:
     num_attn_heads: 1
     num_gnn_heads: 1
-    d_h: 64
+    d_h: 128
     attn_mask: full
     gate: headwise
     norm: layernorm

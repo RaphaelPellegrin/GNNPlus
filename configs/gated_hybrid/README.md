@@ -47,7 +47,8 @@ Configs live in `configs/gated_hybrid/<stem>.yaml` where `<stem>` matches `confi
 | String | Implementation | Edge features |
 |--------|----------------|-----------------|
 | `GCN`, `SAGE`, `GIN`, `GAT` | PyG conv at `d_h` | No |
-| `GCNE` | `GCNConvWithEdges` (matches GNN+ `gcne` baseline) | Yes |
+| `GCNE` | GNN+ `GCNConvLayer` (`gcne`; matches `layer_type: gcne` baseline) | Yes |
+| `GCNE_CONV` | Raw `GCNConvWithEdges` only (legacy pre-layer wrapper) | Yes |
 | `GATEDGCN` | `GatedGCNLayer` (matches GNN+ `gatedgcn` baseline) | Yes |
 | `RESGATEDGCN` | PyG `ResGatedGraphConv` (legacy; see below) | No |
 | `GINE`, `GGNN` / `GATEDGRAPH` | Custom hybrid heads | Partial / yes |
@@ -68,12 +69,31 @@ Also available in **GraphGym** fork as `gnn.stage_type: gated_hybrid`.
 
 The old behavior is kept under **`RESGATEDGCN`** for ablations only. Do **not** compare W&B runs labeled `GATEDGCN` across this boundary without noting the code version.
 
+### `GCNE` semantics (old vs new)
+
+**Current branch** wraps the full **`GCNConvLayer`** (BN + GELU + edge-aware conv) at `d_h`, mirroring the `GATEDGCN` fix. The old raw-conv path is **`GCNE_CONV`**.
+
+| | **Before (raw conv)** | **Current `GCNE`** |
+|--|------------------------|---------------------|
+| Actual layer | `GCNConvWithEdges` only | `GCNConvLayer` (full gcne stack) |
+| Fair vs `layer_type: gcne` baseline | **No** (missing BN/GELU/dropout) | **Yes** |
+
+For peptides hybrid configs using `GCNE`, set **`gnn.ffn: false`** (FFN lives inside `GCNConvLayer` when enabled on baseline).
+
+**Peptides-func sweeps (post GCNE fix):**
+
+| Sweep yaml | Purpose | Trials |
+|------------|---------|--------|
+| `peptides_func_repro_gcne_dh_sweep.yaml` | baseline vs hybrid_attn1 × `d_h` {128,192,275} | 6 |
+| `peptides_func_best_hybrid_sweep.yaml` | Bayes search (attn {0,1,2}, gnn {1,2}, MP types, masks) | many |
+| `peptides_func_mp_only_sweep.yaml` | Sanity: attn=0, 2×GCNE — can MP alone match baseline? | 3 |
+
 **Fair repro sweeps (baseline vs baseline + 1 attn):**
 
 | Dataset | Baseline | Hybrid MP type | Introduced |
 |---------|----------|----------------|------------|
 | CIFAR10 | `configs/gatedgcn/cifar10.yaml` | `GATEDGCN` (post-`2f8ad6b`) | replaces unfair sweep `5q8upl19` |
 | MNIST | `configs/gatedgcn/mnist.yaml` | `GATEDGCN` (post-`2f8ad6b`) | seed **1**; sweep `mnist_repro_baseline_vs_attn_sweep.yaml` |
-| peptides-func | `configs/gcn/peptides-func.yaml` | `GCNE` (commit `8a1a0cb`) | replaces unfair sweep `hymdtc7m` |
+| peptides-func | `configs/gcn/peptides-func.yaml` | `GCNE` (full `GCNConvLayer`) | `peptides_func_repro_gcne_dh_sweep.yaml` |
 
 For CIFAR hybrid configs using `GATEDGCN`, set **`gnn.ffn: false`** so FFN lives only inside `GatedGCNLayer` (same as the custom_gnn baseline stack).

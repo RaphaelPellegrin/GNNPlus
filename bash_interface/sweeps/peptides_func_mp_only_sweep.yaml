@@ -1,0 +1,44 @@
+# Peptides-func sanity: hybrid MP only (0 attn, 2×GCNE heads) vs baseline ~0.714 ap.
+# Can hybrid MP stack match gcne baseline without attention?
+#
+# Create:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/peptides_func_mp_only_sweep.yaml
+# Launch:
+#   SWEEP_ID=... SWEEP_DATASET=peptides_func RUNS_PER_AGENT=3 \
+#     sbatch --array=1-1 --mem=64GB --time=120:00:00 ... run_wandb_sweep_agent.sh
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: grid
+metric:
+  goal: maximize
+  name: test/ap
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_sanity-peptides_func-mp-only-gcne
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/peptides-func-gcn-best-hybrid.yaml
+  - --molecular=true
+  - --seed=2
+  - ${args}
+
+parameters:
+  hybrid_num_attn_heads:
+    value: 0
+  hybrid_num_gnn_heads:
+    value: 2
+  hybrid_gnn_types:
+    value: "GCNE,GCNE"
+  hybrid_gate:
+    value: headwise
+  hybrid_attn_mask:
+    value: full
+  hybrid_norm:
+    value: layernorm
+  hybrid_d_h:
+    values: [128, 192, 275]

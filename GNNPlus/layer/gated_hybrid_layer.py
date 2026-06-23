@@ -23,9 +23,9 @@ from torch_geometric.nn import (
 )
 from torch_geometric.utils import to_undirected
 
-AttnMaskType = Literal['full', 'graph_restricted']
-GateMode = Literal['elementwise', 'headwise']
-NormType = Literal['layernorm', 'rmsnorm']
+AttnMaskType = Literal["full", "graph_restricted"]
+GateMode = Literal["elementwise", "headwise"]
+NormType = Literal["layernorm", "rmsnorm"]
 
 
 def _build_gin_conv(in_dim: int, out_dim: int) -> GINConv:
@@ -40,13 +40,33 @@ def _build_gin_conv(in_dim: int, out_dim: int) -> GINConv:
     )
 
 
-from GNNPlus.layer.gcn_conv_layer_e import GCNConvWithEdges
+from GNNPlus.layer.gcn_conv_layer_e import GCNConvLayer, GCNConvWithEdges
 from GNNPlus.layer.gatedgcn_layer import GatedGCNLayer
 from torch_geometric.graphgym.config import cfg
 
 
+class _EdgeHybridBatch:
+    """Minimal batch object for edge-aware hybrid MP heads (GatedGCN / gcne)."""
+
+    x: Tensor
+    edge_index: Tensor
+    edge_attr: Tensor
+    pe_EquivStableLapPE: None
+
+    def __init__(
+        self,
+        x: Tensor,
+        edge_index: Tensor,
+        edge_attr: Tensor,
+    ) -> None:
+        self.x = x
+        self.edge_index = edge_index
+        self.edge_attr = edge_attr
+        self.pe_EquivStableLapPE = None
+
+
 class _GCNEHybridMPHead(nn.Module):
-    """Edge-aware GCN MP head matching GNN+ ``gcne`` (:class:`GCNConvWithEdges`)."""
+    """Legacy gcne MP head using raw :class:`GCNConvWithEdges` only (pre-layer wrapper)."""
 
     def __init__(
         self,
@@ -76,6 +96,54 @@ class _GCNEHybridMPHead(nn.Module):
             eh = self.edge_proj(edge_attr.float()).to(dtype=dt)
         out = self.conv(x_h, edge_index, eh)
         return F.dropout(out, p=self._gnn_dropout, training=self.training)
+
+
+class _GCNEConvLayerHybridMPHead(nn.Module):
+    """MP head using GNN+ :class:`GCNConvLayer` (gcne) at width ``d_h``."""
+
+    def __init__(
+        self,
+        d_h: int,
+        *,
+        edge_dim: int,
+        dropout: float = 0.2,
+        residual: bool = False,
+        ffn: bool = False,
+        gnn_dropout: float = 0.0,
+    ) -> None:
+        super().__init__()
+        self.d_h = d_h
+        self.edge_proj = nn.Linear(edge_dim, d_h)
+        self.layer = GCNConvLayer(
+            d_h,
+            d_h,
+            dropout=dropout,
+            residual=residual,
+            ffn=ffn,
+        )
+        self._gnn_dropout = float(gnn_dropout)
+
+    def forward(
+        self,
+        x_h: Tensor,
+        edge_index: Tensor,
+        edge_attr: Optional[Tensor] = None,
+    ) -> Tensor:
+        """Run full gcne layer at ``d_h`` with Bond/edge features projected to ``d_h``."""
+        num_e = edge_index.size(1)
+        dev, dt = x_h.device, x_h.dtype
+        if edge_attr is None:
+            eh = torch.zeros((num_e, self.d_h), device=dev, dtype=dt)
+        else:
+            feat = edge_attr.float()
+            if feat.size(-1) == self.d_h:
+                eh = feat.to(dtype=dt)
+            else:
+                eh = self.edge_proj(feat).to(dtype=dt)
+        batch = _EdgeHybridBatch(x_h, edge_index, eh)
+        out = self.layer(batch)
+        result = out.x
+        return F.dropout(result, p=self._gnn_dropout, training=self.training)
 
 
 class _GINEHybridMPHead(nn.Module):
@@ -148,26 +216,6 @@ class _ResGatedHybridMPHead(nn.Module):
         return F.dropout(out, p=self._gnn_dropout, training=self.training)
 
 
-class _GatedGCNHybridBatch:
-    """Minimal batch object for :class:`GatedGCNLayer` inside a hybrid MP head."""
-
-    x: Tensor
-    edge_index: Tensor
-    edge_attr: Tensor
-    pe_EquivStableLapPE: None
-
-    def __init__(
-        self,
-        x: Tensor,
-        edge_index: Tensor,
-        edge_attr: Tensor,
-    ) -> None:
-        self.x = x
-        self.edge_index = edge_index
-        self.edge_attr = edge_attr
-        self.pe_EquivStableLapPE = None
-
-
 class _GatedGCNHybridMPHead(nn.Module):
     """MP head using GNN+ :class:`GatedGCNLayer` at width ``d_h`` (edge-aware)."""
 
@@ -212,7 +260,7 @@ class _GatedGCNHybridMPHead(nn.Module):
                 eh = feat.to(dtype=dt)
             else:
                 eh = self.edge_proj(feat).to(dtype=dt)
-        batch = _GatedGCNHybridBatch(x_h, edge_index, eh)
+        batch = _EdgeHybridBatch(x_h, edge_index, eh)
         out = self.layer(batch)
         result = out.x
         return F.dropout(result, p=self._gnn_dropout, training=self.training)
@@ -232,7 +280,7 @@ class _GatedGraphHybridMPHead(nn.Module):
         self.conv = GatedGraphConv(
             out_channels=d_h,
             num_layers=int(num_ggnn_internal_layers),
-            aggr='add',
+            aggr="add",
         )
         self._gnn_dropout = float(gnn_dropout)
 
@@ -268,16 +316,16 @@ class _ProjectedMPHead(nn.Module):
         self.gate_mode = gate_mode
         self._gnn_dropout = float(gnn_dropout)
 
-        gate_out = 1 if gate_mode == 'headwise' else d_h
+        gate_out = 1 if gate_mode == "headwise" else d_h
         self.hg_proj = nn.Linear(d_model, d_h + gate_out)
 
-        if self.kind == 'GCN':
+        if self.kind == "GCN":
             self.conv = cast(nn.Module, GCNConv(d_h, d_h))
-        elif self.kind == 'SAGE':
+        elif self.kind == "SAGE":
             self.conv = cast(nn.Module, SAGEConv(d_h, d_h))
-        elif self.kind == 'GIN':
+        elif self.kind == "GIN":
             self.conv = cast(nn.Module, _build_gin_conv(d_h, d_h))
-        elif self.kind == 'GAT':
+        elif self.kind == "GAT":
             self.conv = cast(
                 nn.Module,
                 GATConv(
@@ -288,25 +336,33 @@ class _ProjectedMPHead(nn.Module):
                     dropout=float(gnn_dropout),
                 ),
             )
-        elif self.kind == 'GINE':
-            self.conv = cast(
-                nn.Module, _GINEHybridMPHead(d_h, gnn_dropout=gnn_dropout)
-            )
-        elif self.kind == 'GCNE':
+        elif self.kind == "GINE":
+            self.conv = cast(nn.Module, _GINEHybridMPHead(d_h, gnn_dropout=gnn_dropout))
+        elif self.kind == "GCNE":
             self.conv = cast(
                 nn.Module,
-                _GCNEHybridMPHead(
-                    d_h, edge_dim=d_model, gnn_dropout=gnn_dropout
+                _GCNEConvLayerHybridMPHead(
+                    d_h,
+                    edge_dim=d_model,
+                    dropout=float(cfg.gnn.dropout),
+                    residual=bool(cfg.gnn.residual),
+                    ffn=bool(cfg.gnn.ffn),
+                    gnn_dropout=gnn_dropout,
                 ),
             )
-        elif self.kind in ('GGNN', 'GATEDGRAPH', 'GATEDGRAPHCONV'):
+        elif self.kind in ("GCNE_CONV",):
+            self.conv = cast(
+                nn.Module,
+                _GCNEHybridMPHead(d_h, edge_dim=d_model, gnn_dropout=gnn_dropout),
+            )
+        elif self.kind in ("GGNN", "GATEDGRAPH", "GATEDGRAPHCONV"):
             self.conv = cast(
                 nn.Module,
                 _GatedGraphHybridMPHead(
                     d_h, num_ggnn_internal_layers=1, gnn_dropout=gnn_dropout
                 ),
             )
-        elif self.kind in ('GATEDGCN',):
+        elif self.kind in ("GATEDGCN",):
             # GatedGCN+ (GNNPlus GatedGCNLayer). Pre-2f8ad6b this string mapped to
             # ResGatedGraphConv; use RESGATEDGCN for that legacy path.
             self.conv = cast(
@@ -321,15 +377,16 @@ class _ProjectedMPHead(nn.Module):
                     gnn_dropout=gnn_dropout,
                 ),
             )
-        elif self.kind in ('RESGATEDGCN',):
+        elif self.kind in ("RESGATEDGCN",):
             self.conv = cast(
                 nn.Module,
                 _ResGatedHybridMPHead(d_h, gnn_dropout=gnn_dropout),
             )
         else:
             raise ValueError(
-                f'Unknown MP head type: {kind!r} '
-                '(expected GCN, GCNE, GIN, GINE, GGNN, GATEDGCN, RESGATEDGCN, SAGE, or GAT)'
+                f"Unknown MP head type: {kind!r} "
+                "(expected GCN, GCNE, GCNE_CONV, GIN, GINE, GGNN, "
+                "GATEDGCN, RESGATEDGCN, SAGE, or GAT)"
             )
 
     def forward(
@@ -340,7 +397,7 @@ class _ProjectedMPHead(nn.Module):
     ) -> Tuple[Tensor, Tensor]:
         """Return ``(gated_mp_output, gate_value)``."""
         hg = self.hg_proj(x)
-        if self.gate_mode == 'headwise':
+        if self.gate_mode == "headwise":
             h, g = torch.split(hg, [self.d_h, 1], dim=-1)
         else:
             h, g = torch.split(hg, [self.d_h, self.d_h], dim=-1)
@@ -349,6 +406,7 @@ class _ProjectedMPHead(nn.Module):
             self.conv,
             (
                 _GCNEHybridMPHead,
+                _GCNEConvLayerHybridMPHead,
                 _GatedGCNHybridMPHead,
                 _GINEHybridMPHead,
                 _GatedGraphHybridMPHead,
@@ -385,10 +443,10 @@ def parse_hybrid_gnn_types(raw: Optional[str], num_heads: int) -> List[str]:
     """Build a list of length ``num_heads`` of conv type names."""
     if num_heads <= 0:
         return []
-    base = ['GCN', 'GIN', 'SAGE', 'GAT']
-    if raw is None or str(raw).strip() == '':
+    base = ["GCN", "GIN", "SAGE", "GAT"]
+    if raw is None or str(raw).strip() == "":
         return [base[i % len(base)] for i in range(num_heads)]
-    parts = [p.strip().upper() for p in str(raw).split(',') if p.strip()]
+    parts = [p.strip().upper() for p in str(raw).split(",") if p.strip()]
     if len(parts) == 0:
         return [base[i % len(base)] for i in range(num_heads)]
     if len(parts) == 1:
@@ -449,9 +507,9 @@ class GatedHybridGraphLayer(nn.Module):
         num_attn_heads: int,
         num_gnn_heads: int,
         d_h: int,
-        attn_mask_type: AttnMaskType = 'full',
-        gate_mode: GateMode = 'elementwise',
-        norm_type: NormType = 'layernorm',
+        attn_mask_type: AttnMaskType = "full",
+        gate_mode: GateMode = "elementwise",
+        norm_type: NormType = "layernorm",
         gnn_types: Optional[List[str]] = None,
         attn_dropout: float = 0.0,
         mp_gnn_dropout: float = 0.0,
@@ -460,11 +518,11 @@ class GatedHybridGraphLayer(nn.Module):
     ) -> None:
         super().__init__()
         if num_attn_heads < 0 or num_gnn_heads < 0:
-            raise ValueError('num_attn_heads and num_gnn_heads must be non-negative')
+            raise ValueError("num_attn_heads and num_gnn_heads must be non-negative")
         if num_attn_heads + num_gnn_heads < 1:
-            raise ValueError('Need at least one head total')
+            raise ValueError("Need at least one head total")
         if d_h < 1:
-            raise ValueError('d_h must be positive')
+            raise ValueError("d_h must be positive")
 
         self.d_model = d_model
         self.num_attn_heads = num_attn_heads
@@ -480,18 +538,18 @@ class GatedHybridGraphLayer(nn.Module):
         self.norm: nn.Module
         if self.block_bn:
             self.norm = nn.Identity()
-        elif norm_type == 'layernorm':
+        elif norm_type == "layernorm":
             self.norm = nn.LayerNorm(d_model)
-        elif norm_type == 'rmsnorm':
+        elif norm_type == "rmsnorm":
             self.norm = RMSNorm(d_model)
         else:
-            raise ValueError(f'Unknown norm_type: {norm_type!r}')
+            raise ValueError(f"Unknown norm_type: {norm_type!r}")
 
         self.qg_linears = nn.ModuleList()
         self.k_linears = nn.ModuleList()
         self.v_linears = nn.ModuleList()
         for _ in range(num_attn_heads):
-            qg_out = d_h + (1 if gate_mode == 'headwise' else d_h)
+            qg_out = d_h + (1 if gate_mode == "headwise" else d_h)
             self.qg_linears.append(nn.Linear(d_model, qg_out))
             self.k_linears.append(nn.Linear(d_model, d_h))
             self.v_linears.append(nn.Linear(d_model, d_h))
@@ -499,19 +557,21 @@ class GatedHybridGraphLayer(nn.Module):
         types = gnn_types or parse_hybrid_gnn_types(None, num_gnn_heads)
         if len(types) != num_gnn_heads:
             raise ValueError(
-                f'gnn_types length {len(types)} != num_gnn_heads {num_gnn_heads}'
+                f"gnn_types length {len(types)} != num_gnn_heads {num_gnn_heads}"
             )
 
-        self.mp_heads = nn.ModuleList([
-            _make_mp_head(
-                t,
-                d_model,
-                d_h,
-                gate_mode,
-                gnn_dropout=self._mp_gnn_dropout,
-            )
-            for t in types
-        ])
+        self.mp_heads = nn.ModuleList(
+            [
+                _make_mp_head(
+                    t,
+                    d_model,
+                    d_h,
+                    gate_mode,
+                    gnn_dropout=self._mp_gnn_dropout,
+                )
+                for t in types
+            ]
+        )
 
         total_heads = num_attn_heads + num_gnn_heads
         self.out_proj: nn.Module
@@ -524,19 +584,13 @@ class GatedHybridGraphLayer(nn.Module):
         if self.block_bn:
             self.out_proj = nn.Identity()
             self.out_proj_attn = (
-                nn.Linear(num_attn_heads * d_h, d_model)
-                if num_attn_heads > 0 else None
+                nn.Linear(num_attn_heads * d_h, d_model) if num_attn_heads > 0 else None
             )
             self.out_proj_mp = (
-                nn.Linear(num_gnn_heads * d_h, d_model)
-                if num_gnn_heads > 0 else None
+                nn.Linear(num_gnn_heads * d_h, d_model) if num_gnn_heads > 0 else None
             )
-            self.norm1_attn = (
-                nn.BatchNorm1d(d_model) if num_attn_heads > 0 else None
-            )
-            self.norm1_local = (
-                nn.BatchNorm1d(d_model) if num_gnn_heads > 0 else None
-            )
+            self.norm1_attn = nn.BatchNorm1d(d_model) if num_attn_heads > 0 else None
+            self.norm1_local = nn.BatchNorm1d(d_model) if num_gnn_heads > 0 else None
             self.dropout_attn = (
                 nn.Dropout(self._block_dropout) if num_attn_heads > 0 else None
             )
@@ -595,7 +649,7 @@ class GatedHybridGraphLayer(nn.Module):
         src_attn: Tensor = src if attn_source is None else attn_source
         src_mp: Tensor = src if mp_source is None else mp_source
 
-        if self.attn_mask_type == 'graph_restricted':
+        if self.attn_mask_type == "graph_restricted":
             allowed = _graph_adjacency_mask(edge_index, batch, n)
         else:
             allowed = _same_graph_mask(batch, n)
@@ -608,7 +662,7 @@ class GatedHybridGraphLayer(nn.Module):
 
         for m in range(self.num_attn_heads):
             qg = self.qg_linears[m](src_attn)
-            if self.gate_mode == 'headwise':
+            if self.gate_mode == "headwise":
                 q, g = torch.split(qg, [self.d_h, 1], dim=-1)
             else:
                 q, g = torch.split(qg, [self.d_h, self.d_h], dim=-1)
@@ -641,9 +695,9 @@ class GatedHybridGraphLayer(nn.Module):
         gate_stats: Dict[str, float] = {}
         if return_gate_stats:
             for m, gamma in enumerate(attn_gate_vals):
-                gate_stats[f'attn_{m}_gate_mean'] = gamma.detach().mean().item()
+                gate_stats[f"attn_{m}_gate_mean"] = gamma.detach().mean().item()
             for m, gamma in enumerate(mp_gate_vals):
-                gate_stats[f'gnn_{m}_gate_mean'] = gamma.detach().mean().item()
+                gate_stats[f"gnn_{m}_gate_mean"] = gamma.detach().mean().item()
 
         if self.block_bn:
             branch_outs: List[Tensor] = []
@@ -674,14 +728,14 @@ class GatedHybridGraphLayer(nn.Module):
         else:
             fused_inputs = attn_outputs + mp_outputs
             if len(fused_inputs) == 0:
-                raise RuntimeError('gated hybrid layer has no head outputs')
+                raise RuntimeError("gated hybrid layer has no head outputs")
             fused = cast(Tensor, self.out_proj(torch.cat(fused_inputs, dim=-1)))
             out = x + fused
 
         aux: Dict[str, Any] = {}
         if return_gate_stats:
-            aux['gate_stats'] = gate_stats
+            aux["gate_stats"] = gate_stats
         if return_attn_weights:
-            aux['attn_weights'] = attn_weights_list
+            aux["attn_weights"] = attn_weights_list
 
         return out, aux

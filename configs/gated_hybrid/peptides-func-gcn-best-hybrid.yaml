@@ -1,6 +1,5 @@
-# Peptides-func hybrid repro: 1×GCNE MP + 1×attention on gcn/peptides-func.yaml.
-# GCNE uses full GCNConvLayer (BN + GELU + edge-aware gcne) at d_h.
-# d_h=128 default; sweep peptides_func_repro_gcne_dh for {128,192,275}.
+# Peptides-func best-hybrid search — fair GCNE MP (full GCNConvLayer at d_h).
+# Outer hyperparams from configs/gcn/peptides-func.yaml; gnn.ffn false (no double FFN).
 out_dir: results
 metric_best: ap
 wandb:
@@ -9,8 +8,8 @@ wandb:
   tags:
     - gnnplus
     - hybrid_gnn
-    - repro
-    - peptides_func_gcn_repro_a1
+    - cluster
+    - peptides_func_gcn_best_hybrid
 dataset:
   format: OGB
   name: peptides-functional
@@ -65,6 +64,6 @@ optim:
   optimizer: adamW
   weight_decay: 0.0
   base_lr: 0.001
-  max_epoch: 300
+  max_epoch: 600
   scheduler: cosine_with_warmup
-  num_warmup_epochs: 5
+  num_warmup_epochs: 10
