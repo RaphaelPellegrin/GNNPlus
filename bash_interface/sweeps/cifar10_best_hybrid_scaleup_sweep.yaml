@@ -1,0 +1,65 @@
+# CIFAR10 scale-up sweep — anchor run f8ffm1r7 (sweep q5l4oy7f, test/acc 0.7927).
+# Best config: a4g4, d_h=64, layers_mp=10, GATEDGCN MP, lr≈5.35e-4, full/headwise/layernorm.
+# Scale: more attn/MP heads (4→8), wider d_h (64→256), LR around the best value.
+# Other hyperparams fixed at the anchor run.
+#
+# Create:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/cifar10_best_hybrid_scaleup_sweep.yaml
+# Launch:
+#   SWEEP_ARRAY_TASKS=16 SWEEP_ARRAY_PARALLEL=8 RUNS_PER_AGENT=4 \
+#     bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+#       cifar10 weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+#
+# If OOM at d_h=256 or 8+8 heads, relaunch with train.batch_size=8 in sweep or --mem=128GB.
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: maximize
+  name: test/accuracy
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_best_hybrid-cifar10-scaleup
+
+early_terminate:
+  type: hyperband
+  min_iter: 50
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/cifar10-gatedgcn-best-hybrid.yaml
+  - --molecular=false
+  - --seed=0
+  - ${args}
+
+parameters:
+  hybrid_num_attn_heads:
+    values: [4, 8]
+  hybrid_num_gnn_heads:
+    values: [4, 8]
+  hybrid_gnn_types:
+    value: GATEDGCN
+  hybrid_layers_mp:
+    value: 10
+  hybrid_d_h:
+    values: [64, 96, 128, 192, 256]
+  hybrid_attn_dropout:
+    value: 0.2
+  hybrid_mp_dropout:
+    value: 0.1
+  hybrid_attn_mask:
+    value: full
+  hybrid_gate:
+    value: headwise
+  hybrid_norm:
+    value: layernorm
+  optim.base_lr:
+    distribution: log_uniform_values
+    min: 0.00025
+    max: 0.0012

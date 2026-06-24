@@ -48,6 +48,11 @@ Python `parse_hybrid_gnn_types` pads or truncates the list to match `hybrid_num_
 - Base `cifar10-gatedgcn-best-hybrid.yaml` (fair `GATEDGCN` MP, 400 ep)
 - Sweeps `hybrid_num_attn_heads` / `hybrid_num_gnn_heads` in `{1,2,4}`, `hybrid_d_h`, `hybrid_layers_mp`, MP presets, mask/gate/norm, dropout, LR
 
+**CIFAR10 scale-up** (anchor [f8ffm1r7](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/f8ffm1r7), test/acc 0.7927; `cifar10_best_hybrid_scaleup_sweep.yaml` → `GNNplus_best_hybrid-cifar10-scaleup`):
+
+- Fixed at best run: `layers_mp=10`, `GATEDGCN`, full/headwise/layernorm, attn_dropout 0.2, mp_dropout 0.1
+- Sweeps: attn/gnn heads **{4, 8}**, `d_h` **{64, 96, 128, 192, 256}**, LR log-uniform **2.5e-4–1.2e-3** (best ≈ 5.35e-4)
+
 **MNIST / CIFAR10 + GatedGCN MP experts** (pairs GatedGCN with GCN/GIN/SAGE/GAT):
 
 | Dataset | YAML | W&B sweep name |

@@ -109,6 +109,8 @@ elif [[ "${_yaml_stem}" == *_best_hybrid_schedulefree_sweep ]]; then
     DATASET_SLUG="${_yaml_stem%%_best_hybrid_schedulefree_sweep}"
 elif [[ "${_yaml_stem}" == *_best_hybrid_sweep ]]; then
     DATASET_SLUG="${_yaml_stem%%_best_hybrid_sweep}"
+elif [[ "${_yaml_stem}" == *_best_hybrid_scaleup_sweep ]]; then
+    DATASET_SLUG="${_yaml_stem%%_best_hybrid_scaleup_sweep}"
 else
     DATASET_SLUG="${_yaml_stem%%_hybrid_*}"
 fi
