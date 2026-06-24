@@ -1,0 +1,67 @@
+# ZINC best-hybrid Bayes — anchor run 3fdh5kkm (gine/zinc.yaml, test/mae 0.0722).
+# GINE MP head + attention; outer hyperparams from zinc-gine-best-hybrid.yaml.
+# 2000 epochs — use 192h SLURM; Hyperband min_iter=100.
+#
+# Create:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/zinc_best_hybrid_gine_sweep.yaml
+# Launch:
+#   SWEEP_ARRAY_TASKS=16 SWEEP_ARRAY_PARALLEL=4 RUNS_PER_AGENT=4 \
+#     SWEEP_SLURM_TIME=192:00:00 \
+#     bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+#       zinc weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: minimize
+  name: test/mae
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_best_hybrid-zinc-gine
+
+early_terminate:
+  type: hyperband
+  min_iter: 100
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/zinc-gine-best-hybrid.yaml
+  - --molecular=true
+  - --seed=0
+  - ${args}
+
+parameters:
+  hybrid_num_attn_heads:
+    values: [0, 1, 2, 4]
+  hybrid_num_gnn_heads:
+    values: [1, 2, 4]
+  hybrid_gnn_types:
+    values:
+      - GINE
+      - "GINE,GINE"
+      - "GINE,GCN"
+      - "GINE,GCNE"
+  hybrid_d_h:
+    values: [32, 48, 64, 80, 96, 128]
+  hybrid_layers_mp:
+    values: [10, 12, 14]
+  hybrid_attn_dropout:
+    values: [0.0, 0.1, 0.2]
+  hybrid_mp_dropout:
+    values: [0.0, 0.1, 0.15]
+  hybrid_attn_mask:
+    values: [full, graph_restricted]
+  hybrid_gate:
+    values: [headwise, elementwise]
+  hybrid_norm:
+    values: [layernorm, rmsnorm]
+  optim.base_lr:
+    distribution: log_uniform_values
+    min: 0.0003
+    max: 0.003

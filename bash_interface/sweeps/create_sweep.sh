@@ -93,6 +93,12 @@ elif [[ "${_yaml_stem}" == zinc_hybrid_gcne_attn_gnn_sweep ]]; then
     ARRAY_SPEC="1-1"
     JOB_PREFIX="gnnplus_sweep"
     TIME_LIMIT="192:00:00"
+elif [[ "${_yaml_stem}" == zinc_best_hybrid_gine_sweep ]]; then
+    DATASET_SLUG=zinc
+    RUNS_PER_AGENT=4
+    ARRAY_SPEC="1-16%4"
+    JOB_PREFIX="gnnplus_sweep"
+    TIME_LIMIT="192:00:00"
 elif [[ "${_yaml_stem}" == *_hybrid_gatedgcn_mp_lr_schedulefree_sweep ]]; then
     DATASET_SLUG="${_yaml_stem%%_hybrid_gatedgcn_mp_lr_schedulefree_sweep}"
     RUNS_PER_AGENT=36

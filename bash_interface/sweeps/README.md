@@ -186,6 +186,11 @@ bash bash_interface/sweeps/launch_hybrid_sweeps.sh --create-only all
 | coco, voc | `test/f1` | maximize |
 | peptides-func, pcba | `test/ap` | maximize |
 | peptides-struct, zinc | `test/mae` | minimize |
+
+**ZINC GINE best-hybrid** (`zinc_best_hybrid_gine_sweep.yaml` → `GNNplus_best_hybrid-zinc-gine`):
+
+- Anchor [3fdh5kkm](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/3fdh5kkm) (`gine/zinc.yaml`, test/mae ≈ 0.072)
+- Base `configs/gated_hybrid/zinc-gine-best-hybrid.yaml`; `--molecular=true`; **192h**; Bayes + Hyperband `min_iter=100`
 | hiv | `test/auc` | maximize |
 | cluster, pattern | `test/accuracy-SBM` | maximize |
 

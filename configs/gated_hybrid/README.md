@@ -110,4 +110,9 @@ Matches Heterogeneity_Profile: use **`optim.optimizer: schedulefreeAdamW`** with
 
 **ZINC fair GCNE hybrid** (`zinc_hybrid_gcne_attn_gnn_sweep.yaml`): attn {1,2} × gnn {1,2}, `GCNE` MP only, 4 trials, 2000 ep.
 
+**ZINC best-hybrid GINE** (anchor [3fdh5kkm](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/3fdh5kkm), test/mae 0.0722; `zinc_best_hybrid_gine_sweep.yaml` → `GNNplus_best_hybrid-zinc-gine`):
+
+- Base `zinc-gine-best-hybrid.yaml` (`gine/zinc.yaml` outer dims: `dim_inner=80`, 12 layers, RWSE k20)
+- Bayes: attn {0,1,2,4}, gnn {1,2,4}, `GINE` MP presets, `d_h` {32…128}, depth {10,12,14}, mask/gate/norm, dropout, LR; **192h**
+
 Install `schedulefree` on cluster (`requirements-cluster.txt`).
