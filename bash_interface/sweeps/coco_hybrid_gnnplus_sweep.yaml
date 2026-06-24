@@ -1,7 +1,7 @@
 # Superpixel (COCO-SP, VOC-SP) — smaller batch + capped attn heads (GPU memory).
 #
 #   hybrid_num_attn_heads: 2, 4  (no 8 — full attention OOMs on 140GB GPU)
-#   train.batch_size:      8, 16 (swept; yaml default 8)
+#   train.batch_size:      4, 8 (swept; yaml default 4)
 
 program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
 method: bayes
@@ -29,7 +29,7 @@ command:
 
 parameters:
   batch_size:
-    values: [8, 16]
+    values: [4, 8]
   hybrid_num_attn_heads:
     values: [2, 4]
   hybrid_num_gnn_heads:

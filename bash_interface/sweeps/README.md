@@ -22,7 +22,7 @@ Each dataset sweep is named **`GNNplus_hybriddgatedGNN-<dataset>`** in W&B proje
 
 `seed` is fixed at **0** in `sweep_wrapper_gnnplus.sh` (not swept).
 
-**COCO / VOC (superpixel):** separate sweep template — `hybrid_num_attn_heads` **2, 4 only**; swept `batch_size` **8, 16**; yaml default `batch_size: 8`.
+**COCO / VOC (superpixel):** separate sweep template — `hybrid_num_attn_heads` **2, 4 only**; swept `batch_size` **4, 8**; yaml default `batch_size: 4`. Use `--mem=128GB`.
 
 ### `hybrid_gnn_types` pools
 

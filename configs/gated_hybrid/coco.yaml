@@ -27,7 +27,7 @@ posenc_RWSE:
   enable: False
 train:
   mode: custom
-  batch_size: 8
+  batch_size: 4
   eval_period: 1
   ckpt_period: 100
   eval_smoothing_metrics: True
