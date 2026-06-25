@@ -66,7 +66,11 @@ Uses `run_fair_repro_array.sh`: tasks 1–N = baseline seeds, N+1–2N = hybrid_
 Base configs: `configs/gated_hybrid/{pattern-gcne,cluster-gcn,mal-gcne}-best-hybrid.yaml` (outer hyperparams from `gcn/*.yaml`, fair MP type). Generic wide sweeps `*_hybrid_gnnplus_sweep.yaml` also exist (from `generate_hybrid_sweep_yamls.sh`).
 
 ```bash
-# After baselines finish — create + launch (pattern example, 128GB)
+# After baselines finish — create + launch (all three or one dataset)
+bash bash_interface/cluster/submit_best_hybrid_sweep_suite.sh
+bash bash_interface/cluster/submit_best_hybrid_sweep_suite.sh pattern
+
+# Or manually (pattern example, 128GB):
 bash bash_interface/sweeps/create_sweep.sh \
   bash_interface/sweeps/pattern_best_hybrid_sweep.yaml
 

@@ -284,3 +284,23 @@ sbatch --job-name=gnnplus_voc --array=2,3,4%4 --time=48:00:00 --mem=64GB \
   --export=ALL,DATASET=voc,NUM_SEEDS=2,ENV_NAME=gnnplus \
   bash_interface/cluster/run_paper_array.sh
 ```
+
+### PATTERN / CLUSTER / MalNet — best-hybrid Bayes sweeps
+
+After `git pull` (needs `submit_best_hybrid_sweep_suite.sh` on cluster):
+
+```bash
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export ENV_NAME=gnnplus
+conda deactivate 2>/dev/null || true
+
+# Creates W&B sweeps + launches 8 agents × 4 runs each (pattern/cluster 128GB, mal 64GB)
+bash bash_interface/cluster/submit_best_hybrid_sweep_suite.sh
+
+# Or one dataset:
+bash bash_interface/cluster/submit_best_hybrid_sweep_suite.sh pattern
+```
+
+Sweeps: `pattern_best_hybrid_sweep.yaml`, `cluster_best_hybrid_sweep.yaml`, `mal_best_hybrid_sweep.yaml` → W&B projects `GNNplus_best_hybrid-pattern|cluster|mal`.

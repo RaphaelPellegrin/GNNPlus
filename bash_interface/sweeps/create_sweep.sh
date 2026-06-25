@@ -115,10 +115,18 @@ elif [[ "${_yaml_stem}" == *_best_hybrid_schedulefree_sweep ]]; then
     DATASET_SLUG="${_yaml_stem%%_best_hybrid_schedulefree_sweep}"
 elif [[ "${_yaml_stem}" == *_best_hybrid_sweep ]]; then
     DATASET_SLUG="${_yaml_stem%%_best_hybrid_sweep}"
+    RUNS_PER_AGENT=4
+    ARRAY_SPEC="1-8%4"
+    TIME_LIMIT="120:00:00"
 elif [[ "${_yaml_stem}" == *_best_hybrid_scaleup_sweep ]]; then
     DATASET_SLUG="${_yaml_stem%%_best_hybrid_scaleup_sweep}"
 else
     DATASET_SLUG="${_yaml_stem%%_hybrid_*}"
+fi
+
+_MEM="64GB"
+if [[ "${DATASET_SLUG}" == pattern || "${DATASET_SLUG}" == cluster || "${DATASET_SLUG}" == coco || "${DATASET_SLUG}" == voc || "${DATASET_SLUG}" == pcba ]]; then
+    _MEM="128GB"
 fi
 
 echo ""
@@ -126,7 +134,7 @@ echo "Sweep created: ${SWEEP_PATH}"
 echo "Launch agents (copy as one block; do not paste wandb log lines into shell):"
 cat <<EOF
   SWEEP_ID=${SWEEP_PATH} SWEEP_DATASET=${DATASET_SLUG} RUNS_PER_AGENT=${RUNS_PER_AGENT} \\
-  sbatch --job-name=${JOB_PREFIX}_${DATASET_SLUG} --array=${ARRAY_SPEC} --mem=64GB --time=${TIME_LIMIT} \\
+  sbatch --partition=mweber_gpu --job-name=${JOB_PREFIX}_${DATASET_SLUG} --array=${ARRAY_SPEC} --mem=${_MEM} --time=${TIME_LIMIT} \\
     --export=ALL,SWEEP_ID=${SWEEP_PATH},SWEEP_DATASET=${DATASET_SLUG},RUNS_PER_AGENT=${RUNS_PER_AGENT},WANDB_PROJECT=${WANDB_PROJECT},ENV_NAME=${ENV_NAME:-gnnplus} \\
     bash_interface/sweeps/run_wandb_sweep_agent.sh
 EOF

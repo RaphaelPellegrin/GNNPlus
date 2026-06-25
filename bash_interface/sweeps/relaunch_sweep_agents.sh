@@ -83,6 +83,7 @@ relaunch_one() {
     SWEEP_DATASET="${slug}" \
     RUNS_PER_AGENT="${RUNS_PER_AGENT}" \
     sbatch \
+        --partition=mweber_gpu \
         --job-name="gnnplus_sweep_${slug}" \
         --array="1-${ARRAY_TASKS}%${ARRAY_PARALLEL}" \
         --mem="${mem}" \
