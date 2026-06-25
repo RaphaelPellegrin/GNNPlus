@@ -13,7 +13,7 @@
 #     bash_interface/cluster/run_paper_array.sh
 #
 # Env:
-#   DATASET     — yaml stem: cifar10, mnist, peptides-func, coco, voc, ...
+#   DATASET     — yaml stem: cifar10, mnist, peptides-func, peptides-struct, coco, voc, ...
 #   NUM_SEEDS   — number of seeds per model (default 2)
 # =============================================================================
 

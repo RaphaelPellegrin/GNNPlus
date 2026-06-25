@@ -55,6 +55,27 @@ bash bash_interface/cluster/submit_fair_repro_suite.sh pattern  # one dataset
 
 Uses `run_fair_repro_array.sh`: tasks 1–N = baseline seeds, N+1–2N = hybrid_attn1 seeds.
 
+**PATTERN / CLUSTER / MalNet-Tiny hybrid Bayes** (run after standard GNN+ baselines; tune grids from best run):
+
+| Dataset | Best-hybrid YAML | MP-focused YAML | W&B name (best) | Metric |
+|---------|------------------|-----------------|-----------------|--------|
+| PATTERN | `pattern_best_hybrid_sweep.yaml` | `pattern_hybrid_gcne_mp_sweep.yaml` | `GNNplus_best_hybrid-pattern` | `test/accuracy-SBM` |
+| CLUSTER | `cluster_best_hybrid_sweep.yaml` | `cluster_hybrid_gcn_mp_sweep.yaml` | `GNNplus_best_hybrid-cluster` | `test/accuracy-SBM` |
+| MalNet-Tiny | `mal_best_hybrid_sweep.yaml` | `mal_hybrid_gcne_mp_sweep.yaml` | `GNNplus_best_hybrid-mal` | `test/accuracy` |
+
+Base configs: `configs/gated_hybrid/{pattern-gcne,cluster-gcn,mal-gcne}-best-hybrid.yaml` (outer hyperparams from `gcn/*.yaml`, fair MP type). Generic wide sweeps `*_hybrid_gnnplus_sweep.yaml` also exist (from `generate_hybrid_sweep_yamls.sh`).
+
+```bash
+# After baselines finish — create + launch (pattern example, 128GB)
+bash bash_interface/sweeps/create_sweep.sh \
+  bash_interface/sweeps/pattern_best_hybrid_sweep.yaml
+
+SWEEP_ARRAY_TASKS=8 SWEEP_ARRAY_PARALLEL=4 RUNS_PER_AGENT=4 \
+  SWEEP_SLURM_MEM=128GB SWEEP_SLURM_TIME=120:00:00 \
+  bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+    pattern weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+```
+
 **CIFAR10 best-hybrid** (Bayes; `cifar10_best_hybrid_sweep.yaml` → `GNNplus_best_hybrid-cifar10`):
 
 - Base `cifar10-gatedgcn-best-hybrid.yaml` (fair `GATEDGCN` MP, 400 ep)

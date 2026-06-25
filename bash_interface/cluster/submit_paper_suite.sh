@@ -4,7 +4,7 @@
 #
 # Datasets auto-download on first run into GNNPLUS_DATASET_DIR:
 #   - mnist, cifar10     — PyG GNNBenchmark (data.pyg.org)
-#   - peptides-func      — OGB-style peptides (Dropbox via loader)
+#   - peptides-func, peptides-struct — OGB-style peptides (Dropbox via loader)
 #   - coco, voc          — PyG superpixels (PASCAL VOC = voc.yaml)
 #
 # Usage (login node, after smoke test passes):
@@ -29,19 +29,19 @@ if [ "${1:-}" = "--dry-run" ]; then
     shift
 fi
 
-DEFAULT_ORDER=(cifar10 mnist peptides-func coco voc)
+DEFAULT_ORDER=(cifar10 mnist peptides-func peptides-struct coco voc)
 
 paper_num_seeds() {
     case "$1" in
         cifar10|mnist|coco|voc) echo 2 ;;
-        peptides-func) echo 4 ;;
+        peptides-func|peptides-struct) echo 4 ;;
         *) return 1 ;;
     esac
 }
 
 paper_max_parallel() {
     case "$1" in
-        cifar10|mnist|peptides-func) echo 6 ;;
+        cifar10|mnist|peptides-func|peptides-struct) echo 6 ;;
         coco|voc) echo 4 ;;
         *) return 1 ;;
     esac
@@ -50,7 +50,7 @@ paper_max_parallel() {
 paper_slurm_time() {
     case "$1" in
         cifar10|mnist|voc) echo "48:00:00" ;;
-        peptides-func|coco) echo "96:00:00" ;;
+        peptides-func|peptides-struct|coco) echo "96:00:00" ;;
         *) return 1 ;;
     esac
 }
@@ -79,7 +79,8 @@ submit_dataset() {
             --job-name="${job_name}" \
             --array="1-${ntasks}%${max_parallel}" \
             --time="${time_limit}" \
-            --export="ALL,DATASET=${dataset},NUM_SEEDS=${num_seeds}" \
+            --mem=64GB \
+            --export="ALL,DATASET=${dataset},NUM_SEEDS=${num_seeds},ENV_NAME=gnnplus" \
             bash_interface/cluster/run_paper_array.sh
     fi
 }

@@ -75,7 +75,7 @@ relaunch_one() {
         return 1
     fi
 
-    mem="$(sweep_mem "${slug}")"
+    mem="${SWEEP_SLURM_MEM:-$(sweep_mem "${slug}")}"
     time_budget="$(sweep_time "${slug}")"
 
     echo "=== Relaunch agents: ${slug} sweep=${sweep_id} tasks=${ARRAY_TASKS} runs/agent=${RUNS_PER_AGENT} mem=${mem} ==="

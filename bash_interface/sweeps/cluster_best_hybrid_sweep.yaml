@@ -1,0 +1,65 @@
+# CLUSTER best-hybrid Bayes — fair GCN MP (anchor: gcn/cluster.yaml).
+# Base: configs/gated_hybrid/cluster-gcn-best-hybrid.yaml
+# TODO: narrow d_h / LR after standard baselines finish.
+#
+# Create:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/cluster_best_hybrid_sweep.yaml
+# Launch:
+#   SWEEP_ARRAY_TASKS=8 SWEEP_ARRAY_PARALLEL=4 RUNS_PER_AGENT=4 \
+#     SWEEP_SLURM_MEM=128GB SWEEP_SLURM_TIME=120:00:00 \
+#     bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+#       cluster weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: maximize
+  name: test/accuracy-SBM
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_best_hybrid-cluster
+
+early_terminate:
+  type: hyperband
+  min_iter: 30
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/cluster-gcn-best-hybrid.yaml
+  - --molecular=false
+  - --seed=0
+  - ${args}
+
+parameters:
+  hybrid_num_attn_heads:
+    values: [0, 1, 2]
+  hybrid_num_gnn_heads:
+    values: [1, 2]
+  hybrid_gnn_types:
+    values:
+      - GCN
+      - "GCN,GCN"
+      - "GCN,GCNE"
+      - "GCN,GINE"
+  hybrid_d_h:
+    values: [32, 64, 90]
+  hybrid_attn_dropout:
+    values: [0.0, 0.1, 0.2]
+  hybrid_mp_dropout:
+    values: [0.1, 0.15, 0.2]
+  hybrid_attn_mask:
+    values: [full, graph_restricted]
+  hybrid_gate:
+    values: [headwise, elementwise]
+  hybrid_norm:
+    values: [layernorm, rmsnorm]
+  optim.base_lr:
+    distribution: log_uniform_values
+    min: 0.0003
+    max: 0.003

@@ -1,0 +1,56 @@
+# CLUSTER hybrid sweep: every MP preset includes GCN (fair vs gcn/cluster.yaml).
+#
+# Create:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/cluster_hybrid_gcn_mp_sweep.yaml
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: maximize
+  name: test/accuracy-SBM
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_hybriddgatedGNN-cluster-gcn-mp
+
+early_terminate:
+  type: hyperband
+  min_iter: 30
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/cluster-gcn-best-hybrid.yaml
+  - --molecular=false
+  - --seed=0
+  - ${args}
+
+parameters:
+  hybrid_num_attn_heads:
+    values: [2, 4]
+  hybrid_num_gnn_heads:
+    values: [2, 4]
+  hybrid_d_h:
+    values: [32, 64, 90]
+  hybrid_attn_dropout:
+    values: [0.1, 0.2]
+  hybrid_mp_dropout:
+    values: [0.1, 0.15, 0.2]
+  hybrid_attn_mask:
+    values: [full, graph_restricted]
+  hybrid_gate:
+    values: [elementwise, headwise]
+  hybrid_norm:
+    values: [layernorm, rmsnorm]
+  hybrid_gnn_types:
+    values:
+      - "GCN,GCN"
+      - "GCN,GCNE"
+      - "GCN,GINE"
+      - "GCN,GIN"
+      - "GCN,GCN,GCN,GCN"
+      - "GCN,GCNE,GCN,GCNE"

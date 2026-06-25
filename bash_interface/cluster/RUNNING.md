@@ -64,6 +64,7 @@ sbatch bash_interface/cluster/cifar10_paper_baselines.sh
 # | CIFAR10        | cifar10       | 2     | 200           | data.pyg.org           |
 # | MNIST          | mnist         | 2     | 200           | data.pyg.org           |
 # | Peptides-func  | peptides-func | 4     | 300           | Dropbox (OGB loader)   |
+# | Peptides-struct| peptides-struct | 4   | 300           | Dropbox (OGB loader)   |
 # | COCO-SP        | coco          | 2     | 300           | PyG COCOSuperpixels    |
 # | Pascal VOC-SP  | voc           | 2     | 200           | PyG VOCSuperpixels     |
 ```
