@@ -82,6 +82,25 @@ SWEEP_ARRAY_TASKS=8 SWEEP_ARRAY_PARALLEL=4 RUNS_PER_AGENT=4 \
 - `--molecular=true`, metric **`test/ap`** (maximize), `hybrid_num_gnn_heads`: **2, 4**
 - Presets: `GCN,GCN`, `GCN,GINE`, `GCN,GIN`, `GCN,SAGE`, `GCN,GAT`, `GCN,GATEDGCN`, … and 4-head mixes
 
+**Peptides-func best-hybrid** (`peptides_func_best_hybrid_sweep.yaml` → `GNNplus_best_hybrid-peptides_func`):
+
+- Base `configs/gated_hybrid/peptides-func-gcn-best-hybrid.yaml` (600 ep, fair GCNE MP)
+- Bayes: attn/gnn heads, `d_h`, MP presets, mask/gate/norm, dropout, LR log-uniform **3e-4–3e-3**
+
+**Peptides-func best-hybrid LR follow-up** (`peptides_func_best_hybrid_lr_sweep.yaml` → `GNNplus_best_hybrid-peptides_func-lr`):
+
+- Same search as above; LR log-uniform **3e-4–1e-2** (extends prior max 3e-3)
+
+```bash
+bash bash_interface/sweeps/create_sweep.sh \
+  bash_interface/sweeps/peptides_func_best_hybrid_lr_sweep.yaml
+
+SWEEP_ARRAY_TASKS=16 SWEEP_ARRAY_PARALLEL=8 RUNS_PER_AGENT=4 \
+  SWEEP_SLURM_TIME=120:00:00 \
+  bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+    peptides_func weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+```
+
 ```bash
 bash bash_interface/sweeps/create_sweep.sh \
   bash_interface/sweeps/peptides_func_hybrid_gcn_mp_sweep.yaml

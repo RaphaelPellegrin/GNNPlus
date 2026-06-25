@@ -1,0 +1,72 @@
+# Peptides-func heterogeneity profile — hybrid_gnn (fair GCNE MP).
+# Hyperparams: configs/gated_hybrid/peptides-func-gcn-best-hybrid.yaml.
+out_dir: results
+metric_best: ap
+wandb:
+  use: False
+  project: GNNPlus
+dataset:
+  format: OGB
+  name: peptides-functional
+  task: graph
+  task_type: classification_multilabel
+  transductive: False
+  node_encoder: True
+  node_encoder_name: Atom+RWSE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: Bond
+  edge_encoder_bn: False
+posenc_RWSE:
+  enable: True
+  kernel:
+    times_func: range(1,33)
+  model: Linear
+  dim_pe: 28
+  raw_norm_type: BatchNorm
+train:
+  mode: heterogeneity
+  batch_size: 16
+  eval_period: 1
+  ckpt_period: 100
+heterogeneity:
+  required_test_appearances: 10
+  max_trials: 200
+  base_seed: 0
+  use_random_split: true
+  split: [0.5, 0.25, 0.25]
+  save_pickle: true
+  plot: true
+model:
+  type: hybrid_gnn
+  loss_fun: cross_entropy
+  graph_pooling: mean
+gnn:
+  head: mlp_graph
+  ffn: False
+  layers_pre_mp: 0
+  layers_mp: 3
+  layers_post_mp: 4
+  dim_inner: 275
+  act: gelu
+  residual: False
+  dropout: 0.2
+  hybrid:
+    num_attn_heads: 1
+    num_gnn_heads: 1
+    d_h: 128
+    attn_mask: full
+    gate: headwise
+    norm: layernorm
+    gnn_types: "GCNE"
+    attn_dropout: 0.1
+    mp_dropout: 0.2
+    block_bn: false
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 0.0
+  base_lr: 0.001
+  max_epoch: 600
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10
