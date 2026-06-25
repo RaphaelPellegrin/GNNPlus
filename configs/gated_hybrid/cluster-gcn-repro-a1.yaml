@@ -1,0 +1,70 @@
+# CLUSTER hybrid repro: 1×GCN MP + 1×attention on gcn/cluster.yaml (gcn baseline).
+# gnn.ffn false (FFN inside MP head).
+out_dir: results
+metric_best: accuracy-SBM
+wandb:
+  use: False
+  project: GNNPlus
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - repro
+    - cluster_gcn_repro_a1
+dataset:
+  format: PyG-GNNBenchmarkDataset
+  name: CLUSTER
+  task: graph
+  task_type: classification
+  transductive: False
+  split_mode: standard
+  node_encoder: True
+  node_encoder_name: LinearNode+RWSE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: DummyEdge
+  edge_encoder_bn: False
+posenc_RWSE:
+  enable: True
+  kernel:
+    times_func: range(1,21)
+  model: Linear
+  raw_norm_type: BatchNorm
+train:
+  mode: custom
+  batch_size: 16
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: hybrid_gnn
+  loss_fun: weighted_cross_entropy
+  edge_decoding: dot
+gnn:
+  head: inductive_node
+  ffn: False
+  layers_mp: 12
+  layers_pre_mp: 0
+  layers_post_mp: 3
+  dim_inner: 90
+  act: relu
+  dropout: 0.1
+  agg: mean
+  residual: True
+  hybrid:
+    num_attn_heads: 1
+    num_gnn_heads: 1
+    d_h: 64
+    attn_mask: full
+    gate: headwise
+    norm: layernorm
+    gnn_types: "GCN"
+    attn_dropout: 0.1
+    mp_dropout: 0.1
+    block_bn: false
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 1e-5
+  base_lr: 0.001
+  max_epoch: 100
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 5

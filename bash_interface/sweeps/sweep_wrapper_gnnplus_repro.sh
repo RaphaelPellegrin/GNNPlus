@@ -7,7 +7,7 @@
 #   repro_variant=baseline     → original GNN+ yaml (custom_gnn)
 #   repro_variant=hybrid_attn1 → gated_hybrid *-repro-a1.yaml (1 MP + 1 attn)
 #
-# Leading arg: --dataset=cifar10 | mnist | peptides_func
+# Leading arg: --dataset=cifar10 | mnist | peptides_func | pattern | cluster | mal
 # W&B may also pass: --hybrid_d_h=128, --optim.base_lr=..., etc.
 # =============================================================================
 
@@ -63,6 +63,7 @@ while [ "$#" -gt 0 ]; do
                 hybrid_num_attn_heads) _set_opt "gnn.hybrid.num_attn_heads" "${val}" ;;
                 hybrid_num_gnn_heads) _set_opt "gnn.hybrid.num_gnn_heads" "${val}" ;;
                 optim.base_lr|base_lr) _set_opt "optim.base_lr" "${val}" ;;
+                seed) SEED="${val}" ;;
                 *) _set_opt "${key}" "${val}" ;;
             esac
             ;;
@@ -79,6 +80,7 @@ while [ "$#" -gt 0 ]; do
                 hybrid_num_attn_heads) _set_opt "gnn.hybrid.num_attn_heads" "${val}" ;;
                 hybrid_num_gnn_heads) _set_opt "gnn.hybrid.num_gnn_heads" "${val}" ;;
                 optim.base_lr|base_lr) _set_opt "optim.base_lr" "${val}" ;;
+                seed) SEED="${val}" ;;
                 *) _set_opt "${key}" "${val}" ;;
             esac
             ;;
@@ -147,6 +149,63 @@ case "${DATASET}" in
                 ;;
             *)
                 echo "Unknown repro_variant for peptides_func: ${VARIANT}" >&2
+                exit 2
+                ;;
+        esac
+        ;;
+    pattern)
+        case "${VARIANT}" in
+            baseline)
+                CFG="configs/gcn/pattern.yaml"
+                SEED="${SEED:-0}"
+                WANDB_NAME="pattern_gcne_seed${SEED}_repro_baseline"
+                ;;
+            hybrid_attn1)
+                CFG="configs/gated_hybrid/pattern-gcne-repro-a1.yaml"
+                SEED="${SEED:-0}"
+                WANDB_NAME="pattern_gcne_seed${SEED}_repro_hybrid_attn1"
+                EXTRA_ARGS+=(gnn.hybrid.log_gate_stats True)
+                ;;
+            *)
+                echo "Unknown repro_variant for pattern: ${VARIANT}" >&2
+                exit 2
+                ;;
+        esac
+        ;;
+    cluster)
+        case "${VARIANT}" in
+            baseline)
+                CFG="configs/gcn/cluster.yaml"
+                SEED="${SEED:-0}"
+                WANDB_NAME="cluster_gcn_seed${SEED}_repro_baseline"
+                ;;
+            hybrid_attn1)
+                CFG="configs/gated_hybrid/cluster-gcn-repro-a1.yaml"
+                SEED="${SEED:-0}"
+                WANDB_NAME="cluster_gcn_seed${SEED}_repro_hybrid_attn1"
+                EXTRA_ARGS+=(gnn.hybrid.log_gate_stats True)
+                ;;
+            *)
+                echo "Unknown repro_variant for cluster: ${VARIANT}" >&2
+                exit 2
+                ;;
+        esac
+        ;;
+    mal)
+        case "${VARIANT}" in
+            baseline)
+                CFG="configs/gcn/mal.yaml"
+                SEED="${SEED:-0}"
+                WANDB_NAME="mal_gcne_seed${SEED}_repro_baseline"
+                ;;
+            hybrid_attn1)
+                CFG="configs/gated_hybrid/mal-gcne-repro-a1.yaml"
+                SEED="${SEED:-0}"
+                WANDB_NAME="mal_gcne_seed${SEED}_repro_hybrid_attn1"
+                EXTRA_ARGS+=(gnn.hybrid.log_gate_stats True)
+                ;;
+            *)
+                echo "Unknown repro_variant for mal: ${VARIANT}" >&2
                 exit 2
                 ;;
         esac

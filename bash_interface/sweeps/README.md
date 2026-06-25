@@ -42,6 +42,18 @@ Python `parse_hybrid_gnn_types` pads or truncates the list to match `hybrid_num_
 |---------|------|----------|-------|
 | CIFAR10 | `cifar10_repro_baseline_vs_attn_sweep.yaml` | `GNNplus_repro-cifar10-gatedgcn-baseline-vs-attn1` | e.g. `o7tsb3k1` |
 | MNIST | `mnist_repro_baseline_vs_attn_sweep.yaml` | `GNNplus_repro-mnist-gatedgcn-baseline-vs-attn1` | seed 1 |
+| PATTERN | `pattern_repro_baseline_vs_attn_sweep.yaml` | `GNNplus_repro-pattern-gcne-baseline-vs-attn1` | gcne baseline, seeds 0–3 |
+| CLUSTER | `cluster_repro_baseline_vs_attn_sweep.yaml` | `GNNplus_repro-cluster-gcn-baseline-vs-attn1` | gcn baseline, seeds 0–1 |
+| MalNet-Tiny | `mal_repro_baseline_vs_attn_sweep.yaml` | `GNNplus_repro-mal-gcne-baseline-vs-attn1` | gcne baseline, seeds 0–4 |
+
+Cluster **without W&B sweep** (SLURM array, same configs):
+
+```bash
+bash bash_interface/cluster/submit_fair_repro_suite.sh          # pattern + cluster + mal
+bash bash_interface/cluster/submit_fair_repro_suite.sh pattern  # one dataset
+```
+
+Uses `run_fair_repro_array.sh`: tasks 1–N = baseline seeds, N+1–2N = hybrid_attn1 seeds.
 
 **CIFAR10 best-hybrid** (Bayes; `cifar10_best_hybrid_sweep.yaml` → `GNNplus_best_hybrid-cifar10`):
 

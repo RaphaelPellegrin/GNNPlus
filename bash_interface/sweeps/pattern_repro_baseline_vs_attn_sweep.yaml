@@ -1,0 +1,33 @@
+# PATTERN fair repro: gcne baseline vs 1×GCNE MP + 1×attention (paper seeds 0–3).
+#
+# Create:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/pattern_repro_baseline_vs_attn_sweep.yaml
+# Launch:
+#   SWEEP_ID=... SWEEP_DATASET=pattern RUNS_PER_AGENT=8 \
+#     sbatch --array=1-1 --mem=128GB --time=120:00:00 \
+#     --export=ALL,SWEEP_ID,SWEEP_DATASET=pattern,RUNS_PER_AGENT=8,ENV_NAME=gnnplus \
+#     bash_interface/sweeps/run_wandb_sweep_agent.sh
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus_repro.sh
+method: grid
+metric:
+  goal: maximize
+  name: test/accuracy-SBM
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_repro-pattern-gcne-baseline-vs-attn1
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --dataset=pattern
+  - ${args}
+
+parameters:
+  repro_variant:
+    values: [baseline, hybrid_attn1]
+  seed:
+    values: [0, 1, 2, 3]

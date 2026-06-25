@@ -1,0 +1,33 @@
+# CLUSTER fair repro: gcn baseline vs 1×GCN MP + 1×attention (paper seeds 0–1).
+#
+# Create:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/cluster_repro_baseline_vs_attn_sweep.yaml
+# Launch:
+#   SWEEP_ID=... SWEEP_DATASET=cluster RUNS_PER_AGENT=4 \
+#     sbatch --array=1-1 --mem=128GB --time=120:00:00 \
+#     --export=ALL,SWEEP_ID,SWEEP_DATASET=cluster,RUNS_PER_AGENT=4,ENV_NAME=gnnplus \
+#     bash_interface/sweeps/run_wandb_sweep_agent.sh
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus_repro.sh
+method: grid
+metric:
+  goal: maximize
+  name: test/accuracy-SBM
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_repro-cluster-gcn-baseline-vs-attn1
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --dataset=cluster
+  - ${args}
+
+parameters:
+  repro_variant:
+    values: [baseline, hybrid_attn1]
+  seed:
+    values: [0, 1]
