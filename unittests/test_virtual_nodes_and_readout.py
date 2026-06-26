@@ -75,6 +75,34 @@ def test_add_virtual_nodes_zero_is_noop() -> None:
     assert out is not graph
 
 
+def test_weighted_cross_entropy_masks_virtual_node_labels() -> None:
+    """Virtual-node ignore labels are dropped before weighted CE."""
+    import types
+
+    pkg = types.ModuleType('GNNPlus')
+    pre = types.ModuleType('GNNPlus.preprocessing')
+    pre.graph_augmentations = _graph_aug  # type: ignore[attr-defined]
+    sys.modules['GNNPlus'] = pkg
+    sys.modules['GNNPlus.preprocessing'] = pre
+    sys.modules['GNNPlus.preprocessing.graph_augmentations'] = _graph_aug
+
+    wce = _load_module(
+        'gnnplus_wce_vn_test',
+        'GNNPlus/loss/weighted_cross_entropy.py',
+    )
+    pred = torch.tensor(
+        [[2.0, 0.0], [0.0, 2.0], [2.0, 0.0], [0.0, 2.0]],
+        dtype=torch.float32,
+    )
+    true = torch.tensor(
+        [0, 1, _graph_aug.VIRTUAL_NODE_LABEL_IGNORE, -1],
+        dtype=torch.long,
+    )
+    masked_pred, masked_true = wce._mask_virtual_node_targets(pred, true)
+    assert masked_pred.shape[0] == 2
+    assert masked_true.tolist() == [0, 1]
+
+
 def _mock_cfg(act: str = 'relu', dropout: float = 0.0) -> MagicMock:
     cfg = MagicMock()
     cfg.gnn.act = act

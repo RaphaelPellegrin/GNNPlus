@@ -1,0 +1,36 @@
+# VOC-SP virtual-node ablation — grid on anchor mq8f0mx2 (4 trials).
+# num_virtual_nodes=0 → no VN; {1,2,4} auto-enables dataset.add_virtual_nodes.
+#
+# Create:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/voc_hybrid_vn_ablation_sweep.yaml
+# Launch:
+#   SWEEP_ARRAY_TASKS=4 SWEEP_ARRAY_PARALLEL=4 RUNS_PER_AGENT=1 \
+#     SWEEP_SLURM_MEM=128GB SWEEP_SLURM_TIME=120:00:00 \
+#     bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+#       voc weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+#
+# Prefer SLURM array: submit_voc_hybrid_vn_ablation.sh
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: grid
+metric:
+  goal: maximize
+  name: test/f1
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_ablation-voc-hybrid-vn
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/voc-hybrid-mq8f0mx2-anchor.yaml
+  - --molecular=false
+  - --seed=0
+  - ${args}
+
+parameters:
+  num_virtual_nodes:
+    values: [0, 1, 2, 4]
