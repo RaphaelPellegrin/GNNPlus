@@ -1,0 +1,72 @@
+# CLUSTER hybrid fair repro: 1×GatedGCN+ MP + 1×attention on gatedgcn/cluster.yaml.
+# Anchor standard run: n4unldzn (cluster_gatedgcn_seed1_cluster, test/accuracy-SBM).
+# GATEDGCN MP uses GatedGCNLayer; set gnn.ffn: false (FFN inside MP head).
+out_dir: results
+metric_best: accuracy-SBM
+wandb:
+  use: False
+  project: GNNPlus
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - repro
+    - cluster_gatedgcn_repro_a1
+dataset:
+  format: PyG-GNNBenchmarkDataset
+  name: CLUSTER
+  task: graph
+  task_type: classification
+  transductive: False
+  split_mode: standard
+  node_encoder: True
+  node_encoder_name: LinearNode+RWSE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: DummyEdge
+  edge_encoder_bn: False
+posenc_RWSE:
+  enable: True
+  kernel:
+    times_func: range(1,21)
+  model: Linear
+  raw_norm_type: BatchNorm
+train:
+  mode: custom
+  batch_size: 16
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: hybrid_gnn
+  loss_fun: weighted_cross_entropy
+  edge_decoding: dot
+gnn:
+  head: inductive_node
+  ffn: False
+  layers_mp: 16
+  layers_pre_mp: 0
+  layers_post_mp: 3
+  dim_inner: 56
+  act: relu
+  dropout: 0.2
+  agg: mean
+  normalize_adj: False
+  residual: True
+  hybrid:
+    num_attn_heads: 1
+    num_gnn_heads: 1
+    d_h: 56
+    attn_mask: full
+    gate: headwise
+    norm: layernorm
+    gnn_types: "GATEDGCN"
+    attn_dropout: 0.1
+    mp_dropout: 0.2
+    block_bn: false
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 1e-5
+  base_lr: 0.0005
+  max_epoch: 100
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 5

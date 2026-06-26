@@ -61,6 +61,7 @@ Uses `run_fair_repro_array.sh`: tasks 1–N = baseline seeds, N+1–2N = hybrid_
 |---------|------------------|-----------------|-----------------|--------|
 | PATTERN | `pattern_best_hybrid_sweep.yaml` | `pattern_hybrid_gcne_mp_sweep.yaml` | `GNNplus_best_hybrid-pattern` | `test/accuracy-SBM` |
 | CLUSTER | `cluster_best_hybrid_sweep.yaml` | `cluster_hybrid_gcn_mp_sweep.yaml` | `GNNplus_best_hybrid-cluster` | `test/accuracy-SBM` |
+| CLUSTER (GatedGCN+) | `cluster_gatedgcn_best_hybrid_sweep.yaml` | — | `GNNplus_best_hybrid-cluster-gatedgcn` | `test/accuracy-SBM` |
 | MalNet-Tiny | `mal_best_hybrid_sweep.yaml` | `mal_hybrid_gcne_mp_sweep.yaml` | `GNNplus_best_hybrid-mal` | `test/accuracy` |
 
 Base configs: `configs/gated_hybrid/{pattern-gcne,cluster-gcn,mal-gcne}-best-hybrid.yaml` (outer hyperparams from `gcn/*.yaml`, fair MP type). Generic wide sweeps `*_hybrid_gnnplus_sweep.yaml` also exist (from `generate_hybrid_sweep_yamls.sh`).

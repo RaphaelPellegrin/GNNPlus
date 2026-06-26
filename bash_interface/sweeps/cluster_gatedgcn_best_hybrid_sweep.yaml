@@ -1,0 +1,50 @@
+# CLUSTER GatedGCN+ best-hybrid Bayes — 1×GATEDGCN MP + {1,2,4} attention heads.
+# Standard anchor: n4unldzn (gatedgcn/cluster.yaml, seed 1).
+# Base: configs/gated_hybrid/cluster-gatedgcn-best-hybrid.yaml
+#
+# Create:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/cluster_gatedgcn_best_hybrid_sweep.yaml
+# Launch:
+#   bash bash_interface/cluster/submit_cluster_gatedgcn_best_hybrid_sweep.sh
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: maximize
+  name: test/accuracy-SBM
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_best_hybrid-cluster-gatedgcn
+
+early_terminate:
+  type: hyperband
+  min_iter: 30
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/cluster-gatedgcn-best-hybrid.yaml
+  - --molecular=false
+  - --seed=1
+  - ${args}
+
+parameters:
+  hybrid_num_attn_heads:
+    values: [1, 2, 4]
+  hybrid_num_gnn_heads:
+    value: 1
+  hybrid_gnn_types:
+    value: GATEDGCN
+  hybrid_d_h:
+    values: [32, 48, 56, 64, 96]
+  hybrid_attn_mask:
+    values: [full, graph_restricted]
+  optim.base_lr:
+    distribution: log_uniform_values
+    min: 0.0002
+    max: 0.001
