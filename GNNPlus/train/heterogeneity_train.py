@@ -6,8 +6,6 @@ import logging
 
 from torch_geometric.graphgym.register import register_train
 
-from GNNPlus.experiments.heterogeneity_profile import run_heterogeneity_profile
-
 
 @register_train("heterogeneity")
 def heterogeneity_train(loggers, loaders, model, optimizer, scheduler) -> None:
@@ -17,6 +15,8 @@ def heterogeneity_train(loggers, loaders, model, optimizer, scheduler) -> None:
     Ignores the ``loggers`` / ``model`` passed from ``main.py`` (fresh per trial).
     Use ``--repeat 1`` on the CLI; trials are controlled by ``cfg.heterogeneity``.
     """
+    from GNNPlus.experiments.heterogeneity_profile import run_heterogeneity_profile
+
     del loggers, loaders, model, optimizer, scheduler
     logging.info("Starting heterogeneity-profile training mode")
     run_heterogeneity_profile()

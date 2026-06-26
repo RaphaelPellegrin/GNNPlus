@@ -6,7 +6,6 @@ import os
 import pickle
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -93,6 +92,8 @@ def plot_average_per_graph(
     is_encoding_moe: bool = False,
 ) -> str:
     """Plot average accuracy (classification) or average error (regression) per graph."""
+    import matplotlib.pyplot as plt
+
     fig, ax = plt.subplots(figsize=(12, 6))
 
     if task_type == "classification":
