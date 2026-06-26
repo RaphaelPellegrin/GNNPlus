@@ -1,0 +1,84 @@
+# Peptides-struct best-hybrid Bayes — target test/mae < 0.23 (MOE_6 rholn782 anchor).
+# Base: configs/gated_hybrid/peptides-struct-gine-best-hybrid.yaml
+# Sweeps MOE-aligned knobs: hybrid_readout_mlp, add_virtual_nodes, num_virtual_nodes.
+# W&B: test/mae (minimize); logs preprocess/* + MOE keys add_virtual_nodes, hybrid_readout_mlp.
+#
+# Create:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/peptides_struct_best_hybrid_sweep.yaml
+# Launch:
+#   SWEEP_ARRAY_TASKS=16 SWEEP_ARRAY_PARALLEL=8 RUNS_PER_AGENT=4 \
+#     SWEEP_SLURM_TIME=120:00:00 \
+#     bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+#       peptides_struct weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: minimize
+  name: test/mae
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_best_hybrid-peptides_struct
+
+early_terminate:
+  type: hyperband
+  min_iter: 40
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/peptides-struct-gine-best-hybrid.yaml
+  - --molecular=true
+  - --seed=2
+  - ${args}
+
+parameters:
+  hybrid_num_attn_heads:
+    values: [1, 2, 4]
+  hybrid_num_gnn_heads:
+    values: [1, 2, 3]
+  hybrid_gnn_types:
+    values:
+      - "GINE,GGNN"
+      - "GGNN,GINE"
+      - "GINE,GINE"
+      - "GGNN,GGNN"
+  hybrid_d_h:
+    values: [12, 16, 20, 24]
+  hybrid_layers_mp:
+    values: [8, 10, 12, 14]
+  hybrid_dim_inner:
+    values: [80, 96, 112, 128]
+  hybrid_attn_dropout:
+    values: [0.0, 0.05, 0.1]
+  hybrid_mp_dropout:
+    values: [0.0, 0.05, 0.1]
+  hybrid_attn_mask:
+    value: full
+  hybrid_gate:
+    value: headwise
+  hybrid_norm:
+    values: [layernorm, rmsnorm]
+  hybrid_readout_mlp:
+    values: [pyramid, narrow2, linear, deep4]
+  add_virtual_nodes:
+    values: [true, false]
+  num_virtual_nodes:
+    values: [2, 4]
+  gnn.ffn:
+    values: [true, false]
+  gnn.residual:
+    value: true
+  gnn.dropout:
+    values: [0.0, 0.05, 0.1]
+  batch_size:
+    values: [32, 64]
+  optim.base_lr:
+    values: [0.0002, 0.0003, 0.0004, 0.0006]
+  optim.num_warmup_epochs:
+    values: [5, 10, 20]

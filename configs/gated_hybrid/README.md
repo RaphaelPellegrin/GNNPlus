@@ -80,6 +80,17 @@ The old behavior is kept under **`RESGATEDGCN`** for ablations only. Do **not** 
 
 For peptides hybrid configs using `GCNE`, set **`gnn.ffn: false`** (FFN lives inside `GCNConvLayer` when enabled on baseline).
 
+### Virtual nodes and readout presets
+
+| Config | MOE equivalent | Notes |
+|--------|----------------|-------|
+| `dataset.add_virtual_nodes: true` | `--add_virtual_nodes` | Applied after PE precompute, all splits |
+| `dataset.num_virtual_nodes: 4` | `--num_virtual_nodes 4` | Zero-init features; bidirectional edges to all real nodes |
+| `gnn.readout_mlp: pyramid` | `--hybrid_readout_mlp pyramid` | `d→d/2→d/4→out` (use with `head: mlp_graph`) |
+| `gnn.readout_mlp: ''` | — | Legacy `layers_post_mp` same-width stack |
+
+W&B logs `preprocess/add_virtual_nodes`, `preprocess/num_virtual_nodes`, `preprocess/readout_mlp` on run start.
+
 **Peptides-func sweeps (post GCNE fix):**
 
 | Sweep yaml | Purpose | Trials |
@@ -116,3 +127,9 @@ Matches Heterogeneity_Profile: use **`optim.optimizer: schedulefreeAdamW`** with
 - Bayes: attn {0,1,2,4}, gnn {1,2,4}, `GINE` MP presets, `d_h` {32…128}, depth {10,12,14}, mask/gate/norm, dropout, LR; **192h**
 
 Install `schedulefree` on cluster (`requirements-cluster.txt`).
+
+**Peptides-struct best-hybrid GINE+GGNN** (MOE anchor [rholn782](https://wandb.ai/weber-geoml-harvard-university/MOE_6/runs/rholn782), best/test_mae &lt; 0.23):
+
+- Base `peptides-struct-gine-best-hybrid.yaml` — L12, `dim_inner=96`, a2g2, `GINE,GGNN`, `d_h=16`, ffn+residual, lr=4e-4, bs=64, 4 virtual nodes, `readout_mlp: pyramid`
+- Sweep `peptides_struct_best_hybrid_sweep.yaml` → `GNNplus_best_hybrid-peptides_struct`
+- **GNNPlus gap vs MOE:** precomputed `g_rwpe_k21` head routing (RWSE `range(1,21)` is approximate)

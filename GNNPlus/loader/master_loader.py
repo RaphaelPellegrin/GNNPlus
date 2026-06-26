@@ -20,6 +20,7 @@ from GNNPlus.loader.dataset.malnet_tiny import MalNetTiny
 from GNNPlus.loader.dataset.voc_superpixels import VOCSuperpixels
 from GNNPlus.loader.split_generator import (prepare_splits,
                                              set_dataset_splits)
+from GNNPlus.preprocessing.graph_augmentations import maybe_add_virtual_nodes, parse_cfg_bool
 from GNNPlus.transform.posenc_stats import compute_posenc_stats
 from GNNPlus.transform.task_preprocessing import task_specific_preprocessing
 from GNNPlus.transform.transforms import (pre_transform_in_memory,
@@ -214,6 +215,15 @@ def load_dataset_master(format, name, dataset_dir):
         timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
                   + f'{elapsed:.2f}'[-3:]
         logging.info(f"Done! Took {timestr}")
+
+    if parse_cfg_bool(cfg.dataset.add_virtual_nodes) and int(cfg.dataset.num_virtual_nodes) > 0:
+        r = int(cfg.dataset.num_virtual_nodes)
+        logging.info(f"Adding {r} virtual node(s) per graph (all splits)...")
+        pre_transform_in_memory(
+            dataset,
+            partial(maybe_add_virtual_nodes, cfg=cfg),
+            show_progress=True,
+        )
 
     # Set standard dataset train/val/test splits
     if hasattr(dataset, 'split_idxs'):

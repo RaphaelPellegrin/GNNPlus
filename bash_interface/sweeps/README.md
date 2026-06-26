@@ -243,6 +243,17 @@ bash bash_interface/sweeps/launch_hybrid_sweeps.sh --create-only all
 | peptides-func, pcba | `test/ap` | maximize |
 | peptides-struct, zinc | `test/mae` | minimize |
 
+**Peptides-struct GINE best-hybrid** (`peptides_struct_best_hybrid_sweep.yaml` → `GNNplus_best_hybrid-peptides_struct`):
+
+- MOE anchor [rholn782](https://wandb.ai/weber-geoml-harvard-university/MOE_6/runs/rholn782) (HybridGated, test_mae &lt; 0.23 in Heterogeneity_Profile)
+- Base `peptides-struct-gine-best-hybrid.yaml` (L12, H96, GINE+GGNN, ffn+residual, lr=4e-4, bs=64)
+- One-shot repro (no sweep): `python main.py --cfg configs/gated_hybrid/peptides-struct-gine-best-hybrid.yaml seed 2 wandb.use True`
+- Create + launch: `bash bash_interface/sweeps/create_sweep.sh bash_interface/sweeps/peptides_struct_best_hybrid_sweep.yaml` then `relaunch_sweep_agents.sh peptides_struct <SWEEP_ID>`
+- Config: `add_virtual_nodes`, `num_virtual_nodes`, `hybrid_readout_mlp` (MOE names; also `dataset.*` / `gnn.readout_mlp`)
+- W&B filters: `config.add_virtual_nodes`, `config.hybrid_readout_mlp`, `summary.preprocess/num_virtual_nodes`
+- One-shot launch: `bash bash_interface/cluster/submit_peptides_struct_best_hybrid_sweep.sh`
+- **GNNPlus gap vs MOE:** RWSE `range(1,21)` approximates `g_rwpe_k21`
+
 **ZINC GINE best-hybrid** (`zinc_best_hybrid_gine_sweep.yaml` → `GNNplus_best_hybrid-zinc-gine`):
 
 - Anchor [3fdh5kkm](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/3fdh5kkm) (`gine/zinc.yaml`, test/mae ≈ 0.072)

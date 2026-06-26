@@ -10,3 +10,8 @@ def custom_gnn_cfg(cfg):
     # Use residual connections between the GNN layers.
     cfg.gnn.residual = True
     cfg.gnn.ffn = True
+
+    # Graph readout preset for ``mlp_graph`` head (MOE hybrid_readout_mlp).
+    # Empty / mlp_graph: legacy ``layers_post_mp`` same-width hidden stack.
+    # linear | narrow2 | pyramid | deep4
+    cfg.gnn.readout_mlp = ''

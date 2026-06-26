@@ -19,6 +19,7 @@ from GNNPlus.hybrid_gate_tracking import (
     hybrid_gate_logging_enabled,
     publish_gate_stats_to_wandb,
 )
+from GNNPlus.wandb_helpers import record_preprocessing_wandb_flags
 from GNNPlus.optimizer.schedulefree_support import (
     get_optimizer_logged_lr,
     set_optimizer_eval_mode,
@@ -158,6 +159,7 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
             wandb_kwargs['tags'] = wandb_tags
         run = wandb.init(**wandb_kwargs)
         run.config.update(cfg_to_dict(cfg))
+        record_preprocessing_wandb_flags()
         if hybrid_gate_logging_enabled():
             wandb.define_metric('train/epoch')
             wandb.define_metric('gates/*', step_metric='train/epoch')
