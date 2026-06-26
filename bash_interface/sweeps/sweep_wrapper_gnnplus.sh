@@ -188,7 +188,12 @@ if [ -z "${OPTS[gnn.hybrid.gnn_types]:-}" ]; then
 fi
 # parse_hybrid_gnn_types in Python pads/truncates gnn_types to num_gnn_heads.
 
-if ! _is_truthy "${OPTS[dataset.add_virtual_nodes]:-false}"; then
+_num_vn="${OPTS[dataset.num_virtual_nodes]:-0}"
+if _is_truthy "${OPTS[dataset.add_virtual_nodes]:-false}"; then
+    :
+elif [ "${_num_vn}" -gt 0 ] 2>/dev/null; then
+    _set_opt "dataset.add_virtual_nodes" "True"
+else
     _set_opt "dataset.add_virtual_nodes" "False"
     _set_opt "dataset.num_virtual_nodes" "0"
 fi
