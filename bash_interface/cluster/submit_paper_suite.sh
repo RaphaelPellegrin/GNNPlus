@@ -55,12 +55,20 @@ paper_slurm_time() {
     esac
 }
 
+paper_mem() {
+    case "$1" in
+        coco|voc) echo "128GB" ;;
+        *) echo "64GB" ;;
+    esac
+}
+
 submit_dataset() {
     local dataset="$1"
-    local num_seeds max_parallel time_limit ntasks job_name
+    local num_seeds max_parallel time_limit mem ntasks job_name
     num_seeds="$(paper_num_seeds "$dataset")"
     max_parallel="$(paper_max_parallel "$dataset")"
     time_limit="$(paper_slurm_time "$dataset")"
+    mem="$(paper_mem "$dataset")"
     ntasks=$((3 * num_seeds))
     job_name="gnnplus_${dataset//-/_}"
 
@@ -69,17 +77,17 @@ submit_dataset() {
         return 1
     fi
 
-    echo "→ ${dataset}: ${ntasks} tasks (${num_seeds} seeds × 3 models), time=${time_limit}"
+    echo "→ ${dataset}: ${ntasks} tasks (${num_seeds} seeds × 3 models), time=${time_limit}, mem=${mem}"
     if [ "$DRY_RUN" -eq 1 ]; then
         echo "  [dry-run] sbatch --job-name=${job_name} --array=1-${ntasks}%${max_parallel} \\"
-        echo "    --time=${time_limit} --export=ALL,DATASET=${dataset},NUM_SEEDS=${num_seeds} \\"
+        echo "    --time=${time_limit} --mem=${mem} --export=ALL,DATASET=${dataset},NUM_SEEDS=${num_seeds} \\"
         echo "    bash_interface/cluster/run_paper_array.sh"
     else
         sbatch \
             --job-name="${job_name}" \
             --array="1-${ntasks}%${max_parallel}" \
             --time="${time_limit}" \
-            --mem=64GB \
+            --mem="${mem}" \
             --export="ALL,DATASET=${dataset},NUM_SEEDS=${num_seeds},ENV_NAME=gnnplus" \
             bash_interface/cluster/run_paper_array.sh
     fi

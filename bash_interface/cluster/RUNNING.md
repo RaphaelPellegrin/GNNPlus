@@ -304,3 +304,11 @@ bash bash_interface/cluster/submit_best_hybrid_sweep_suite.sh pattern
 ```
 
 Sweeps: `pattern_best_hybrid_sweep.yaml`, `cluster_best_hybrid_sweep.yaml`, `mal_best_hybrid_sweep.yaml` → W&B projects `GNNplus_best_hybrid-pattern|cluster|mal`.
+
+### Peptides-struct best-hybrid (MOE rholn782 repro)
+
+```bash
+bash bash_interface/cluster/submit_peptides_struct_best_hybrid_sweep.sh
+```
+
+Sweeps `hybrid_readout_mlp`, `add_virtual_nodes`, `num_virtual_nodes` + architecture/LR. W&B: `config.add_virtual_nodes`, `config.hybrid_readout_mlp`, tags `virtual_nodes`, `readout_pyramid`, etc.
