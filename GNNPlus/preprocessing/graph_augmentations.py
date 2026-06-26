@@ -7,6 +7,9 @@ from typing import Any
 import torch
 from torch_geometric.data import Data
 
+# Sentinel for per-node targets on appended virtual nodes (excluded from loss/metrics).
+VIRTUAL_NODE_LABEL_IGNORE: int = -1
+
 
 def parse_cfg_bool(value: Any) -> bool:
     """Parse yacs / W&B sweep values into a boolean."""
@@ -57,6 +60,22 @@ def _pad_node_level_attrs(graph: Data, n_real: int, r: int) -> None:
         graph[key] = _zero_pad_node_rows(value, n_real, r)
 
 
+def _pad_node_labels(graph: Data, n_real: int, r: int) -> None:
+    """Append ignore labels for virtual nodes when ``y`` is per-node."""
+    if r <= 0:
+        return
+    y = getattr(graph, 'y', None)
+    if y is None or not torch.is_tensor(y) or int(y.size(0)) != n_real:
+        return
+    ignore = torch.full(
+        (r, *list(y.shape[1:])),
+        fill_value=VIRTUAL_NODE_LABEL_IGNORE,
+        dtype=y.dtype,
+        device=y.device,
+    )
+    graph.y = torch.cat([y, ignore], dim=0)
+
+
 def add_virtual_nodes(graph: Data, r: int) -> Data:
     """Return a copy of ``graph`` with ``r`` virtual nodes appended.
 
@@ -105,6 +124,7 @@ def add_virtual_nodes(graph: Data, r: int) -> Data:
             out.edge_attr = torch.cat([edge_attr, add], dim=0)
 
     _pad_node_level_attrs(out, n_real, r)
+    _pad_node_labels(out, n_real, r)
     if hasattr(out, 'num_nodes'):
         out.num_nodes = n_real + r
 

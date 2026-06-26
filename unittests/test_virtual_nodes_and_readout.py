@@ -50,6 +50,23 @@ def test_add_virtual_nodes_extends_graph() -> None:
     assert out.edge_index.size(1) == edge_index.size(1) + 2 * r * n
 
 
+def test_add_virtual_nodes_pads_per_node_labels() -> None:
+    """Per-node ``y`` is extended with ignore labels for virtual nodes."""
+    n, d, r = 5, 8, 2
+    y = torch.arange(n)
+    graph = Data(
+        x=torch.randn(n, d),
+        y=y,
+        edge_index=torch.tensor([[0, 1, 2], [1, 2, 3]], dtype=torch.long),
+    )
+
+    out = _graph_aug.add_virtual_nodes(graph, r)
+
+    assert out.y.shape == (n + r,)
+    assert torch.equal(out.y[:n], y)
+    assert torch.all(out.y[n:] == _graph_aug.VIRTUAL_NODE_LABEL_IGNORE)
+
+
 def test_add_virtual_nodes_zero_is_noop() -> None:
     """``r=0`` returns a clone with unchanged shape."""
     graph = Data(x=torch.ones(3, 4), edge_index=torch.tensor([[0, 1], [1, 2]]))
