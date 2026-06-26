@@ -90,6 +90,12 @@ SWEEP_ARRAY_TASKS=8 SWEEP_ARRAY_PARALLEL=4 RUNS_PER_AGENT=4 \
 - Fixed at best run: `layers_mp=10`, `GATEDGCN`, full/headwise/layernorm, attn_dropout 0.2, mp_dropout 0.1
 - Sweeps: attn/gnn heads **{4, 8}**, `d_h` **{64, 96, 128, 192, 256}**, LR log-uniform **2.5e-4–1.2e-3** (best ≈ 5.35e-4)
 
+**VOC-SP best-hybrid** (hybrid anchor [20f5lcie](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/20f5lcie), standard [z59jkox4](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/z59jkox4); `voc_best_hybrid_sweep.yaml` → `GNNplus_best_hybrid-voc`):
+
+- Base `configs/gated_hybrid/voc-gatedgcn-best-hybrid.yaml` (outer `gatedgcn/voc.yaml` + RWSE; hybrid centered on best wide-sweep run)
+- Bayes: attn/gnn heads **{2, 4}**, `d_h` **{16–64}**, `layers_mp` / `dim_inner`, MP presets, mask/gate/norm, batch **4/8**, LR log-uniform **3e-4–2e-3**
+- Launch: `bash bash_interface/cluster/submit_voc_best_hybrid_sweep.sh` (**128GB**, 120h)
+
 **MNIST / CIFAR10 + GatedGCN MP experts** (pairs GatedGCN with GCN/GIN/SAGE/GAT):
 
 | Dataset | YAML | W&B sweep name |

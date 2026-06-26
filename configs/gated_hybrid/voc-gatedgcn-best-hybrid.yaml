@@ -1,0 +1,75 @@
+# VOC-SP best-hybrid — outer hyperparams from gatedgcn/voc.yaml (standard GatedGCN+).
+# Hybrid block centered on W&B anchor run 20f5lcie (sweep gskccsb2, hybrid).
+# Standard baseline reference: z59jkox4 (gatedgcn/voc.yaml, custom_gnn).
+#
+# Sweep: bash_interface/sweeps/voc_best_hybrid_sweep.yaml
+# Cluster: bash_interface/cluster/submit_voc_best_hybrid_sweep.sh
+# Submit with --mem=128GB (superpixel + attention).
+out_dir: results
+metric_best: f1
+wandb:
+  use: False
+  project: GNNPlus
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - voc_best_hybrid
+    - voc_anchor_20f5lcie
+dataset:
+  format: PyG-VOCSuperpixels
+  name: edge_wt_region_boundary
+  slic_compactness: 30
+  task: graph
+  task_type: classification
+  transductive: False
+  node_encoder: True
+  node_encoder_name: VOCNode+RWSE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: VOCEdge
+  edge_encoder_bn: False
+posenc_RWSE:
+  enable: True
+  kernel:
+    times_func: range(1,33)
+  model: Linear
+  dim_pe: 28
+  raw_norm_type: BatchNorm
+train:
+  mode: custom
+  batch_size: 8
+  eval_period: 1
+  ckpt_period: 100
+  eval_smoothing_metrics: True
+model:
+  type: hybrid_gnn
+  loss_fun: weighted_cross_entropy
+gnn:
+  head: inductive_node
+  ffn: False
+  layers_pre_mp: 0
+  layers_mp: 14
+  layers_post_mp: 1
+  dim_inner: 95
+  act: gelu
+  residual: True
+  dropout: 0.15
+  hybrid:
+    num_attn_heads: 2
+    num_gnn_heads: 2
+    d_h: 32
+    attn_mask: graph_restricted
+    gate: headwise
+    norm: layernorm
+    gnn_types: "GATEDGCN,GATEDGCN"
+    attn_dropout: 0.1
+    mp_dropout: 0.15
+    block_bn: false
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 0.0
+  base_lr: 0.001
+  max_epoch: 200
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10

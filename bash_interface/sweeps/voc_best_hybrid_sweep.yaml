@@ -1,0 +1,80 @@
+# VOC-SP best-hybrid Bayes — architecture search around anchor hybrid 20f5lcie.
+# Standard GatedGCN+ outer hyperparams (gatedgcn/voc.yaml; baseline z59jkox4).
+# Base config: configs/gated_hybrid/voc-gatedgcn-best-hybrid.yaml
+# Metric: test/f1 (maximize). Use 128GB on cluster.
+#
+# Create:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/voc_best_hybrid_sweep.yaml
+# Launch:
+#   bash bash_interface/cluster/submit_voc_best_hybrid_sweep.sh
+# Or:
+#   SWEEP_ARRAY_TASKS=16 SWEEP_ARRAY_PARALLEL=4 RUNS_PER_AGENT=4 \
+#     SWEEP_SLURM_TIME=120:00:00 SWEEP_SLURM_MEM=128GB \
+#     bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+#       voc weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: maximize
+  name: test/f1
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_best_hybrid-voc
+
+early_terminate:
+  type: hyperband
+  min_iter: 20
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/voc-gatedgcn-best-hybrid.yaml
+  - --molecular=false
+  - --seed=0
+  - ${args}
+
+parameters:
+  batch_size:
+    values: [4, 8]
+  hybrid_num_attn_heads:
+    values: [2, 4]
+  hybrid_num_gnn_heads:
+    values: [2, 4]
+  hybrid_gnn_types:
+    values:
+      - "GATEDGCN,GATEDGCN"
+      - "GATEDGCN,GIN"
+      - "GCN,GIN"
+      - "GINE,GIN"
+      - "GIN,SAGE"
+      - "GCN,SAGE"
+  hybrid_d_h:
+    values: [16, 32, 48, 64]
+  hybrid_layers_mp:
+    values: [12, 14, 16]
+  hybrid_dim_inner:
+    values: [85, 95, 110]
+  hybrid_attn_dropout:
+    values: [0.05, 0.1, 0.2]
+  hybrid_mp_dropout:
+    values: [0.05, 0.1, 0.15]
+  hybrid_attn_mask:
+    values: [graph_restricted, full]
+  hybrid_gate:
+    values: [headwise, elementwise]
+  hybrid_norm:
+    values: [layernorm, rmsnorm]
+  gnn.ffn:
+    values: [true, false]
+  gnn.dropout:
+    values: [0.1, 0.15]
+  optim.base_lr:
+    distribution: log_uniform_values
+    min: 0.0003
+    max: 0.002
