@@ -35,6 +35,16 @@ PY
     unzip -t "${GNN_BENCH_ROOT}/MNIST/raw/MNIST_v2.zip" | tail -1
 }
 
+prep_malnet() {
+    echo "=== MalNet-Tiny -> ${GNNPLUS_DATASET_DIR}/MalNetTiny ==="
+    python - <<PY
+from GNNPlus.loader.master_loader import preformat_MalNetTiny
+root = "${GNNPLUS_DATASET_DIR}/MalNetTiny"
+ds = preformat_MalNetTiny(root, "LocalDegreeProfile")
+print("MalNet-Tiny OK:", len(ds), "graphs")
+PY
+}
+
 prep_cifar10() {
     echo "=== CIFAR10 -> ${GNN_BENCH_ROOT}/CIFAR10 ==="
     python - <<PY
@@ -59,7 +69,7 @@ fix_misplaced_cifar10() {
 }
 
 if [ "$#" -lt 1 ]; then
-    echo "Usage: $0 {mnist|cifar10|all|fix-cifar10} ..."
+    echo "Usage: $0 {mnist|cifar10|mal|all|fix-cifar10} ..."
     exit 1
 fi
 
@@ -68,10 +78,12 @@ fix_misplaced_cifar10
 for arg in "$@"; do
     case "${arg}" in
         mnist) prep_mnist ;;
+        mal|malnet) prep_malnet ;;
         cifar10) prep_cifar10 ;;
         all)
             prep_mnist
             prep_cifar10
+            prep_malnet
             ;;
         fix-cifar10) fix_misplaced_cifar10 ;;
         *)

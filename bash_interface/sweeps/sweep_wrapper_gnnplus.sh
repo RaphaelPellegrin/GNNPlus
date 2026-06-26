@@ -62,6 +62,16 @@ _set_opt() {
     OPTS["${key}"]="${value}"
 }
 
+# YACS float nodes reject integer literals (e.g. sweep ``0`` vs cfg ``0.1``).
+_set_float_opt() {
+    local key="$1"
+    local value="$2"
+    if [[ "${value}" =~ ^-?[0-9]+$ ]]; then
+        value="${value}.0"
+    fi
+    _set_opt "${key}" "${value}"
+}
+
 while [ "$#" -gt 0 ]; do
     tok="$1"
     shift
@@ -102,24 +112,24 @@ while [ "$#" -gt 0 ]; do
                 hybrid_num_attn_heads) _set_opt "gnn.hybrid.num_attn_heads" "${val}" ;;
                 hybrid_num_gnn_heads) _set_opt "gnn.hybrid.num_gnn_heads" "${val}" ;;
                 hybrid_d_h) _set_opt "gnn.hybrid.d_h" "${val}" ;;
-                hybrid_attn_dropout) _set_opt "gnn.hybrid.attn_dropout" "${val}" ;;
+                hybrid_attn_dropout) _set_float_opt "gnn.hybrid.attn_dropout" "${val}" ;;
                 hybrid_attn_mask) _set_opt "gnn.hybrid.attn_mask" "${val}" ;;
                 hybrid_gate) _set_opt "gnn.hybrid.gate" "${val}" ;;
                 hybrid_norm) _set_opt "gnn.hybrid.norm" "${val}" ;;
-                hybrid_mp_dropout) _set_opt "gnn.hybrid.mp_dropout" "${val}" ;;
+                hybrid_mp_dropout) _set_float_opt "gnn.hybrid.mp_dropout" "${val}" ;;
                 hybrid_gnn_types) _set_opt "gnn.hybrid.gnn_types" "${val}" ;;
                 hybrid_layers_mp) _set_opt "gnn.layers_mp" "${val}" ;;
                 hybrid_dim_inner|gnn.dim_inner) _set_opt "gnn.dim_inner" "${val}" ;;
                 hybrid_readout_mlp|gnn.readout_mlp) _set_opt "gnn.readout_mlp" "${val}" ;;
                 hybrid_max_epoch) _set_opt "optim.max_epoch" "${val}" ;;
-                gnn.dropout) _set_opt "gnn.dropout" "${val}" ;;
+                gnn.dropout) _set_float_opt "gnn.dropout" "${val}" ;;
                 gnn.ffn) _set_opt "gnn.ffn" "${val}" ;;
                 gnn.residual) _set_opt "gnn.residual" "${val}" ;;
                 add_virtual_nodes|dataset.add_virtual_nodes) _set_opt "dataset.add_virtual_nodes" "${val}" ;;
                 num_virtual_nodes|dataset.num_virtual_nodes) _set_opt "dataset.num_virtual_nodes" "${val}" ;;
-                base_lr|optim.base_lr) _set_opt "optim.base_lr" "${val}" ;;
+                base_lr|optim.base_lr) _set_float_opt "optim.base_lr" "${val}" ;;
                 optim.num_warmup_epochs) _set_opt "optim.num_warmup_epochs" "${val}" ;;
-                optim.min_lr) _set_opt "optim.min_lr" "${val}" ;;
+                optim.min_lr) _set_float_opt "optim.min_lr" "${val}" ;;
                 optim.optimizer) _set_opt "optim.optimizer" "${val}" ;;
                 optim.scheduler) _set_opt "optim.scheduler" "${val}" ;;
                 schedulefree_beta1|optim.schedulefree_beta1)
@@ -144,24 +154,24 @@ while [ "$#" -gt 0 ]; do
                 hybrid_num_attn_heads) _set_opt "gnn.hybrid.num_attn_heads" "${val}" ;;
                 hybrid_num_gnn_heads) _set_opt "gnn.hybrid.num_gnn_heads" "${val}" ;;
                 hybrid_d_h) _set_opt "gnn.hybrid.d_h" "${val}" ;;
-                hybrid_attn_dropout) _set_opt "gnn.hybrid.attn_dropout" "${val}" ;;
+                hybrid_attn_dropout) _set_float_opt "gnn.hybrid.attn_dropout" "${val}" ;;
                 hybrid_attn_mask) _set_opt "gnn.hybrid.attn_mask" "${val}" ;;
                 hybrid_gate) _set_opt "gnn.hybrid.gate" "${val}" ;;
                 hybrid_norm) _set_opt "gnn.hybrid.norm" "${val}" ;;
-                hybrid_mp_dropout) _set_opt "gnn.hybrid.mp_dropout" "${val}" ;;
+                hybrid_mp_dropout) _set_float_opt "gnn.hybrid.mp_dropout" "${val}" ;;
                 hybrid_gnn_types) _set_opt "gnn.hybrid.gnn_types" "${val}" ;;
                 hybrid_layers_mp) _set_opt "gnn.layers_mp" "${val}" ;;
                 hybrid_dim_inner|gnn.dim_inner) _set_opt "gnn.dim_inner" "${val}" ;;
                 hybrid_readout_mlp|gnn.readout_mlp) _set_opt "gnn.readout_mlp" "${val}" ;;
                 hybrid_max_epoch) _set_opt "optim.max_epoch" "${val}" ;;
-                gnn.dropout) _set_opt "gnn.dropout" "${val}" ;;
+                gnn.dropout) _set_float_opt "gnn.dropout" "${val}" ;;
                 gnn.ffn) _set_opt "gnn.ffn" "${val}" ;;
                 gnn.residual) _set_opt "gnn.residual" "${val}" ;;
                 add_virtual_nodes|dataset.add_virtual_nodes) _set_opt "dataset.add_virtual_nodes" "${val}" ;;
                 num_virtual_nodes|dataset.num_virtual_nodes) _set_opt "dataset.num_virtual_nodes" "${val}" ;;
-                base_lr|optim.base_lr) _set_opt "optim.base_lr" "${val}" ;;
+                base_lr|optim.base_lr) _set_float_opt "optim.base_lr" "${val}" ;;
                 optim.num_warmup_epochs) _set_opt "optim.num_warmup_epochs" "${val}" ;;
-                optim.min_lr) _set_opt "optim.min_lr" "${val}" ;;
+                optim.min_lr) _set_float_opt "optim.min_lr" "${val}" ;;
                 optim.optimizer) _set_opt "optim.optimizer" "${val}" ;;
                 optim.scheduler) _set_opt "optim.scheduler" "${val}" ;;
                 schedulefree_beta1|optim.schedulefree_beta1)
