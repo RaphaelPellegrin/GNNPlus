@@ -1,0 +1,40 @@
+# CLUSTER hybrid LR × d_h grid — anchor o6owwoqp (a1g1 GATEDGCN, seed 1).
+# Reproduces https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/o6owwoqp
+# with optim.base_lr ∈ {3e-4 … 3e-3} (log-spaced) and hybrid_d_h ∈ {64, 128}.
+#
+# Create W&B sweep:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/cluster_hybrid_o6owwoqp_lr_dh_sweep.yaml
+# Launch agents:
+#   SWEEP_ARRAY_TASKS=8 SWEEP_ARRAY_PARALLEL=4 RUNS_PER_AGENT=1 \
+#     SWEEP_SLURM_MEM=128GB SWEEP_SLURM_TIME=120:00:00 \
+#     bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+#       cluster weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+#
+# Prefer SLURM array (no sweep id):
+#   bash bash_interface/cluster/submit_cluster_hybrid_o6owwoqp_lr_dh_sweep.sh
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: grid
+metric:
+  goal: maximize
+  name: test/accuracy-SBM
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_grid-cluster-hybrid-o6owwoqp-lr-dh
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/cluster-hybrid-o6owwoqp-anchor.yaml
+  - --molecular=false
+  - --seed=1
+  - ${args}
+
+parameters:
+  hybrid_d_h:
+    values: [64, 128]
+  optim.base_lr:
+    values: [0.0003, 0.000669, 0.001492, 0.003]
