@@ -22,5 +22,8 @@ def set_cfg_wandb(cfg):
     # Optional run name
     cfg.wandb.name = ""
 
+    # Optional W&B group (e.g. paper repro cohort across seeds)
+    cfg.wandb.group = ""
+
     # Optional W&B tags (yaml list or comma-separated string)
     cfg.wandb.tags = []

@@ -239,7 +239,8 @@ W&B project: https://wandb.ai/weber-geoml-harvard-university/GNNPlus
 | Job ID | Variant | Dataset | Config | W&B run name | Log | Metric | Notes |
 |--------|---------|---------|--------|--------------|-----|--------|-------|
 | `25287393` | hybrid | PATTERN | `configs/gated_hybrid/pattern-grit-repro-a1g1.yaml` | `pattern_grit_hybrid_seed0_job25287393` | `logs_gnnplus/pattern_grit_hybrid_25287393.log` | `test/accuracy-SBM` | [laneuetq](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/laneuetq) |
-| `25302952` | standalone | PATTERN | `configs/grit/pattern-grit-rrwp.yaml` | — | `logs_gnnplus/pattern_grit_rrwp_25302952.log` | `test/accuracy-SBM` | **FAILED** `Unexpected PE stats selection RRWP` — fixed in `master_loader.py` |
+| `25309402` | **standalone** | PATTERN | `configs/grit/pattern-grit-rrwp.yaml` | `pattern_grit_rrwp_seed0_job25309402` | `logs_gnnplus/pattern_grit_rrwp_25309402.log` | `test/accuracy-SBM` | Relaunch after RRWP PE-stats fix (`614213b`) |
+| `25302952` | standalone | PATTERN | `configs/grit/pattern-grit-rrwp.yaml` | — | `logs_gnnplus/pattern_grit_rrwp_25302952.log` | `test/accuracy-SBM` | **FAILED** `Unexpected PE stats selection RRWP` |
 | `25296336` | standalone | PATTERN | `configs/grit/pattern-grit-rrwp.yaml` | — | `logs_gnnplus/pattern_grit_rrwp_25296336.log` | `test/accuracy-SBM` | **FAILED** `KeyError: gnn.dim_edge` |
 | `25296338` | standalone | CLUSTER | `configs/grit/cluster-grit-rrwp.yaml` | — | `logs_gnnplus/cluster_grit_rrwp_25296338.log` | `test/accuracy-SBM` | **FAILED** `KeyError: gnn.dim_edge` |
 | `25296339` | standalone | ZINC | `configs/grit/zinc-grit-rrwp.yaml` | — | `logs_gnnplus/zinc_grit_rrwp_25296339.log` | `test/mae` | **FAILED** `KeyError: gnn.dim_edge` |
@@ -255,8 +256,8 @@ W&B project: https://wandb.ai/weber-geoml-harvard-university/GNNPlus
 
 ```bash
 squeue -u $USER | grep grit
-tail -f logs_gnnplus/pattern_grit_rrwp_25302952.log
-grep -E "RRWP done|wandb|epoch|accuracy-SBM|Traceback" logs_gnnplus/pattern_grit_rrwp_25302952.log | tail -20
+tail -f logs_gnnplus/pattern_grit_rrwp_25309402.log
+grep -E "Precomputing RRWP|RRWP done|wandb|epoch|accuracy-SBM|Traceback" logs_gnnplus/pattern_grit_rrwp_25309402.log | tail -20
 ```
 
 **W&B lookup:** tag `job_<JOBID>` or search run name `*_grit_*_job<JOBID>`.
@@ -275,7 +276,7 @@ grep -E "RRWP done|wandb|epoch|accuracy-SBM|Traceback" logs_gnnplus/pattern_grit
 **Diagnose on cluster:**
 
 ```bash
-for j in 25302952 25287393 25296336 25296338 25296339; do
+for j in 25309402 25287393 25302952 25296336 25296338 25296339; do
   echo "=== JOB $j ==="
   sacct -j $j -X --format=JobID,State,ExitCode,Elapsed,MaxRSS 2>/dev/null
   f=$(ls logs_gnnplus/*_${j}.log 2>/dev/null | head -1)
@@ -285,10 +286,10 @@ done
 
 **W&B filters:** standalone → `config.model.type = GritTransformer`; hybrid → `config.model.type = hybrid_gnn` + tag `grit`.
 
-**Relaunch standalone** (after `git pull` ≥ `acebf66`):
+**Relaunch standalone** (after `git pull` ≥ `614213b`):
 
 ```bash
-bash bash_interface/cluster/submit_grit.sh pattern standalone   # → 25302952
+bash bash_interface/cluster/submit_grit.sh pattern standalone   # → 25309402
 bash bash_interface/cluster/submit_grit.sh cluster standalone
 bash bash_interface/cluster/submit_grit.sh zinc standalone
 ```
@@ -319,6 +320,35 @@ Fair grid (LR sweep): `PATTERN_FAIR_TASKS=2-5 bash submit_pattern_gcne_fair_comp
 squeue -u $USER | grep -E 'pattern_hybrid|pattern_fair'
 tail -f logs_gnnplus/pattern_hybrid_qcz7umtl_a1g1_25297819.log
 tail -f logs_gnnplus/pattern_fair_25297831_2.log
+```
+
+## Paper repro (5 seeds, `bestmodel_v1`)
+
+Frozen anchor configs + W&B **group** (primary) and **tags** (cross-dataset filter).
+
+| Field | Convention |
+|-------|------------|
+| **Group** | `paper_bestmodel_v1_<dataset>_<anchor_id>` — groups 5 seeds in W&B UI |
+| **Tags** | `paper_repro`, `bestmodel_v1`, `<dataset>`, `anchor_<id>` |
+| **Report metric** | `best_test_perf` (= `best/test_{metric_best}` at val-best epoch) |
+| **Seeds** | `0, 1, 2, 3, 4` (override `PAPER_NUM_SEEDS`) |
+
+### CIFAR10 — ulij45a2 (a8g4, d_h=256)
+
+Best single run: [ulij45a2](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ulij45a2)  
+Anchor config: `configs/gated_hybrid/cifar10-hybrid-ulij45a2-anchor.yaml`  
+Repro commit: `ca47851df38e54a3ed052be53f9072bcb159464e`
+
+| Job ID | Task | Seed | W&B group | Log |
+|--------|------|------|-----------|-----|
+| *(pending)* | 1–5 | 0–4 | `paper_bestmodel_v1_cifar10_ulij45a2` | `logs_gnnplus/cifar10_paper_v1_<JOBID>_<TASK>.log` |
+
+```bash
+bash bash_interface/cluster/submit_cifar10_hybrid_ulij45a2_paper_repro.sh
+
+# Aggregate (when ≥1 run finished):
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_bestmodel_v1_cifar10_ulij45a2
 ```
 
 ## COCO hybrid anchored on 5b4z9l3u (GatedGCN+ baseline)
@@ -389,3 +419,5 @@ squeue -u $USER -n sweep_agent -o "%.10i %.12j %.8T %.10M"
 | 2026-06-07 | Fix standalone GRIT `KeyError: gnn.dim_edge` — register key in `grit_config.py` |
 | 2026-06-07 | Relaunch standalone PATTERN GRIT `25302952` after `acebf66` pull |
 | 2026-06-07 | Fix RRWP routed to `compute_posenc_stats` — skip RRWP in generic PE loop |
+| 2026-06-07 | Relaunch standalone PATTERN GRIT `25309402` after `614213b` pull |
+| 2026-06-07 | CIFAR10 paper repro ulij45a2: anchor yaml, 5-seed array, W&B group + aggregate script |

@@ -55,6 +55,9 @@ def init_wandb_run() -> Any | None:
         "project": cfg.wandb.project,
         "name": wandb_name,
     }
+    wandb_group = str(getattr(cfg.wandb, "group", "") or "").strip()
+    if wandb_group:
+        wandb_kwargs["group"] = wandb_group
     wandb_tags = _parse_wandb_tags()
     if wandb_tags:
         wandb_kwargs["tags"] = wandb_tags
