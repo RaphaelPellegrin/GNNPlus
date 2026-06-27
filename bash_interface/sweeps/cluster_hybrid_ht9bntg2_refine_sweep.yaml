@@ -1,0 +1,44 @@
+# CLUSTER hybrid refine grid — anchor ht9bntg2 (a1g1 GATEDGCN, seed 1).
+# Best so far: test/accuracy-SBM ≈ 0.793 (d_h=64, lr=0.001492, full mask).
+# Third axis: hybrid_attn_mask (full vs graph_restricted) — cheap, high-leverage on CLUSTER.
+#
+# 32 runs = 4 d_h × 4 lr × 2 attn_mask
+#
+# Create W&B sweep:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/cluster_hybrid_ht9bntg2_refine_sweep.yaml
+# Launch agents:
+#   SWEEP_ARRAY_TASKS=32 SWEEP_ARRAY_PARALLEL=4 RUNS_PER_AGENT=1 \
+#     SWEEP_SLURM_MEM=128GB SWEEP_SLURM_TIME=120:00:00 \
+#     bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+#       cluster weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+#
+# Prefer SLURM array:
+#   bash bash_interface/cluster/submit_cluster_hybrid_ht9bntg2_refine_sweep.sh
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: grid
+metric:
+  goal: maximize
+  name: test/accuracy-SBM
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_grid-cluster-hybrid-ht9bntg2-refine
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/cluster-hybrid-ht9bntg2-anchor.yaml
+  - --molecular=false
+  - --seed=1
+  - ${args}
+
+parameters:
+  hybrid_d_h:
+    values: [48, 64, 96, 128]
+  optim.base_lr:
+    values: [0.0008, 0.001, 0.001492, 0.002]
+  hybrid_attn_mask:
+    values: [full, graph_restricted]
