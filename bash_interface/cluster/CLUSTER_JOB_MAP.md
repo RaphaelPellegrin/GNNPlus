@@ -326,6 +326,13 @@ tail -f logs_gnnplus/pattern_fair_25297831_2.log
 
 See **`bash_interface/cluster/PAPER_REPRO_TRACKER.md`** for `bestmodel_v1` cohorts, W&B groups, run names, and aggregate results.
 
+| Dataset | Anchor | SLURM array | W&B group |
+|---------|--------|-------------|-----------|
+| CIFAR10 | [ulij45a2](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ulij45a2) | `25310487` | `paper_bestmodel_v1_cifar10_ulij45a2` |
+| MNIST | [lcvbyyss](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/lcvbyyss) | `25313521` | `paper_bestmodel_v1_mnist_lcvbyyss` |
+| MalNet-Tiny | [9h3jqzkm](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/9h3jqzkm) | `25313522` | `paper_bestmodel_v1_malnet_9h3jqzkm` |
+| VOC-SP | [j7ukyzdm](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/j7ukyzdm) | *(pending)* | `paper_bestmodel_v1_voc_j7ukyzdm` |
+
 Quick start (CIFAR10 ulij45a2):
 
 ```bash
@@ -348,6 +355,14 @@ MalNet-Tiny 9h3jqzkm:
 bash bash_interface/cluster/submit_malnet_hybrid_9h3jqzkm_paper_repro.sh
 python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_bestmodel_v1_malnet_9h3jqzkm
+```
+
+VOC-SP j7ukyzdm:
+
+```bash
+bash bash_interface/cluster/submit_voc_hybrid_j7ukyzdm_paper_repro.sh
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_bestmodel_v1_voc_j7ukyzdm
 ```
 
 ## COCO hybrid anchored on 5b4z9l3u (GatedGCN+ baseline)

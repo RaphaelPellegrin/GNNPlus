@@ -84,30 +84,28 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 | **Repro commit** | `a28a4f998373167d689d7fea4807c562a66d8c0a` |
 | **Config** | `configs/gated_hybrid/mnist-hybrid-lcvbyyss-anchor.yaml` |
 | **Submit** | `bash bash_interface/cluster/submit_mnist_hybrid_lcvbyyss_paper_repro.sh` |
-| **SLURM array** | *(pending)* |
+| **SLURM array** | `25313521` (tasks 1–5 → seeds 0–4) |
 | **W&B group** | `paper_bestmodel_v1_mnist_lcvbyyss` |
 | **Group URL** | https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/paper_bestmodel_v1_mnist_lcvbyyss |
 | **Tags** | `paper_repro`, `bestmodel_v1`, `mnist`, `anchor_lcvbyyss`, `hybrid_a2g2`, `gate_elementwise` |
 | **Metric** | `best_test_perf` (`metric_best: accuracy`) |
-| **Logs** | `logs_gnnplus/mnist_paper_v1_<JOBID>_<TASK>.log` |
-| **Status** | not submitted |
-| **Aggregate result** | *(pending)* |
+| **Logs** | `logs_gnnplus/mnist_paper_v1_25313521_<TASK>.log` |
+| **Status** | running (submitted 2026-06-07) |
+| **Aggregate result** | *(pending — run when finished)* |
 
-**Expected run names** (fill W&B run id after submit):
+**Expected run names** (fill W&B run id when known):
 
 | Seed | SLURM task | Run name | W&B run id | `best_test_perf` |
 |------|------------|----------|------------|------------------|
-| 0 | 1 | `mnist_hybrid_lcvbyyss_a2g2_seed0_job<JOBID>_1` | | |
-| 1 | 2 | `mnist_hybrid_lcvbyyss_a2g2_seed1_job<JOBID>_2` | | |
-| 2 | 3 | `mnist_hybrid_lcvbyyss_a2g2_seed2_job<JOBID>_3` | | |
-| 3 | 4 | `mnist_hybrid_lcvbyyss_a2g2_seed3_job<JOBID>_4` | | |
-| 4 | 5 | `mnist_hybrid_lcvbyyss_a2g2_seed4_job<JOBID>_5` | | |
+| 0 | 1 | `mnist_hybrid_lcvbyyss_a2g2_seed0_job25313521_1` | | |
+| 1 | 2 | `mnist_hybrid_lcvbyyss_a2g2_seed1_job25313521_2` | | |
+| 2 | 3 | `mnist_hybrid_lcvbyyss_a2g2_seed2_job25313521_3` | | |
+| 3 | 4 | `mnist_hybrid_lcvbyyss_a2g2_seed3_job25313521_4` | | |
+| 4 | 5 | `mnist_hybrid_lcvbyyss_a2g2_seed4_job25313521_5` | | |
 | **mean ± std** | | | | |
 
 ```bash
-bash bash_interface/cluster/submit_mnist_hybrid_lcvbyyss_paper_repro.sh
-
-grep "View run at" logs_gnnplus/mnist_paper_v1_<JOBID>_*.log
+grep "View run at" logs_gnnplus/mnist_paper_v1_25313521_*.log
 
 python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_bestmodel_v1_mnist_lcvbyyss
@@ -123,12 +121,49 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 | **Repro commit** | `ed02d752b932f932b924a1def36c244c8f9c1694` |
 | **Config** | `configs/gated_hybrid/malnet-hybrid-9h3jqzkm-anchor.yaml` |
 | **Submit** | `bash bash_interface/cluster/submit_malnet_hybrid_9h3jqzkm_paper_repro.sh` |
-| **SLURM array** | *(pending)* |
+| **SLURM array** | `25313522` (tasks 1–5 → seeds 0–4) |
 | **W&B group** | `paper_bestmodel_v1_malnet_9h3jqzkm` |
 | **Group URL** | https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/paper_bestmodel_v1_malnet_9h3jqzkm |
 | **Tags** | `paper_repro`, `bestmodel_v1`, `malnet`, `anchor_9h3jqzkm`, `hybrid_a0g2`, `gate_elementwise` |
 | **Metric** | `best_test_perf` (`metric_best: accuracy`) |
-| **Logs** | `logs_gnnplus/malnet_paper_v1_<JOBID>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/malnet_paper_v1_25313522_<TASK>.log` |
+| **Status** | running (submitted 2026-06-07) |
+| **Aggregate result** | *(pending — run when finished)* |
+
+**Expected run names** (fill W&B run id when known):
+
+| Seed | SLURM task | Run name | W&B run id | `best_test_perf` |
+|------|------------|----------|------------|------------------|
+| 0 | 1 | `malnet_hybrid_9h3jqzkm_a0g2_seed0_job25313522_1` | | |
+| 1 | 2 | `malnet_hybrid_9h3jqzkm_a0g2_seed1_job25313522_2` | | |
+| 2 | 3 | `malnet_hybrid_9h3jqzkm_a0g2_seed2_job25313522_3` | | |
+| 3 | 4 | `malnet_hybrid_9h3jqzkm_a0g2_seed3_job25313522_4` | | |
+| 4 | 5 | `malnet_hybrid_9h3jqzkm_a0g2_seed4_job25313522_5` | | |
+| **mean ± std** | | | | |
+
+```bash
+grep "View run at" logs_gnnplus/malnet_paper_v1_25313522_*.log
+
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_bestmodel_v1_malnet_9h3jqzkm
+```
+
+### `bestmodel_v1` — VOC-SP — [j7ukyzdm](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/j7ukyzdm)
+
+| Field | Value |
+|-------|--------|
+| **Dataset** | VOC superpixels (`edge_wt_region_boundary` + RWSE) |
+| **Architecture** | 2×attn + 2×GATEDGCN MP (a2g2+RWSE), `d_h=64`, **headwise** gate, FFN, `layers_mp=16` |
+| **Anchor W&B** | [j7ukyzdm](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/j7ukyzdm) (seed 0 discovery run) |
+| **Repro commit** | `5f30e22107510047fdad90910bf343fdf7b44c96` |
+| **Config** | `configs/gated_hybrid/voc-hybrid-j7ukyzdm-anchor.yaml` |
+| **Submit** | `bash bash_interface/cluster/submit_voc_hybrid_j7ukyzdm_paper_repro.sh` |
+| **SLURM array** | *(pending)* |
+| **W&B group** | `paper_bestmodel_v1_voc_j7ukyzdm` |
+| **Group URL** | https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/paper_bestmodel_v1_voc_j7ukyzdm |
+| **Tags** | `paper_repro`, `bestmodel_v1`, `voc`, `anchor_j7ukyzdm`, `hybrid_a2g2`, `gate_headwise`, `rwse` |
+| **Metric** | `best_test_perf` (`metric_best: f1`) |
+| **Logs** | `logs_gnnplus/voc_paper_v1_<JOBID>_<TASK>.log` |
 | **Status** | not submitted |
 | **Aggregate result** | *(pending)* |
 
@@ -136,20 +171,20 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 
 | Seed | SLURM task | Run name | W&B run id | `best_test_perf` |
 |------|------------|----------|------------|------------------|
-| 0 | 1 | `malnet_hybrid_9h3jqzkm_a0g2_seed0_job<JOBID>_1` | | |
-| 1 | 2 | `malnet_hybrid_9h3jqzkm_a0g2_seed1_job<JOBID>_2` | | |
-| 2 | 3 | `malnet_hybrid_9h3jqzkm_a0g2_seed2_job<JOBID>_3` | | |
-| 3 | 4 | `malnet_hybrid_9h3jqzkm_a0g2_seed3_job<JOBID>_4` | | |
-| 4 | 5 | `malnet_hybrid_9h3jqzkm_a0g2_seed4_job<JOBID>_5` | | |
+| 0 | 1 | `voc_hybrid_j7ukyzdm_a2g2_seed0_job<JOBID>_1` | | |
+| 1 | 2 | `voc_hybrid_j7ukyzdm_a2g2_seed1_job<JOBID>_2` | | |
+| 2 | 3 | `voc_hybrid_j7ukyzdm_a2g2_seed2_job<JOBID>_3` | | |
+| 3 | 4 | `voc_hybrid_j7ukyzdm_a2g2_seed3_job<JOBID>_4` | | |
+| 4 | 5 | `voc_hybrid_j7ukyzdm_a2g2_seed4_job<JOBID>_5` | | |
 | **mean ± std** | | | | |
 
 ```bash
-bash bash_interface/cluster/submit_malnet_hybrid_9h3jqzkm_paper_repro.sh
+bash bash_interface/cluster/submit_voc_hybrid_j7ukyzdm_paper_repro.sh
 
-grep "View run at" logs_gnnplus/malnet_paper_v1_<JOBID>_*.log
+grep "View run at" logs_gnnplus/voc_paper_v1_<JOBID>_*.log
 
 python scripts/api_wanndb_query/aggregate_paper_repro.py \
-  --group paper_bestmodel_v1_malnet_9h3jqzkm
+  --group paper_bestmodel_v1_voc_j7ukyzdm
 ```
 
 ---
@@ -184,3 +219,5 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 | 2026-06-27 | Created tracker; CIFAR10 ulij45a2 cohort `25310487` |
 | 2026-06-27 | MNIST lcvbyyss anchor config + 5-seed submit scripts |
 | 2026-06-27 | MalNet-Tiny 9h3jqzkm anchor config + 5-seed submit scripts |
+| 2026-06-07 | Submitted MNIST lcvbyyss cohort `25313521`, MalNet 9h3jqzkm cohort `25313522` |
+| 2026-06-07 | VOC-SP j7ukyzdm anchor config + 5-seed submit scripts |
