@@ -29,7 +29,7 @@ submit_one() {
     local variant="$1"
     local cfg="$2"
     local job_name="$3"
-    local extra_tags="$4"
+    local extra_cli="${4:-}"
 
     local job_id
     job_id="$(
@@ -48,8 +48,7 @@ submit_one() {
             wandb.entity weber-geoml-harvard-university \
             wandb.project GNNPlus \
             wandb.name ${job_name}_seed${SEED}_job\${SLURM_JOB_ID} \
-            wandb.tags grit,pattern,${variant},${extra_tags},job_\${SLURM_JOB_ID} \
-            dataset.dir \${GNNPLUS_DATASET_DIR}"
+            dataset.dir \${GNNPLUS_DATASET_DIR} ${extra_cli}"
     )"
 
     echo ""
@@ -57,21 +56,21 @@ submit_one() {
     echo "  JOBID:     ${job_id}"
     echo "  Log:       logs_gnnplus/${job_name}_${job_id}.log"
     echo "  W&B name:  ${job_name}_seed${SEED}_job${job_id}"
-    echo "  W&B tags:  grit, pattern, ${variant}, job_${job_id}, ${extra_tags}"
+    echo "  W&B tags:  (yaml tags) + job_${job_id}  [auto at wandb.init]"
     echo "  Monitor:   tail -f logs_gnnplus/${job_name}_${job_id}.log"
     echo ""
 }
 
 case "${MODE}" in
     standalone|rrwp)
-        submit_one "standalone" "configs/grit/pattern-grit-rrwp.yaml" "pattern_grit_rrwp" "rrwp"
+        submit_one "standalone" "configs/grit/pattern-grit-rrwp.yaml" "pattern_grit_rrwp" ""
         ;;
     hybrid|a1g1)
-        submit_one "hybrid" "configs/gated_hybrid/pattern-grit-repro-a1g1.yaml" "pattern_grit_hybrid" "a1g1"
+        submit_one "hybrid" "configs/gated_hybrid/pattern-grit-repro-a1g1.yaml" "pattern_grit_hybrid" "gnn.hybrid.log_gate_stats True"
         ;;
     both|all)
-        submit_one "standalone" "configs/grit/pattern-grit-rrwp.yaml" "pattern_grit_rrwp" "rrwp"
-        submit_one "hybrid" "configs/gated_hybrid/pattern-grit-repro-a1g1.yaml" "pattern_grit_hybrid" "a1g1"
+        submit_one "standalone" "configs/grit/pattern-grit-rrwp.yaml" "pattern_grit_rrwp" ""
+        submit_one "hybrid" "configs/gated_hybrid/pattern-grit-repro-a1g1.yaml" "pattern_grit_hybrid" "gnn.hybrid.log_gate_stats True"
         ;;
     *)
         echo "Usage: $0 {standalone|hybrid|both}" >&2

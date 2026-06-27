@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 
 import numpy as np
@@ -32,10 +33,27 @@ def _parse_wandb_tags() -> list[str]:
     """Return W&B tags from ``cfg.wandb.tags`` (list or comma-separated string)."""
     raw = getattr(cfg.wandb, 'tags', None)
     if raw is None or raw == '' or raw == []:
-        return []
-    if isinstance(raw, (list, tuple)):
-        return [str(tag).strip() for tag in raw if str(tag).strip()]
-    return [part.strip() for part in str(raw).split(',') if part.strip()]
+        tags: list[str] = []
+    elif isinstance(raw, (list, tuple)):
+        tags = [str(tag).strip() for tag in raw if str(tag).strip()]
+    else:
+        tags = [part.strip() for part in str(raw).split(',') if part.strip()]
+    return _append_slurm_wandb_tags(tags)
+
+
+def _append_slurm_wandb_tags(tags: list[str]) -> list[str]:
+    """Add ``job_<SLURM_JOB_ID>`` (and array task) tags when running under SLURM."""
+    extra: list[str] = []
+    job_id = os.environ.get('SLURM_JOB_ID', '').strip()
+    if job_id:
+        extra.append(f'job_{job_id}')
+    array_job = os.environ.get('SLURM_ARRAY_JOB_ID', '').strip()
+    array_task = os.environ.get('SLURM_ARRAY_TASK_ID', '').strip()
+    if array_job and array_task:
+        extra.append(f'array_{array_job}_{array_task}')
+    if not extra:
+        return tags
+    return list(dict.fromkeys([*tags, *extra]))
 
 def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation):
     model.train()
