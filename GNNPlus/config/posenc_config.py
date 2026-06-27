@@ -11,6 +11,7 @@ def set_cfg_posenc(cfg):
     # cfg.posenc_LapPE = CN()
     # cfg.posenc_SignNet = CN()
     cfg.posenc_RWSE = CN()
+    cfg.posenc_RRWP = CN()
     # cfg.posenc_HKdiagSE = CN()
     # cfg.posenc_ElstaticSE = CN()
     # cfg.posenc_EquivStableLapPE = CN()
@@ -87,3 +88,8 @@ def set_cfg_posenc(cfg):
 
     # Override default, electrostatic kernel has fixed set of 10 measures.
     # cfg.posenc_ElstaticSE.kernel.times_func = 'range(10)'
+
+    cfg.posenc_RRWP.enable = False
+    cfg.posenc_RRWP.ksteps = 21
+    cfg.posenc_RRWP.add_identity = True
+    cfg.posenc_RRWP.add_node_attr = False

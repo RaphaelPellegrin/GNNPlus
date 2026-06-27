@@ -14,7 +14,7 @@ def gated_hybrid_cfg(cfg: CN) -> None:
     cfg.gnn.hybrid.attn_mask = 'full'  # full | graph_restricted
     cfg.gnn.hybrid.gate = 'headwise'  # elementwise | headwise
     cfg.gnn.hybrid.norm = 'layernorm'  # layernorm | rmsnorm
-    cfg.gnn.hybrid.gnn_types = ''  # e.g. "GCN,GIN,GCNE,GATEDGCN" — see configs/gated_hybrid/README.md (GATEDGCN semantics)
+    cfg.gnn.hybrid.gnn_types = ''  # e.g. "GCN,GIN,GCNE,GRIT,GATEDGCN"
     cfg.gnn.hybrid.attn_dropout = 0.1
     cfg.gnn.hybrid.mp_dropout = 0.0  # 0 => use cfg.gnn.dropout
     cfg.gnn.hybrid.block_bn = False

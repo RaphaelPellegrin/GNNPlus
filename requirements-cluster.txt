@@ -9,5 +9,6 @@ tensorboardX
 ogb
 wandb
 schedulefree
+opt_einsum
 # Optional: heterogeneity-profile plotting only (not required for standard training)
 matplotlib

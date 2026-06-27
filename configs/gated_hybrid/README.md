@@ -52,6 +52,7 @@ Configs live in `configs/gated_hybrid/<stem>.yaml` where `<stem>` matches `confi
 | `GATEDGCN` | `GatedGCNLayer` (matches GNN+ `gatedgcn` baseline) | Yes |
 | `RESGATEDGCN` | PyG `ResGatedGraphConv` (legacy; see below) | No |
 | `GINE`, `GGNN` / `GATEDGRAPH` | Custom hybrid heads | Partial / yes |
+| `GRIT` | One GRIT layer at `d_h` (Ma et al. 2023; sparse graph edges) | Yes (`gnn.grit.*`) |
 
 Also available in **GraphGym** fork as `gnn.stage_type: gated_hybrid`.
 
