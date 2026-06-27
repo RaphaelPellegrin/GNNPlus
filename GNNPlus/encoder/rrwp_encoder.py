@@ -7,7 +7,7 @@ import warnings
 import torch
 from torch import nn
 from torch_geometric.graphgym.register import register_edge_encoder, register_node_encoder
-from torch_geometric.utils import add_self_loops, scatter
+from torch_geometric.utils import add_self_loops, coalesce, scatter
 
 
 def full_edge_index(edge_index: torch.Tensor, batch: torch.Tensor | None = None) -> torch.Tensor:
@@ -114,35 +114,29 @@ class RRWPLinearEdgeEncoder(nn.Module):
         if self.overwrite_old_attr:
             out_idx, out_val = rrwp_idx, rrwp_val
         else:
-            import torch_sparse
-
             edge_index, edge_attr = add_self_loops(
                 edge_index,
                 edge_attr,
                 num_nodes=batch.num_nodes,
                 fill_value=0.0,
             )
-            out_idx, out_val = torch_sparse.coalesce(
+            out_idx, out_val = coalesce(
                 torch.cat([edge_index, rrwp_idx], dim=1),
                 torch.cat([edge_attr, rrwp_val], dim=0),
-                batch.num_nodes,
-                batch.num_nodes,
-                op="add",
+                num_nodes=batch.num_nodes,
+                reduce="add",
             )
 
         if self.pad_to_full_graph:
-            import torch_sparse
-
             edge_index_full = full_edge_index(out_idx, batch=getattr(batch, "batch", None))
             edge_attr_pad = self.padding.repeat(edge_index_full.size(1), 1)
             out_idx = torch.cat([out_idx, edge_index_full], dim=1)
             out_val = torch.cat([out_val, edge_attr_pad], dim=0)
-            out_idx, out_val = torch_sparse.coalesce(
+            out_idx, out_val = coalesce(
                 out_idx,
                 out_val,
-                batch.num_nodes,
-                batch.num_nodes,
-                op="add",
+                num_nodes=batch.num_nodes,
+                reduce="add",
             )
 
         out_val = self.bn(out_val)

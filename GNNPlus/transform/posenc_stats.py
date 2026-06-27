@@ -31,7 +31,11 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
     Returns:
         Extended PyG Data object.
     """
-    # Verify PE types.
+    # Verify PE types (RRWP is handled by AddFullRRWPTransform, not here).
+    pe_types = [t for t in pe_types if t != 'RRWP']
+    if not pe_types:
+        return data
+
     for t in pe_types:
         if t not in ['LapPE', 'EquivStableLapPE', 'SignNet', 'RWSE', 'HKdiagSE',
                      'HKfullPE', 'ElstaticSE', 'GraphormerBias']:

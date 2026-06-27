@@ -331,8 +331,8 @@ See **`bash_interface/cluster/PAPER_REPRO_TRACKER.md`** for `bestmodel_v1` cohor
 | CIFAR10 | [ulij45a2](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ulij45a2) | `25310487` | `paper_bestmodel_v1_cifar10_ulij45a2` |
 | MNIST | [lcvbyyss](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/lcvbyyss) | `25313521` | `paper_bestmodel_v1_mnist_lcvbyyss` |
 | MalNet-Tiny | [9h3jqzkm](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/9h3jqzkm) (v1, a0g2) | `25313522` | `paper_bestmodel_v1_malnet_9h3jqzkm` |
-| MalNet-Tiny | [4j21kp8d](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/4j21kp8d) (v2, a1g2) | *(pending)* | `paper_bestmodel_v2_malnet_4j21kp8d` |
-| VOC-SP | [j7ukyzdm](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/j7ukyzdm) | *(pending)* | `paper_bestmodel_v1_voc_j7ukyzdm` |
+| MalNet-Tiny | [4j21kp8d](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/4j21kp8d) (v2, a1g2) | `25324182` | `paper_bestmodel_v2_malnet_4j21kp8d` |
+| VOC-SP | [j7ukyzdm](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/j7ukyzdm) | `25322496` | `paper_bestmodel_v1_voc_j7ukyzdm` |
 
 Quick start (CIFAR10 ulij45a2):
 
@@ -442,6 +442,7 @@ squeue -u $USER -n sweep_agent -o "%.10i %.12j %.8T %.10M"
 | 2026-06-07 | Fix standalone GRIT `KeyError: gnn.dim_edge` — register key in `grit_config.py` |
 | 2026-06-07 | Relaunch standalone PATTERN GRIT `25302952` after `acebf66` pull |
 | 2026-06-07 | Fix RRWP routed to `compute_posenc_stats` — skip RRWP in generic PE loop |
+| 2026-06-07 | RRWP dense fallback (no torch_sparse); encoder uses PyG `coalesce` |
 | 2026-06-07 | Relaunch standalone PATTERN GRIT `25309402` after `614213b` pull |
 | 2026-06-07 | CIFAR10 paper repro ulij45a2: anchor yaml, 5-seed array, W&B group + aggregate script |
 | 2026-06-07 | Submitted CIFAR10 paper repro array `25310487` (seeds 0–4, group `paper_bestmodel_v1_cifar10_ulij45a2`) |
