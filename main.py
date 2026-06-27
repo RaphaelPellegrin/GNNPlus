@@ -24,6 +24,7 @@ from torch_geometric import seed_everything
 from GNNPlus.finetuning import load_pretrained_model_cfg, \
     init_model_from_pretrained
 from GNNPlus.logger import create_logger
+from GNNPlus.wandb_helpers import init_wandb_run
 
 
 torch.backends.cuda.matmul.allow_tf32 = True  # Default False in PyTorch 1.12+
@@ -99,7 +100,11 @@ if __name__ == '__main__':
         logging.info(f"[*] Run ID {run_id}: seed={cfg.seed}, "
                      f"split_index={cfg.dataset.split_index}")
         logging.info(f"    Starting now: {datetime.datetime.now()}")
-        
+
+        # W&B before dataset load so RRWP / loader failures still create a run.
+        if cfg.train.mode == 'custom':
+            init_wandb_run()
+
         # Set machine learning pipeline
         loaders = create_loader()
         loggers = create_logger()

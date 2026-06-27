@@ -37,7 +37,7 @@ class GritFeatureEncoder(nn.Module):
             self.dim_in = cfg.gnn.dim_inner
 
         if cfg.dataset.edge_encoder:
-            if cfg.gt.layer_type == "GritTransformer" and cfg.posenc_RRWP.enable:
+            if int(cfg.gnn.dim_edge) <= 0:
                 cfg.gnn.dim_edge = cfg.gnn.dim_inner
             edge_encoder = register.edge_encoder_dict[cfg.dataset.edge_encoder_name]
             self.edge_encoder = edge_encoder(cfg.gnn.dim_edge)

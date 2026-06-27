@@ -6,7 +6,10 @@ from yacs.config import CfgNode as CN
 
 @register_config("cfg_gt")
 def set_cfg_gt(cfg: CN) -> None:
-    """Register ``cfg.gt`` for standalone :class:`GritTransformer` models."""
+    """Register ``cfg.gt`` and ``cfg.gnn.dim_edge`` for standalone GRIT models."""
+    # Edge feature width for RRWP relative encoders / edge_encoder (0 => dim_inner).
+    cfg.gnn.dim_edge = 0
+
     cfg.gt = CN(new_allowed=True)
     cfg.gt.layer_type = "GritTransformer"
     cfg.gt.layers = 10

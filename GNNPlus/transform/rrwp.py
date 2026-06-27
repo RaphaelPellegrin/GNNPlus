@@ -31,7 +31,14 @@ def add_full_rrwp(
     add_identity: bool = True,
 ) -> Data:
     """Precompute absolute and relative RRWP features on a graph."""
-    from torch_sparse import SparseTensor
+    try:
+        from torch_sparse import SparseTensor
+    except (ImportError, OSError) as exc:
+        raise ImportError(
+            "RRWP precompute requires torch_sparse (GPU compute node with matching "
+            "PyG wheels). Standalone GRIT cannot start without RRWP; hybrid GRIT "
+            "uses RWSE instead."
+        ) from exc
 
     device = data.edge_index.device
     num_nodes = data.num_nodes

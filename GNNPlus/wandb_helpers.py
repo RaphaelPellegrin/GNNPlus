@@ -2,11 +2,66 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from torch_geometric.graphgym.config import cfg
 
 from GNNPlus.preprocessing.graph_augmentations import parse_cfg_bool
+from GNNPlus.utils import cfg_to_dict, make_wandb_name
+
+
+def _parse_wandb_tags() -> list[str]:
+    """Return W&B tags from ``cfg.wandb.tags`` (list or comma-separated string)."""
+    raw = getattr(cfg.wandb, "tags", None)
+    if raw is None or raw == "" or raw == []:
+        tags: list[str] = []
+    elif isinstance(raw, (list, tuple)):
+        tags = [str(tag).strip() for tag in raw if str(tag).strip()]
+    else:
+        tags = [part.strip() for part in str(raw).split(",") if part.strip()]
+    return _append_slurm_wandb_tags(tags)
+
+
+def _append_slurm_wandb_tags(tags: list[str]) -> list[str]:
+    """Add ``job_<SLURM_JOB_ID>`` (and array task) tags when running under SLURM."""
+    extra: list[str] = []
+    job_id = os.environ.get("SLURM_JOB_ID", "").strip()
+    if job_id:
+        extra.append(f"job_{job_id}")
+    array_job = os.environ.get("SLURM_ARRAY_JOB_ID", "").strip()
+    array_task = os.environ.get("SLURM_ARRAY_TASK_ID", "").strip()
+    if array_job and array_task:
+        extra.append(f"array_{array_job}_{array_task}")
+    if not extra:
+        return tags
+    return list(dict.fromkeys([*tags, *extra]))
+
+
+def init_wandb_run() -> Any | None:
+    """Initialize W&B once per process if ``cfg.wandb.use`` (no-op if already active)."""
+    if not cfg.wandb.use:
+        return None
+    try:
+        import wandb
+    except ImportError as exc:
+        raise ImportError("WandB is not installed.") from exc
+    if wandb.run is not None:
+        return wandb.run
+
+    wandb_name = make_wandb_name(cfg) if cfg.wandb.name == "" else cfg.wandb.name
+    wandb_kwargs: dict[str, object] = {
+        "entity": cfg.wandb.entity,
+        "project": cfg.wandb.project,
+        "name": wandb_name,
+    }
+    wandb_tags = _parse_wandb_tags()
+    if wandb_tags:
+        wandb_kwargs["tags"] = wandb_tags
+    run = wandb.init(**wandb_kwargs)
+    run.config.update(cfg_to_dict(cfg))
+    record_preprocessing_wandb_flags()
+    return run
 
 
 def _effective_readout_preset() -> str:

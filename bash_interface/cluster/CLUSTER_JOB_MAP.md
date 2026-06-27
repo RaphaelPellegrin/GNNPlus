@@ -260,6 +260,37 @@ grep -E "RRWP done|epoch|accuracy-SBM|test/mae|Traceback" logs_gnnplus/*_grit_*_
 
 **W&B lookup:** tag `job_<JOBID>` or search run name `*_grit_*_job<JOBID>`.
 
+### Troubleshooting standalone GRIT (no W&B run)
+
+| Symptom | Cause |
+|---------|--------|
+| Only [laneuetq](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/laneuetq) visible | That run is **hybrid** GRIT (`model.type=hybrid_gnn`), not standalone |
+| Standalone jobs `25296336`/`38`/`39` missing on W&B | Failed at **config load** (`KeyError: gnn.dim_edge`) before training; fixed in `grit_config.py` |
+| `wandb.init` after loader | RRWP crash = no run (fixed: early init in `main.py`) |
+| Log stops at `Precomputing RRWP` | `torch_sparse` missing or OOM during dense RRWP (`adj.to_dense()`) |
+| Log never reaches `RRWP done` | PATTERN/CLUSTER precompute is slow (many graphs); ZINC can take hours |
+
+**Diagnose on cluster:**
+
+```bash
+for j in 25296336 25296338 25296339 25287393; do
+  echo "=== JOB $j ==="
+  sacct -j $j -X --format=JobID,State,ExitCode,Elapsed,MaxRSS 2>/dev/null
+  f=$(ls logs_gnnplus/*_${j}.log 2>/dev/null | head -1)
+  [ -n "$f" ] && grep -E "RRWP|Traceback|Error|wandb|GritTransformer|hybrid_gnn|epoch" "$f" | tail -8
+done
+```
+
+**W&B filters:** standalone → `config.model.type = GritTransformer`; hybrid → `config.model.type = hybrid_gnn` + tag `grit`.
+
+**Relaunch standalone** (after `git pull` for early W&B init):
+
+```bash
+bash bash_interface/cluster/submit_grit.sh pattern standalone
+# or zinc first (smaller graphs, good smoke test):
+bash bash_interface/cluster/submit_grit.sh zinc standalone
+```
+
 ## PATTERN hybrid anchored on qcz7umtl (GCNE baseline)
 
 Best MP-only baseline: [qcz7umtl](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/qcz7umtl)  
@@ -313,10 +344,19 @@ COCO_FAIR_TASKS=2-5 bash bash_interface/cluster/submit_coco_gatedgcn_fair_compar
 bash bash_interface/cluster/submit_coco_gatedgcn_best_hybrid_sweep.sh
 ```
 
-| Job ID | Task | Variant | W&B run name | Log |
-|--------|------|---------|--------------|-----|
-| *(pending)* | — | a1g1 | `coco_hybrid_5b4z9l3u_a1g1_seed1_job…` | `logs_gnnplus/coco_hybrid_5b4z9l3u_a1g1_*.log` |
-| *(pending)* | — | sweep | `GNNplus_best_hybrid-coco-gatedgcn` | `logs_gnnplus/sweep_agent_*_*.log` |
+| Job ID | Task | Variant | Sweep / W&B | Log |
+|--------|------|---------|-------------|-----|
+| `25299176` | — | a1g1 anchor | `coco_hybrid_5b4z9l3u_a1g1_seed1_job25299176` | `logs_gnnplus/coco_hybrid_5b4z9l3u_a1g1_25299176.log` |
+| `25299177` | — | a2g1 anchor | `coco_hybrid_5b4z9l3u_a2g1_seed1_job25299177` | `logs_gnnplus/coco_hybrid_5b4z9l3u_a2g1_25299177.log` |
+| `25299326` | 1–16 | Bayes sweep | [xrks1f52](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/sweeps/xrks1f52) | `logs_gnnplus/sweep_agent_25299326_<TASK>.log` |
+
+Sweep `xrks1f52` (`GNNplus_best_hybrid-coco-gatedgcn`): attn {1,2}, LR log-uniform, d_h {32,48,52}, batch {8,16}, 16 agents × 4 runs, 128GB, seed 1.
+
+```bash
+squeue -u $USER | grep -E 'coco_hybrid|25299326'
+tail -f logs_gnnplus/coco_hybrid_5b4z9l3u_a1g1_25299176.log
+grep -m1 SWEEP_ID logs_gnnplus/sweep_agent_25299326_1.log
+```
 
 ## Quick lookup
 
@@ -342,3 +382,6 @@ squeue -u $USER -n sweep_agent -o "%.10i %.12j %.8T %.10M"
 | 2026-06-07 | PATTERN hybrid qcz7umtl anchor configs + `submit_pattern_hybrid_qcz7umtl.sh` |
 | 2026-06-07 | Submitted `25297819` (a1g1 anchor) + array `25297831` tasks 2–5 (fair hybrid LR sweep) |
 | 2026-06-07 | COCO hybrid 5b4z9l3u anchor configs, fair comparison array, Bayes sweep |
+| 2026-06-07 | Submitted COCO `25299176`/`25299177` (a1g1/a2g1) + sweep array `25299326` (`xrks1f52`) |
+| 2026-06-07 | Early W&B init before RRWP loader; GRIT troubleshooting notes in job map |
+| 2026-06-07 | Fix standalone GRIT `KeyError: gnn.dim_edge` — register key in `grit_config.py` |
