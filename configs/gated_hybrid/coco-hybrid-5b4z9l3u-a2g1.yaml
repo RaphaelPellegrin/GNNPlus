@@ -1,0 +1,76 @@
+# COCO-SP hybrid anchor — GatedGCN+ MP head from 5b4z9l3u + 2×attention.
+#
+# Baseline: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/5b4z9l3u
+# Same outer hyperparams as configs/gatedgcn/coco.yaml; 2 attn + 1 GATEDGCN MP head.
+out_dir: results
+metric_best: f1
+num_workers: 6
+wandb:
+  use: False
+  project: GNNPlus
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - coco_anchor_5b4z9l3u
+    - coco_gatedgcn_repro_a2
+dataset:
+  format: PyG-COCOSuperpixels
+  name: edge_wt_region_boundary
+  slic_compactness: 30
+  task: graph
+  task_type: classification
+  transductive: False
+  node_encoder: True
+  node_encoder_name: COCONode
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: COCOEdge
+  edge_encoder_bn: False
+posenc_RWSE:
+  enable: False
+  kernel:
+    times_func: range(1,21)
+  model: Linear
+  dim_pe: 28
+  raw_norm_type: BatchNorm
+train:
+  mode: custom
+  batch_size: 16
+  eval_period: 1
+  ckpt_period: 100
+  eval_smoothing_metrics: True
+model:
+  type: hybrid_gnn
+  loss_fun: weighted_cross_entropy
+gnn:
+  head: inductive_node
+  ffn: False
+  layers_pre_mp: 0
+  layers_mp: 20
+  layers_post_mp: 1
+  dim_inner: 52
+  act: gelu
+  dropout: 0.05
+  agg: mean
+  normalize_adj: False
+  residual: True
+  hybrid:
+    num_attn_heads: 2
+    num_gnn_heads: 1
+    d_h: 52
+    attn_mask: full
+    gate: headwise
+    norm: layernorm
+    gnn_types: "GATEDGCN"
+    attn_dropout: 0.1
+    mp_dropout: 0.05
+    block_bn: false
+    log_gate_stats: True
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 0.0
+  base_lr: 0.001
+  max_epoch: 300
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10

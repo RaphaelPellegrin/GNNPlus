@@ -1,0 +1,57 @@
+# COCO-SP GatedGCN+ best-hybrid Bayes — 1×GATEDGCN MP + {1,2} attention heads.
+# Standard anchor: 5b4z9l3u (gatedgcn/coco.yaml, seed 1).
+# Base: configs/gated_hybrid/coco-gatedgcn-best-hybrid.yaml
+# Metric: test/f1. Use 128GB on cluster.
+#
+# Create:
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/coco_gatedgcn_best_hybrid_sweep.yaml
+# Launch:
+#   bash bash_interface/cluster/submit_coco_gatedgcn_best_hybrid_sweep.sh
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: maximize
+  name: test/f1
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_best_hybrid-coco-gatedgcn
+
+early_terminate:
+  type: hyperband
+  min_iter: 30
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/coco-gatedgcn-best-hybrid.yaml
+  - --molecular=false
+  - --seed=1
+  - ${args}
+
+parameters:
+  batch_size:
+    values: [8, 16]
+  hybrid_num_attn_heads:
+    values: [1, 2]
+  hybrid_num_gnn_heads:
+    value: 1
+  hybrid_gnn_types:
+    value: GATEDGCN
+  hybrid_d_h:
+    values: [32, 48, 52]
+  hybrid_attn_mask:
+    values: [full, graph_restricted]
+  hybrid_attn_dropout:
+    values: [0.1, 0.2]
+  hybrid_mp_dropout:
+    values: [0.05, 0.1]
+  optim.base_lr:
+    distribution: log_uniform_values
+    min: 0.0003
+    max: 0.002

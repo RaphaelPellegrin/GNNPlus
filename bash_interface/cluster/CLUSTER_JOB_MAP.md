@@ -271,11 +271,52 @@ Best MP-only baseline: [qcz7umtl](https://wandb.ai/weber-geoml-harvard-universit
 | hybrid a1g1 | `configs/gated_hybrid/pattern-hybrid-qcz7umtl-a1g1.yaml` | 1×attn + 1×GCNE MP |
 | hybrid a2g1 | `configs/gated_hybrid/pattern-hybrid-qcz7umtl-a2g1.yaml` | 2×attn + 1×GCNE MP |
 
-Submit: `bash bash_interface/cluster/submit_pattern_hybrid_qcz7umtl.sh a1g1`
+Submit: `bash bash_interface/cluster/submit_pattern_hybrid_qcz7umtl.sh a1g1`  
+Fair grid (LR sweep): `PATTERN_FAIR_TASKS=2-5 bash submit_pattern_gcne_fair_comparison.sh`
 
-| Job ID | Variant | W&B run name | Log |
-|--------|---------|--------------|-----|
-| *(pending)* | a1g1 | `pattern_hybrid_qcz7umtl_a1g1_seed2_job…` | `logs_gnnplus/pattern_hybrid_qcz7umtl_a1g1_*.log` |
+| Job ID | Task | Variant | Config | W&B run name | Log |
+|--------|------|---------|--------|--------------|-----|
+| `25297819` | — | a1g1 anchor | `pattern-hybrid-qcz7umtl-a1g1.yaml` | `pattern_hybrid_qcz7umtl_a1g1_seed2_job25297819` | `logs_gnnplus/pattern_hybrid_qcz7umtl_a1g1_25297819.log` |
+| `25297831` | 2 | a1g1 lr=0.001 | `pattern-gcne-repro-a1.yaml` | `pattern_gcne_seed2_repro_hybrid_a1g1_lr0p001` | `logs_gnnplus/pattern_fair_25297831_2.log` |
+| `25297831` | 3 | a2g1 lr=0.001 | `pattern-gcne-repro-a2.yaml` | `pattern_gcne_seed2_repro_hybrid_a2g1_lr0p001` | `logs_gnnplus/pattern_fair_25297831_3.log` |
+| `25297831` | 4 | a1g1 lr=0.002 | `pattern-gcne-repro-a1.yaml` | `pattern_gcne_seed2_repro_hybrid_a1g1_lr0p002` | `logs_gnnplus/pattern_fair_25297831_4.log` |
+| `25297831` | 5 | a2g1 lr=0.002 | `pattern-gcne-repro-a2.yaml` | `pattern_gcne_seed2_repro_hybrid_a2g1_lr0p002` | `logs_gnnplus/pattern_fair_25297831_5.log` |
+
+```bash
+squeue -u $USER | grep -E 'pattern_hybrid|pattern_fair'
+tail -f logs_gnnplus/pattern_hybrid_qcz7umtl_a1g1_25297819.log
+tail -f logs_gnnplus/pattern_fair_25297831_2.log
+```
+
+## COCO hybrid anchored on 5b4z9l3u (GatedGCN+ baseline)
+
+Best MP-only baseline: [5b4z9l3u](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/5b4z9l3u)  
+(`configs/gatedgcn/coco.yaml`, seed 1, `layer_type: gatedgcn`, metric `test/f1`)
+
+| Variant | Config | Architecture |
+|---------|--------|----------------|
+| baseline (done) | `configs/gatedgcn/coco.yaml` | 20×GatedGCN+ MP-only |
+| hybrid a1g1 | `configs/gated_hybrid/coco-hybrid-5b4z9l3u-a1g1.yaml` | 1×attn + 1×GATEDGCN MP |
+| hybrid a2g1 | `configs/gated_hybrid/coco-hybrid-5b4z9l3u-a2g1.yaml` | 2×attn + 1×GATEDGCN MP |
+| sweep base | `configs/gated_hybrid/coco-gatedgcn-best-hybrid.yaml` | Bayes over attn/LR/d_h |
+
+**Submit options**
+
+```bash
+# Single anchor runs (128GB, 192h)
+bash bash_interface/cluster/submit_coco_hybrid_5b4z9l3u.sh both
+
+# Fair grid: a1g1/a2g1 × lr {0.001, 0.002} (skip baseline if done)
+COCO_FAIR_TASKS=2-5 bash bash_interface/cluster/submit_coco_gatedgcn_fair_comparison.sh
+
+# Bayes sweep: attn {1,2}, LR log-uniform, d_h, batch {8,16}
+bash bash_interface/cluster/submit_coco_gatedgcn_best_hybrid_sweep.sh
+```
+
+| Job ID | Task | Variant | W&B run name | Log |
+|--------|------|---------|--------------|-----|
+| *(pending)* | — | a1g1 | `coco_hybrid_5b4z9l3u_a1g1_seed1_job…` | `logs_gnnplus/coco_hybrid_5b4z9l3u_a1g1_*.log` |
+| *(pending)* | — | sweep | `GNNplus_best_hybrid-coco-gatedgcn` | `logs_gnnplus/sweep_agent_*_*.log` |
 
 ## Quick lookup
 
@@ -299,3 +340,5 @@ squeue -u $USER -n sweep_agent -o "%.10i %.12j %.8T %.10M"
 | 2026-06-07 | Initial map from `sweep_agent_*.log` grep on holylogin05 |
 | 2026-06-07 | GRIT batch: standalone `25296336`/`25296338`/`25296339` (PATTERN/CLUSTER/ZINC); hybrid `25287393` (PATTERN) |
 | 2026-06-07 | PATTERN hybrid qcz7umtl anchor configs + `submit_pattern_hybrid_qcz7umtl.sh` |
+| 2026-06-07 | Submitted `25297819` (a1g1 anchor) + array `25297831` tasks 2–5 (fair hybrid LR sweep) |
+| 2026-06-07 | COCO hybrid 5b4z9l3u anchor configs, fair comparison array, Bayes sweep |
