@@ -166,6 +166,12 @@ case "${DATASET}" in
                 WANDB_NAME="pattern_gcne_seed${SEED}_repro_hybrid_attn1"
                 EXTRA_ARGS+=(gnn.hybrid.log_gate_stats True)
                 ;;
+            hybrid_attn2)
+                CFG="configs/gated_hybrid/pattern-gcne-repro-a2.yaml"
+                SEED="${SEED:-0}"
+                WANDB_NAME="pattern_gcne_seed${SEED}_repro_hybrid_attn2"
+                EXTRA_ARGS+=(gnn.hybrid.log_gate_stats True)
+                ;;
             *)
                 echo "Unknown repro_variant for pattern: ${VARIANT}" >&2
                 exit 2
