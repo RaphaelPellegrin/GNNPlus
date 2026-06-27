@@ -1,0 +1,78 @@
+# MNIST hybrid anchor — frozen hyperparams from W&B lcvbyyss (seed 0).
+#
+# Repro commit: a28a4f998373167d689d7fea4807c562a66d8c0a
+# Paper repro: 5 seeds via submit_mnist_hybrid_lcvbyyss_paper_repro.sh
+# W&B group: paper_bestmodel_v1_mnist_lcvbyyss | tags: paper_repro, bestmodel_v1
+#
+# Architecture: 2×attention + 2×GATEDGCN MP (4×GATEDGCN types), d_h=64, elementwise gate.
+out_dir: results
+metric_best: accuracy
+wandb:
+  use: False
+  project: GNNPlus
+  group: paper_bestmodel_v1_mnist_lcvbyyss
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - paper_repro
+    - bestmodel_v1
+    - mnist
+    - anchor_lcvbyyss
+    - hybrid_a2g2
+    - gate_elementwise
+dataset:
+  format: PyG-GNNBenchmarkDataset
+  name: MNIST
+  task: graph
+  task_type: classification
+  transductive: False
+  node_encoder: True
+  node_encoder_name: LinearNode
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: LinearEdge
+  edge_encoder_bn: False
+posenc_RWSE:
+  enable: False
+train:
+  mode: custom
+  batch_size: 16
+  eval_period: 1
+  ckpt_period: 100
+  eval_smoothing_metrics: False
+model:
+  type: hybrid_gnn
+  loss_fun: cross_entropy
+  edge_decoding: dot
+  graph_pooling: mean
+gnn:
+  head: default
+  layers_mp: 6
+  layers_pre_mp: 0
+  layers_post_mp: 1
+  dim_inner: 60
+  act: relu
+  dropout: 0.15
+  agg: mean
+  ffn: True
+  residual: True
+  hybrid:
+    num_attn_heads: 2
+    num_gnn_heads: 2
+    d_h: 64
+    attn_mask: full
+    gate: elementwise
+    norm: layernorm
+    gnn_types: "GATEDGCN,GATEDGCN,GATEDGCN,GATEDGCN"
+    attn_dropout: 0.5
+    mp_dropout: 0.15
+    block_bn: false
+    log_gate_stats: True
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 1e-5
+  base_lr: 0.0005
+  max_epoch: 200
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 5

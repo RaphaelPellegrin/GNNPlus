@@ -1,0 +1,76 @@
+# MalNet-Tiny (LDP) hybrid anchor — frozen hyperparams from W&B 9h3jqzkm (seed 0).
+#
+# Repro commit: ed02d752b932f932b924a1def36c244c8f9c1694
+# Paper repro: 5 seeds via submit_malnet_hybrid_9h3jqzkm_paper_repro.sh
+# W&B group: paper_bestmodel_v1_malnet_9h3jqzkm | tags: paper_repro, bestmodel_v1
+#
+# Architecture: 0×attention + 2×GCNE MP (a0g2), d_h=110, elementwise gate, no virtual nodes.
+out_dir: results
+metric_best: accuracy
+wandb:
+  use: False
+  project: GNNPlus
+  group: paper_bestmodel_v1_malnet_9h3jqzkm
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - paper_repro
+    - bestmodel_v1
+    - malnet
+    - anchor_9h3jqzkm
+    - hybrid_a0g2
+    - gate_elementwise
+dataset:
+  format: PyG-MalNetTiny
+  name: LocalDegreeProfile
+  task: graph
+  task_type: classification
+  transductive: False
+  node_encoder: False
+  edge_encoder: True
+  edge_encoder_name: DummyEdge
+  edge_encoder_bn: False
+  add_virtual_nodes: False
+  num_virtual_nodes: 0
+train:
+  mode: custom
+  batch_size: 16
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: hybrid_gnn
+  loss_fun: cross_entropy
+  edge_decoding: dot
+  graph_pooling: max
+gnn:
+  head: default
+  ffn: False
+  layers_mp: 8
+  layers_pre_mp: 1
+  layers_post_mp: 1
+  dim_inner: 110
+  batchnorm: True
+  act: relu
+  dropout: 0.0
+  agg: mean
+  residual: True
+  hybrid:
+    num_attn_heads: 0
+    num_gnn_heads: 2
+    d_h: 110
+    attn_mask: graph_restricted
+    gate: elementwise
+    norm: rmsnorm
+    gnn_types: "GCNE"
+    attn_dropout: 0.1
+    mp_dropout: 0.05
+    block_bn: false
+    log_gate_stats: True
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 1e-5
+  base_lr: 0.0019142361730964056
+  max_epoch: 150
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10

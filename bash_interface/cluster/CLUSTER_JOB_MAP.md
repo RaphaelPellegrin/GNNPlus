@@ -322,33 +322,32 @@ tail -f logs_gnnplus/pattern_hybrid_qcz7umtl_a1g1_25297819.log
 tail -f logs_gnnplus/pattern_fair_25297831_2.log
 ```
 
-## Paper repro (5 seeds, `bestmodel_v1`)
+## Paper repro (5 seeds)
 
-Frozen anchor configs + W&B **group** (primary) and **tags** (cross-dataset filter).
+See **`bash_interface/cluster/PAPER_REPRO_TRACKER.md`** for `bestmodel_v1` cohorts, W&B groups, run names, and aggregate results.
 
-| Field | Convention |
-|-------|------------|
-| **Group** | `paper_bestmodel_v1_<dataset>_<anchor_id>` — groups 5 seeds in W&B UI |
-| **Tags** | `paper_repro`, `bestmodel_v1`, `<dataset>`, `anchor_<id>` |
-| **Report metric** | `best_test_perf` (= `best/test_{metric_best}` at val-best epoch) |
-| **Seeds** | `0, 1, 2, 3, 4` (override `PAPER_NUM_SEEDS`) |
-
-### CIFAR10 — ulij45a2 (a8g4, d_h=256)
-
-Best single run: [ulij45a2](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ulij45a2)  
-Anchor config: `configs/gated_hybrid/cifar10-hybrid-ulij45a2-anchor.yaml`  
-Repro commit: `ca47851df38e54a3ed052be53f9072bcb159464e`
-
-| Job ID | Task | Seed | W&B group | Log |
-|--------|------|------|-----------|-----|
-| *(pending)* | 1–5 | 0–4 | `paper_bestmodel_v1_cifar10_ulij45a2` | `logs_gnnplus/cifar10_paper_v1_<JOBID>_<TASK>.log` |
+Quick start (CIFAR10 ulij45a2):
 
 ```bash
 bash bash_interface/cluster/submit_cifar10_hybrid_ulij45a2_paper_repro.sh
-
-# Aggregate (when ≥1 run finished):
 python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_bestmodel_v1_cifar10_ulij45a2
+```
+
+MNIST lcvbyyss:
+
+```bash
+bash bash_interface/cluster/submit_mnist_hybrid_lcvbyyss_paper_repro.sh
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_bestmodel_v1_mnist_lcvbyyss
+```
+
+MalNet-Tiny 9h3jqzkm:
+
+```bash
+bash bash_interface/cluster/submit_malnet_hybrid_9h3jqzkm_paper_repro.sh
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_bestmodel_v1_malnet_9h3jqzkm
 ```
 
 ## COCO hybrid anchored on 5b4z9l3u (GatedGCN+ baseline)
@@ -421,3 +420,5 @@ squeue -u $USER -n sweep_agent -o "%.10i %.12j %.8T %.10M"
 | 2026-06-07 | Fix RRWP routed to `compute_posenc_stats` — skip RRWP in generic PE loop |
 | 2026-06-07 | Relaunch standalone PATTERN GRIT `25309402` after `614213b` pull |
 | 2026-06-07 | CIFAR10 paper repro ulij45a2: anchor yaml, 5-seed array, W&B group + aggregate script |
+| 2026-06-07 | Submitted CIFAR10 paper repro array `25310487` (seeds 0–4, group `paper_bestmodel_v1_cifar10_ulij45a2`) |
+| 2026-06-07 | Added `PAPER_REPRO_TRACKER.md` for bestmodel_v1 cohorts |
