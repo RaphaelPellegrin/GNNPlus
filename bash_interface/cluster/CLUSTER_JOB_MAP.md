@@ -236,12 +236,13 @@ Copy output here or run the grouping snippet at the bottom of this file.
 Submitted via `bash bash_interface/cluster/submit_grit.sh`.  
 W&B project: https://wandb.ai/weber-geoml-harvard-university/GNNPlus
 
-| Job ID | Variant | Dataset | Config | W&B run name | Log | Metric |
-|--------|---------|---------|--------|--------------|-----|--------|
-| `25287393` | hybrid | PATTERN | `configs/gated_hybrid/pattern-grit-repro-a1g1.yaml` | `pattern_grit_hybrid_seed0_job25287393` | `logs_gnnplus/pattern_grit_hybrid_25287393.log` | `test/accuracy-SBM` |
-| `25296336` | **standalone** | PATTERN | `configs/grit/pattern-grit-rrwp.yaml` | `pattern_grit_rrwp_seed0_job25296336` | `logs_gnnplus/pattern_grit_rrwp_25296336.log` | `test/accuracy-SBM` |
-| `25296338` | **standalone** | CLUSTER | `configs/grit/cluster-grit-rrwp.yaml` | `cluster_grit_rrwp_seed0_job25296338` | `logs_gnnplus/cluster_grit_rrwp_25296338.log` | `test/accuracy-SBM` |
-| `25296339` | **standalone** | ZINC | `configs/grit/zinc-grit-rrwp.yaml` | `zinc_grit_rrwp_seed0_job25296339` | `logs_gnnplus/zinc_grit_rrwp_25296339.log` | `test/mae` |
+| Job ID | Variant | Dataset | Config | W&B run name | Log | Metric | Notes |
+|--------|---------|---------|--------|--------------|-----|--------|-------|
+| `25287393` | hybrid | PATTERN | `configs/gated_hybrid/pattern-grit-repro-a1g1.yaml` | `pattern_grit_hybrid_seed0_job25287393` | `logs_gnnplus/pattern_grit_hybrid_25287393.log` | `test/accuracy-SBM` | [laneuetq](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/laneuetq) |
+| `25302952` | standalone | PATTERN | `configs/grit/pattern-grit-rrwp.yaml` | — | `logs_gnnplus/pattern_grit_rrwp_25302952.log` | `test/accuracy-SBM` | **FAILED** `Unexpected PE stats selection RRWP` — fixed in `master_loader.py` |
+| `25296336` | standalone | PATTERN | `configs/grit/pattern-grit-rrwp.yaml` | — | `logs_gnnplus/pattern_grit_rrwp_25296336.log` | `test/accuracy-SBM` | **FAILED** `KeyError: gnn.dim_edge` |
+| `25296338` | standalone | CLUSTER | `configs/grit/cluster-grit-rrwp.yaml` | — | `logs_gnnplus/cluster_grit_rrwp_25296338.log` | `test/accuracy-SBM` | **FAILED** `KeyError: gnn.dim_edge` |
+| `25296339` | standalone | ZINC | `configs/grit/zinc-grit-rrwp.yaml` | — | `logs_gnnplus/zinc_grit_rrwp_25296339.log` | `test/mae` | **FAILED** `KeyError: gnn.dim_edge` |
 
 **Variant cheat sheet**
 
@@ -254,8 +255,8 @@ W&B project: https://wandb.ai/weber-geoml-harvard-university/GNNPlus
 
 ```bash
 squeue -u $USER | grep grit
-tail -f logs_gnnplus/pattern_grit_rrwp_25296336.log
-grep -E "RRWP done|epoch|accuracy-SBM|test/mae|Traceback" logs_gnnplus/*_grit_*_2529633*.log
+tail -f logs_gnnplus/pattern_grit_rrwp_25302952.log
+grep -E "RRWP done|wandb|epoch|accuracy-SBM|Traceback" logs_gnnplus/pattern_grit_rrwp_25302952.log | tail -20
 ```
 
 **W&B lookup:** tag `job_<JOBID>` or search run name `*_grit_*_job<JOBID>`.
@@ -267,13 +268,14 @@ grep -E "RRWP done|epoch|accuracy-SBM|test/mae|Traceback" logs_gnnplus/*_grit_*_
 | Only [laneuetq](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/laneuetq) visible | That run is **hybrid** GRIT (`model.type=hybrid_gnn`), not standalone |
 | Standalone jobs `25296336`/`38`/`39` missing on W&B | Failed at **config load** (`KeyError: gnn.dim_edge`) before training; fixed in `grit_config.py` |
 | `wandb.init` after loader | RRWP crash = no run (fixed: early init in `main.py`) |
+| Log shows `Unexpected PE stats selection RRWP` | RRWP wrongly routed to `compute_posenc_stats`; fixed in `master_loader.py` |
 | Log stops at `Precomputing RRWP` | `torch_sparse` missing or OOM during dense RRWP (`adj.to_dense()`) |
 | Log never reaches `RRWP done` | PATTERN/CLUSTER precompute is slow (many graphs); ZINC can take hours |
 
 **Diagnose on cluster:**
 
 ```bash
-for j in 25296336 25296338 25296339 25287393; do
+for j in 25302952 25287393 25296336 25296338 25296339; do
   echo "=== JOB $j ==="
   sacct -j $j -X --format=JobID,State,ExitCode,Elapsed,MaxRSS 2>/dev/null
   f=$(ls logs_gnnplus/*_${j}.log 2>/dev/null | head -1)
@@ -283,11 +285,11 @@ done
 
 **W&B filters:** standalone → `config.model.type = GritTransformer`; hybrid → `config.model.type = hybrid_gnn` + tag `grit`.
 
-**Relaunch standalone** (after `git pull` for early W&B init):
+**Relaunch standalone** (after `git pull` ≥ `acebf66`):
 
 ```bash
-bash bash_interface/cluster/submit_grit.sh pattern standalone
-# or zinc first (smaller graphs, good smoke test):
+bash bash_interface/cluster/submit_grit.sh pattern standalone   # → 25302952
+bash bash_interface/cluster/submit_grit.sh cluster standalone
 bash bash_interface/cluster/submit_grit.sh zinc standalone
 ```
 
@@ -385,3 +387,5 @@ squeue -u $USER -n sweep_agent -o "%.10i %.12j %.8T %.10M"
 | 2026-06-07 | Submitted COCO `25299176`/`25299177` (a1g1/a2g1) + sweep array `25299326` (`xrks1f52`) |
 | 2026-06-07 | Early W&B init before RRWP loader; GRIT troubleshooting notes in job map |
 | 2026-06-07 | Fix standalone GRIT `KeyError: gnn.dim_edge` — register key in `grit_config.py` |
+| 2026-06-07 | Relaunch standalone PATTERN GRIT `25302952` after `acebf66` pull |
+| 2026-06-07 | Fix RRWP routed to `compute_posenc_stats` — skip RRWP in generic PE loop |

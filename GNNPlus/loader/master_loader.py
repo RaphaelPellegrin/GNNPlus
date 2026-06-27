@@ -190,6 +190,9 @@ def load_dataset_master(format, name, dataset_dir):
     for key, pecfg in cfg.items():
         if key.startswith('posenc_') and pecfg.enable:
             pe_name = key.split('_', 1)[1]
+            # RRWP uses AddFullRRWPTransform (below), not compute_posenc_stats.
+            if pe_name == 'RRWP':
+                continue
             pe_enabled_list.append(pe_name)
             if hasattr(pecfg, 'kernel'):
                 # Generate kernel times if functional snippet is set.
