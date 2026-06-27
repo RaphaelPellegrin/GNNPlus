@@ -18,7 +18,9 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "${REPO_ROOT}"
 
 export GNNPLUS_DATASET_DIR="${GNNPLUS_DATASET_DIR:-/n/netscratch/mweber_lab/Lab/gnnplus_datasets}"
-export PYTHONNOUSERSITE=1
+export ENV_NAME="${ENV_NAME:-gnnplus}"
+# shellcheck source=common_env.sh
+source "${REPO_ROOT}/bash_interface/cluster/common_env.sh"
 
 # PyG GNNBenchmarkDataset root used by load_dataset_master (PyG-GNNBenchmarkDataset):
 GNN_BENCH_ROOT="${GNNPLUS_DATASET_DIR}/GNNBenchmarkDataset"
