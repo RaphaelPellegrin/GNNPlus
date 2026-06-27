@@ -231,6 +231,52 @@ Copy output here or run the grouping snippet at the bottom of this file.
 ### Unknown / no sweep in log
 `23839038`, `23839041`, `23878867`, `23878871`, `23885469`, `24670840`, `24670854`, `24670880`, `24670894`, `24679066`, `24679677`
 
+## GRIT runs (direct `sbatch`, not W&B sweeps)
+
+Submitted via `bash bash_interface/cluster/submit_grit.sh`.  
+W&B project: https://wandb.ai/weber-geoml-harvard-university/GNNPlus
+
+| Job ID | Variant | Dataset | Config | W&B run name | Log | Metric |
+|--------|---------|---------|--------|--------------|-----|--------|
+| `25287393` | hybrid | PATTERN | `configs/gated_hybrid/pattern-grit-repro-a1g1.yaml` | `pattern_grit_hybrid_seed0_job25287393` | `logs_gnnplus/pattern_grit_hybrid_25287393.log` | `test/accuracy-SBM` |
+| `25296336` | **standalone** | PATTERN | `configs/grit/pattern-grit-rrwp.yaml` | `pattern_grit_rrwp_seed0_job25296336` | `logs_gnnplus/pattern_grit_rrwp_25296336.log` | `test/accuracy-SBM` |
+| `25296338` | **standalone** | CLUSTER | `configs/grit/cluster-grit-rrwp.yaml` | `cluster_grit_rrwp_seed0_job25296338` | `logs_gnnplus/cluster_grit_rrwp_25296338.log` | `test/accuracy-SBM` |
+| `25296339` | **standalone** | ZINC | `configs/grit/zinc-grit-rrwp.yaml` | `zinc_grit_rrwp_seed0_job25296339` | `logs_gnnplus/zinc_grit_rrwp_25296339.log` | `test/mae` |
+
+**Variant cheat sheet**
+
+| Variant | `model.type` | Pos. encoding | Submit |
+|---------|--------------|---------------|--------|
+| standalone (paper GRIT) | `GritTransformer` | RRWP | `submit_grit.sh <ds> standalone` |
+| hybrid (1 attn + 1 GRIT MP) | `hybrid_gnn` | RWSE | `submit_grit.sh <ds> hybrid` |
+
+**Monitor GRIT jobs**
+
+```bash
+squeue -u $USER | grep grit
+tail -f logs_gnnplus/pattern_grit_rrwp_25296336.log
+grep -E "RRWP done|epoch|accuracy-SBM|test/mae|Traceback" logs_gnnplus/*_grit_*_2529633*.log
+```
+
+**W&B lookup:** tag `job_<JOBID>` or search run name `*_grit_*_job<JOBID>`.
+
+## PATTERN hybrid anchored on qcz7umtl (GCNE baseline)
+
+Best MP-only baseline: [qcz7umtl](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/qcz7umtl)  
+(`configs/gcn/pattern.yaml`, seed 2, `layer_type: gcne`, SBM ≈ 0.866)
+
+| Variant | Config | Architecture |
+|---------|--------|----------------|
+| baseline (done) | `configs/gcn/pattern.yaml` | 12×GCNE MP-only |
+| hybrid a1g1 | `configs/gated_hybrid/pattern-hybrid-qcz7umtl-a1g1.yaml` | 1×attn + 1×GCNE MP |
+| hybrid a2g1 | `configs/gated_hybrid/pattern-hybrid-qcz7umtl-a2g1.yaml` | 2×attn + 1×GCNE MP |
+
+Submit: `bash bash_interface/cluster/submit_pattern_hybrid_qcz7umtl.sh a1g1`
+
+| Job ID | Variant | W&B run name | Log |
+|--------|---------|--------------|-----|
+| *(pending)* | a1g1 | `pattern_hybrid_qcz7umtl_a1g1_seed2_job…` | `logs_gnnplus/pattern_hybrid_qcz7umtl_a1g1_*.log` |
+
 ## Quick lookup
 
 ```bash
@@ -251,3 +297,5 @@ squeue -u $USER -n sweep_agent -o "%.10i %.12j %.8T %.10M"
 | Date | Notes |
 |------|-------|
 | 2026-06-07 | Initial map from `sweep_agent_*.log` grep on holylogin05 |
+| 2026-06-07 | GRIT batch: standalone `25296336`/`25296338`/`25296339` (PATTERN/CLUSTER/ZINC); hybrid `25287393` (PATTERN) |
+| 2026-06-07 | PATTERN hybrid qcz7umtl anchor configs + `submit_pattern_hybrid_qcz7umtl.sh` |
