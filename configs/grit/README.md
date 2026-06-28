@@ -28,7 +28,8 @@ bash bash_interface/cluster/submit_grit.sh zinc standalone
 # All three (hybrid — faster, no RRWP precompute)
 bash bash_interface/cluster/submit_grit.sh all hybrid
 
-# All three standalone (paper GRIT + RRWP; needs torch_sparse on GPU node)
+# All three standalone (paper GRIT + RRWP; dense RRWP on PATTERN/CLUSTER — no torch_sparse needed)
+bash bash_interface/cluster/submit_grit.sh pattern,cluster standalone
 bash bash_interface/cluster/submit_grit.sh all standalone
 ```
 

@@ -270,8 +270,9 @@ grep -E "Precomputing RRWP|RRWP done|wandb|epoch|accuracy-SBM|Traceback" logs_gn
 | Standalone jobs `25296336`/`38`/`39` missing on W&B | Failed at **config load** (`KeyError: gnn.dim_edge`) before training; fixed in `grit_config.py` |
 | `wandb.init` after loader | RRWP crash = no run (fixed: early init in `main.py`) |
 | Log shows `Unexpected PE stats selection RRWP` | RRWP wrongly routed to `compute_posenc_stats`; fixed in `master_loader.py` |
-| Log stops at `Precomputing RRWP` | `torch_sparse` missing or OOM during dense RRWP (`adj.to_dense()`) |
-| Log never reaches `RRWP done` | PATTERN/CLUSTER precompute is slow (many graphs); ZINC can take hours |
+| Log stops at `Precomputing RRWP` | OOM during dense RRWP on very large graphs; PATTERN/CLUSTER are fine |
+| Log never reaches `RRWP done` | PATTERN/CLUSTER precompute ~minutes (14k graphs); ZINC can take hours |
+| `torch_sparse unavailable for RRWP` spam | Fixed: small graphs use dense RRWP silently (pull ≥ RRWP fix) |
 
 **Diagnose on cluster:**
 
@@ -418,6 +419,15 @@ PATTERN ta9qtxb9 (v1, a2g2+RWSE):
 bash bash_interface/cluster/submit_pattern_hybrid_ta9qtxb9_paper_repro.sh
 python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_bestmodel_v1_pattern_ta9qtxb9
+```
+
+Standalone GRIT (paper Ma et al. 2023, `GritTransformer` + RRWP):
+
+```bash
+bash bash_interface/cluster/submit_grit.sh pattern,cluster standalone
+# or separately:
+bash bash_interface/cluster/submit_grit.sh pattern standalone
+bash bash_interface/cluster/submit_grit.sh cluster standalone
 ```
 
 peptides-struct rholn782 (v1, MOE hybrid a2g2 GINE+GGNN + vn4):

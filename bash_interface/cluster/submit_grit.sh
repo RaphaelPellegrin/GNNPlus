@@ -7,8 +7,9 @@
 #   cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 #   source bash_interface/cluster/common_env.sh
 #
-#   bash bash_interface/cluster/submit_grit.sh pattern hybrid
+#   bash bash_interface/cluster/submit_grit.sh pattern standalone
 #   bash bash_interface/cluster/submit_grit.sh cluster standalone
+#   bash bash_interface/cluster/submit_grit.sh pattern,cluster standalone
 #   bash bash_interface/cluster/submit_grit.sh zinc standalone
 #   bash bash_interface/cluster/submit_grit.sh all hybrid    # pattern+cluster+zinc
 #
@@ -123,7 +124,12 @@ expand_datasets() {
             echo "${1}"
             ;;
         *)
-            echo "Unknown dataset: ${1} (use pattern|cluster|zinc|all)" >&2
+            # Comma-separated list: pattern,cluster
+            if [[ "${1}" == *","* ]]; then
+                echo "${1//,/ }"
+                return
+            fi
+            echo "Unknown dataset: ${1} (use pattern|cluster|zinc|all|pattern,cluster)" >&2
             exit 2
             ;;
     esac
