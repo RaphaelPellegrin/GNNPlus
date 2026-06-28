@@ -46,6 +46,7 @@ https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/<GROUP>
 | MalNet | v4 | `paper_bestmodel_v4_malnet_apiw6l3u` | — | *(pending)* | not submitted |
 | VOC-SP | v1 | `paper_bestmodel_v1_voc_j7ukyzdm` | 5 | **0.2814 ± 0.0702** (test/f1) | done — high variance |
 | COCO-SP | v1 | `paper_bestmodel_v1_coco_o5hr3tma` | — | *(pending)* | not submitted |
+| COCO-SP | v2 | `paper_bestmodel_v2_coco_5b4z9l3u` | — | *(pending)* | not submitted |
 | CLUSTER | v1 | `paper_bestmodel_v1_cluster_ht9bntg2` | — | *(pending)* | not submitted |
 | PATTERN | v1 | `paper_bestmodel_v1_pattern_ta9qtxb9` | — | *(pending)* | not submitted |
 | peptides-struct | v1 | `paper_bestmodel_v1_peptides_struct_rholn782` | — | *(pending)* | not submitted |
@@ -384,6 +385,42 @@ grep "View run at" logs_gnnplus/coco_paper_v1_<JOBID>_*.log
 
 python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_bestmodel_v1_coco_o5hr3tma
+```
+
+### `bestmodel_v2` — COCO-SP — [q57ng7d2](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/q57ng7d2) / [5b4z9l3u](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/5b4z9l3u) *(a1g1)*
+
+| Field | Value |
+|-------|--------|
+| **Dataset** | COCO superpixels (`edge_wt_region_boundary`) |
+| **Architecture** | 1×attn + 1×GATEDGCN MP (a1g1), `d_h=52`, headwise gate, L20 |
+| **Parent run** | [q57ng7d2](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/q57ng7d2) (seed 1, `best_test_perf` **0.417**) |
+| **Baseline** | [5b4z9l3u](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/5b4z9l3u) (GatedGCN+ MP-only) |
+| **Config** | `configs/gated_hybrid/coco-hybrid-5b4z9l3u-a1g1-anchor.yaml` |
+| **Submit** | `bash bash_interface/cluster/submit_coco_hybrid_5b4z9l3u_paper_repro.sh` |
+| **SLURM array** | *(pending)* |
+| **W&B group** | `paper_bestmodel_v2_coco_5b4z9l3u` |
+| **Group URL** | https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/paper_bestmodel_v2_coco_5b4z9l3u |
+| **Tags** | `paper_repro`, `bestmodel_v2`, `coco`, `anchor_5b4z9l3u`, `hybrid_a1g1` |
+| **Metric** | `best_test_perf` (`metric_best: f1`) |
+| **Logs** | `logs_gnnplus/coco_paper_v2_<JOBID>_<TASK>.log` |
+| **Status** | not submitted |
+
+| Seed | SLURM task | Run name | W&B run id | `best_test_perf` |
+|------|------------|----------|------------|------------------|
+| 0 | 1 | `coco_hybrid_5b4z9l3u_a1g1_seed0_job<JOBID>_1` | | |
+| 1 | 2 | `coco_hybrid_5b4z9l3u_a1g1_seed1_job<JOBID>_2` | | |
+| 2 | 3 | `coco_hybrid_5b4z9l3u_a1g1_seed2_job<JOBID>_3` | | |
+| 3 | 4 | `coco_hybrid_5b4z9l3u_a1g1_seed3_job<JOBID>_4` | | |
+| 4 | 5 | `coco_hybrid_5b4z9l3u_a1g1_seed4_job<JOBID>_5` | | |
+| **mean ± std** | | | | |
+
+```bash
+bash bash_interface/cluster/submit_coco_hybrid_5b4z9l3u_paper_repro.sh
+
+grep "View run at" logs_gnnplus/coco_paper_v2_<JOBID>_*.log
+
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_bestmodel_v2_coco_5b4z9l3u
 ```
 
 ### `bestmodel_v1` — CLUSTER — [ht9bntg2](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ht9bntg2) *(v1, a1g1+RWSE)*

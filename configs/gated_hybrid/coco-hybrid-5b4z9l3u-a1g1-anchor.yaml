@@ -1,0 +1,86 @@
+# COCO-SP hybrid anchor — frozen from W&B q57ng7d2 (5b4z9l3u + a1g1 repro).
+#
+# Parent run: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/q57ng7d2
+# Baseline MP-only: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/5b4z9l3u
+# Paper repro: 5 seeds via submit_coco_hybrid_5b4z9l3u_paper_repro.sh
+# W&B group: paper_bestmodel_v2_coco_5b4z9l3u | tags: paper_repro, bestmodel_v2
+#
+# Architecture: 1×attn + 1×GATEDGCN MP (a1g1), d_h=52, headwise gate, L20.
+out_dir: results
+metric_best: f1
+num_workers: 6
+wandb:
+  use: False
+  project: GNNPlus
+  group: paper_bestmodel_v2_coco_5b4z9l3u
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - paper_repro
+    - bestmodel_v2
+    - coco
+    - anchor_5b4z9l3u
+    - anchor_q57ng7d2
+    - hybrid_a1g1
+    - gate_headwise
+dataset:
+  format: PyG-COCOSuperpixels
+  name: edge_wt_region_boundary
+  slic_compactness: 30
+  task: graph
+  task_type: classification
+  transductive: False
+  node_encoder: True
+  node_encoder_name: COCONode
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: COCOEdge
+  edge_encoder_bn: False
+posenc_RWSE:
+  enable: False
+  kernel:
+    times_func: range(1,21)
+  model: Linear
+  dim_pe: 28
+  raw_norm_type: BatchNorm
+train:
+  mode: custom
+  batch_size: 16
+  eval_period: 1
+  ckpt_period: 100
+  eval_smoothing_metrics: True
+model:
+  type: hybrid_gnn
+  loss_fun: weighted_cross_entropy
+gnn:
+  head: inductive_node
+  ffn: False
+  layers_pre_mp: 0
+  layers_mp: 20
+  layers_post_mp: 1
+  dim_inner: 52
+  act: gelu
+  dropout: 0.05
+  agg: mean
+  normalize_adj: False
+  residual: True
+  hybrid:
+    num_attn_heads: 1
+    num_gnn_heads: 1
+    d_h: 52
+    attn_mask: full
+    gate: headwise
+    norm: layernorm
+    gnn_types: "GATEDGCN"
+    attn_dropout: 0.1
+    mp_dropout: 0.05
+    block_bn: false
+    log_gate_stats: True
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 0.0
+  base_lr: 0.001
+  max_epoch: 300
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10

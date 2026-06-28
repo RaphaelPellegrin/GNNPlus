@@ -338,6 +338,7 @@ See **`bash_interface/cluster/PAPER_REPRO_TRACKER.md`** for `bestmodel_v1` cohor
 | MalNet-Tiny | [apiw6l3u](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/apiw6l3u) (v4, a0g3) | *(pending)* | `paper_bestmodel_v4_malnet_apiw6l3u` |
 | VOC-SP | [j7ukyzdm](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/j7ukyzdm) | `25322496` | `paper_bestmodel_v1_voc_j7ukyzdm` |
 | COCO-SP | [o5hr3tma](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/o5hr3tma) | *(pending)* | `paper_bestmodel_v1_coco_o5hr3tma` |
+| COCO-SP | [q57ng7d2](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/q57ng7d2) (v2, 5b4z9l3u a1g1) | *(pending)* | `paper_bestmodel_v2_coco_5b4z9l3u` |
 | CLUSTER | [ht9bntg2](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ht9bntg2) (v1, a1g1+RWSE) | *(pending)* | `paper_bestmodel_v1_cluster_ht9bntg2` |
 | PATTERN | [ta9qtxb9](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ta9qtxb9) (v1, a2g2+RWSE) | *(pending)* | `paper_bestmodel_v1_pattern_ta9qtxb9` |
 | peptides-struct | [rholn782](https://wandb.ai/weber-geoml-harvard-university/MOE_6/runs/rholn782) (v1, MOE hybrid+VN) | *(pending)* | `paper_bestmodel_v1_peptides_struct_rholn782` |
@@ -406,12 +407,20 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_bestmodel_v1_voc_j7ukyzdm
 ```
 
-COCO-SP o5hr3tma:
+COCO-SP o5hr3tma (v1, a2g8):
 
 ```bash
 bash bash_interface/cluster/submit_coco_hybrid_o5hr3tma_paper_repro.sh
 python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_bestmodel_v1_coco_o5hr3tma
+```
+
+COCO-SP 5b4z9l3u / q57ng7d2 (v2, a1g1 GatedGCN+ hybrid):
+
+```bash
+bash bash_interface/cluster/submit_coco_hybrid_5b4z9l3u_paper_repro.sh
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_bestmodel_v2_coco_5b4z9l3u
 ```
 
 CLUSTER ht9bntg2 (v1, a1g1+RWSE):
