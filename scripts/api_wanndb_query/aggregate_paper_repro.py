@@ -155,10 +155,51 @@ def aggregate_runs(
     return scores
 
 
-def print_report(scores: list[RunScore], metric_key: str) -> None:
+def print_empty_diagnostic(runs: Sequence[Any], metric_key: Optional[str]) -> None:
+    """Print W&B runs in the filter when none have a usable summary metric."""
+    if not runs:
+        print(
+            "No W&B runs matched the filter (check group/tag and that jobs reached wandb.init).",
+            file=sys.stderr,
+        )
+        print(
+            "On cluster: squeue -j <JOBID>  and  tail logs_gnnplus/malnet_paper_v2_<JOBID>_1.log",
+            file=sys.stderr,
+        )
+        return
+
+    print(f"Found {len(runs)} run(s) but none with a summary metric yet.", file=sys.stderr)
+    print(f"{'state':<10}  {'run_id':<10}  {'metric?':<8}  name", file=sys.stderr)
+    print("-" * 72, file=sys.stderr)
+    keys = (metric_key,) if metric_key else DEFAULT_METRIC_KEYS
+    for run in runs:
+        summary = dict(run.summary or {})
+        has_metric = any(k in summary and summary[k] is not None for k in keys)
+        metric_flag = "yes" if has_metric else "no"
+        print(
+            f"{str(run.state):<10}  {run.id:<10}  {metric_flag:<8}  {run.name}",
+            file=sys.stderr,
+        )
+    print(
+        "\nIf state=running and metric?=no: training started; wait for epoch 1 eval.",
+        file=sys.stderr,
+    )
+    print(
+        "If no runs listed: jobs may be pending (PD) or failed before W&B init — check SLURM logs.",
+        file=sys.stderr,
+    )
+
+
+def print_report(
+    scores: list[RunScore],
+    metric_key: str,
+    *,
+    all_runs: Sequence[Any],
+    requested_metric: Optional[str],
+) -> None:
     """Print per-seed table and mean ± std."""
     if not scores:
-        print("No runs with a usable metric found.", file=sys.stderr)
+        print_empty_diagnostic(all_runs, requested_metric)
         sys.exit(1)
 
     scores_sorted = sorted(scores, key=lambda s: (-1 if s.seed is None else s.seed))
@@ -186,8 +227,8 @@ def main() -> None:
     parser.add_argument("--metric", default=None, help="Summary key (default: auto)")
     parser.add_argument(
         "--state",
-        default="finished,running",
-        help="Comma-separated run states to include",
+        default="finished,running,failed,crashed",
+        help="Comma-separated run states to include (default includes failed for debugging)",
     )
     parser.add_argument("--max-runs", type=int, default=50)
     args = parser.parse_args()
@@ -207,7 +248,7 @@ def main() -> None:
     )
     scores = aggregate_runs(runs, args.metric)
     metric_label = scores[0].metric_key if scores else (args.metric or "metric")
-    print_report(scores, metric_label)
+    print_report(scores, metric_label, all_runs=runs, requested_metric=args.metric)
 
 
 if __name__ == "__main__":
