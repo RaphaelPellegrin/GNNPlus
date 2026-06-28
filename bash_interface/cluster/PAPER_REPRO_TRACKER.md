@@ -45,6 +45,7 @@ https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/<GROUP>
 | MalNet | v3 | `paper_bestmodel_v3_malnet_vcb1cuql` | — | *(pending)* | not submitted |
 | VOC-SP | v1 | `paper_bestmodel_v1_voc_j7ukyzdm` | 5 | **0.2814 ± 0.0702** (test/f1) | done — high variance |
 | COCO-SP | v1 | `paper_bestmodel_v1_coco_o5hr3tma` | — | *(pending)* | not submitted |
+| CLUSTER | v1 | `paper_bestmodel_v1_cluster_ht9bntg2` | — | *(pending)* | not submitted |
 
 ---
 
@@ -346,6 +347,45 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_bestmodel_v1_coco_o5hr3tma
 ```
 
+### `bestmodel_v1` — CLUSTER — [ht9bntg2](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ht9bntg2) *(v1, a1g1+RWSE)*
+
+| Field | Value |
+|-------|--------|
+| **Dataset** | CLUSTER (`PyG-GNNBenchmarkDataset`) |
+| **Architecture** | 1×attn + 1×GATEDGCN MP (a1g1), `d_h=64`, **headwise** gate, LayerNorm, RWSE |
+| **Anchor W&B** | [ht9bntg2](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ht9bntg2) (seed 1 discovery run, ≈0.793 SBM) |
+| **Repro commit** | `8138ddee6f3fa4d58052ebd86d17939e832eaea3` |
+| **Config** | `configs/gated_hybrid/cluster-hybrid-ht9bntg2-anchor.yaml` |
+| **Submit** | `bash bash_interface/cluster/submit_cluster_hybrid_ht9bntg2_paper_repro.sh` |
+| **SLURM array** | *(pending)* |
+| **W&B group** | `paper_bestmodel_v1_cluster_ht9bntg2` |
+| **Group URL** | https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/paper_bestmodel_v1_cluster_ht9bntg2 |
+| **Tags** | `paper_repro`, `bestmodel_v1`, `cluster`, `anchor_ht9bntg2`, `hybrid_a1g1`, `gate_headwise`, `rwse` |
+| **Metric** | `best_test_perf` (`metric_best: accuracy-SBM`) |
+| **Logs** | `logs_gnnplus/cluster_paper_v1_<JOBID>_<TASK>.log` |
+| **Status** | not submitted |
+| **Aggregate result** | *(pending)* |
+
+**Expected run names** (fill W&B run id after submit):
+
+| Seed | SLURM task | Run name | W&B run id | `best_test_perf` |
+|------|------------|----------|------------|------------------|
+| 0 | 1 | `cluster_hybrid_ht9bntg2_a1g1_seed0_job<JOBID>_1` | | |
+| 1 | 2 | `cluster_hybrid_ht9bntg2_a1g1_seed1_job<JOBID>_2` | | |
+| 2 | 3 | `cluster_hybrid_ht9bntg2_a1g1_seed2_job<JOBID>_3` | | |
+| 3 | 4 | `cluster_hybrid_ht9bntg2_a1g1_seed3_job<JOBID>_4` | | |
+| 4 | 5 | `cluster_hybrid_ht9bntg2_a1g1_seed4_job<JOBID>_5` | | |
+| **mean ± std** | | | | |
+
+```bash
+bash bash_interface/cluster/submit_cluster_hybrid_ht9bntg2_paper_repro.sh
+
+grep "View run at" logs_gnnplus/cluster_paper_v1_<JOBID>_*.log
+
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_bestmodel_v1_cluster_ht9bntg2
+```
+
 ---
 
 ## Planned / template (copy for next dataset)
@@ -385,3 +425,4 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 | 2026-06-07 | COCO-SP o5hr3tma anchor config + 5-seed submit scripts |
 | 2026-06-07 | MNIST 429u8olp (v2, a8g2) anchor config + 5-seed submit scripts |
 | 2026-06-07 | MalNet v3 vcb1cuql (a1g1, d_h=64) anchor config + 5-seed submit scripts |
+| 2026-06-07 | CLUSTER ht9bntg2 (a1g1+RWSE) paper repro config + 5-seed submit scripts |

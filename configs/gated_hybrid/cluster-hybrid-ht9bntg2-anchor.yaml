@@ -1,16 +1,27 @@
-# CLUSTER hybrid anchor — best SLURM grid run ht9bntg2 (job 25026631_3).
-# test/accuracy-SBM ≈ 0.793 | a1g1 GATEDGCN, d_h=64, lr=0.001492, full mask, seed 1.
+# CLUSTER hybrid anchor — frozen hyperparams from W&B ht9bntg2 (seed 1).
+#
+# Repro commit: 8138ddee6f3fa4d58052ebd86d17939e832eaea3
+# Paper repro: 5 seeds via submit_cluster_hybrid_ht9bntg2_paper_repro.sh
+# W&B group: paper_bestmodel_v1_cluster_ht9bntg2 | tags: paper_repro, bestmodel_v1
+#
+# test/accuracy-SBM ≈ 0.793 | a1g1 GATEDGCN, d_h=64, lr=0.001492, full mask, RWSE.
 # Refine sweep: bash_interface/cluster/submit_cluster_hybrid_ht9bntg2_refine_sweep.sh
 out_dir: results
 metric_best: accuracy-SBM
 wandb:
   use: False
   project: GNNPlus
+  group: paper_bestmodel_v1_cluster_ht9bntg2
   tags:
     - gnnplus
     - hybrid_gnn
-    - cluster_anchor_ht9bntg2
-    - cluster_hybrid_refine
+    - paper_repro
+    - bestmodel_v1
+    - cluster
+    - anchor_ht9bntg2
+    - hybrid_a1g1
+    - gate_headwise
+    - rwse
 dataset:
   format: PyG-GNNBenchmarkDataset
   name: CLUSTER
