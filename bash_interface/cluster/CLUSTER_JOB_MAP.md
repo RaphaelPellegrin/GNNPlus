@@ -330,6 +330,7 @@ See **`bash_interface/cluster/PAPER_REPRO_TRACKER.md`** for `bestmodel_v1` cohor
 | Dataset | Anchor | SLURM array | W&B group |
 |---------|--------|-------------|-----------|
 | CIFAR10 | [ulij45a2](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ulij45a2) | `25310487` | `paper_bestmodel_v1_cifar10_ulij45a2` |
+| CIFAR10 | [t8prvgqr](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/t8prvgqr) (v2, a4g4, gpu_h200) | *(pending)* | `paper_bestmodel_v2_cifar10_t8prvgqr` |
 | MNIST | [lcvbyyss](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/lcvbyyss) (v1, a2g2) | `25313521` | `paper_bestmodel_v1_mnist_lcvbyyss` |
 | MNIST | [429u8olp](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/429u8olp) (v2, a8g2) | *(pending)* | `paper_bestmodel_v2_mnist_429u8olp` |
 | MalNet-Tiny | [9h3jqzkm](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/9h3jqzkm) (v1, a0g2) | `25313522` | `paper_bestmodel_v1_malnet_9h3jqzkm` |
@@ -343,12 +344,20 @@ See **`bash_interface/cluster/PAPER_REPRO_TRACKER.md`** for `bestmodel_v1` cohor
 | PATTERN | [ta9qtxb9](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ta9qtxb9) (v1, a2g2+RWSE) | *(pending)* | `paper_bestmodel_v1_pattern_ta9qtxb9` |
 | peptides-struct | [rholn782](https://wandb.ai/weber-geoml-harvard-university/MOE_6/runs/rholn782) (v1, MOE hybrid+VN) | *(pending)* | `paper_bestmodel_v1_peptides_struct_rholn782` |
 
-Quick start (CIFAR10 ulij45a2):
+Quick start (CIFAR10 ulij45a2 v1):
 
 ```bash
 bash bash_interface/cluster/submit_cifar10_hybrid_ulij45a2_paper_repro.sh
 python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_bestmodel_v1_cifar10_ulij45a2
+```
+
+CIFAR10 t8prvgqr (v2, a4g4 on gpu_h200):
+
+```bash
+bash bash_interface/cluster/submit_cifar10_hybrid_t8prvgqr_paper_repro.sh
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_bestmodel_v2_cifar10_t8prvgqr
 ```
 
 MNIST lcvbyyss (v1, a2g2):

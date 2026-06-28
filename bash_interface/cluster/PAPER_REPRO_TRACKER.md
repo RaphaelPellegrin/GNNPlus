@@ -38,6 +38,7 @@ https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/<GROUP>
 | Dataset | Version | Group | n | `best_test_perf` | Status |
 |---------|---------|-------|---|------------------|--------|
 | CIFAR10 | v1 | `paper_bestmodel_v1_cifar10_ulij45a2` | 5 | **0.7290 ± 0.0078** | done |
+| CIFAR10 | v2 | `paper_bestmodel_v2_cifar10_t8prvgqr` | — | *(pending)* | not submitted |
 | MNIST | v1 | `paper_bestmodel_v1_mnist_lcvbyyss` | 5 | **0.9820 ± 0.0008** | done |
 | MNIST | v2 | `paper_bestmodel_v2_mnist_429u8olp` | — | *(pending)* | not submitted |
 | MalNet | v1 | `paper_bestmodel_v1_malnet_9h3jqzkm` | 5 | **0.9340 ± 0.0072** | done |
@@ -90,6 +91,42 @@ grep "View run at" logs_gnnplus/cifar10_paper_v1_25310487_*.log
 # Paper table number
 python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_bestmodel_v1_cifar10_ulij45a2
+```
+
+### `bestmodel_v2` — CIFAR10 — [t8prvgqr](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/t8prvgqr) *(a4g4)*
+
+| Field | Value |
+|-------|--------|
+| **Dataset** | CIFAR10 |
+| **Architecture** | 4×attn + 4×GATEDGCN MP (a4g4), `d_h=128`, `layers_mp=10` |
+| **Parent run** | [t8prvgqr](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/t8prvgqr) (seed 0, `best_test_perf` **0.800**) |
+| **Config** | `configs/gated_hybrid/cifar10-hybrid-t8prvgqr-anchor.yaml` |
+| **Submit** | `bash bash_interface/cluster/submit_cifar10_hybrid_t8prvgqr_paper_repro.sh` |
+| **Partition** | `gpu_h200` (override: `CIFAR_PAPER_PARTITION=mweber_gpu`) |
+| **SLURM array** | *(pending)* |
+| **W&B group** | `paper_bestmodel_v2_cifar10_t8prvgqr` |
+| **Group URL** | https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/paper_bestmodel_v2_cifar10_t8prvgqr |
+| **Tags** | `paper_repro`, `bestmodel_v2`, `cifar10`, `anchor_t8prvgqr`, `hybrid_a4g4` |
+| **Metric** | `best_test_perf` (`metric_best: accuracy`) |
+| **Logs** | `logs_gnnplus/cifar10_paper_v2_<JOBID>_<TASK>.log` |
+| **Status** | not submitted |
+
+| Seed | SLURM task | Run name | W&B run id | `best_test_perf` |
+|------|------------|----------|------------|------------------|
+| 0 | 1 | `cifar10_hybrid_t8prvgqr_a4g4_seed0_job<JOBID>_1` | | |
+| 1 | 2 | `cifar10_hybrid_t8prvgqr_a4g4_seed1_job<JOBID>_2` | | |
+| 2 | 3 | `cifar10_hybrid_t8prvgqr_a4g4_seed2_job<JOBID>_3` | | |
+| 3 | 4 | `cifar10_hybrid_t8prvgqr_a4g4_seed3_job<JOBID>_4` | | |
+| 4 | 5 | `cifar10_hybrid_t8prvgqr_a4g4_seed4_job<JOBID>_5` | | |
+| **mean ± std** | | | | |
+
+```bash
+bash bash_interface/cluster/submit_cifar10_hybrid_t8prvgqr_paper_repro.sh
+
+grep "View run at" logs_gnnplus/cifar10_paper_v2_<JOBID>_*.log
+
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_bestmodel_v2_cifar10_t8prvgqr
 ```
 
 ### `bestmodel_v1` — MNIST — [lcvbyyss](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/lcvbyyss) *(v1, a2g2)*

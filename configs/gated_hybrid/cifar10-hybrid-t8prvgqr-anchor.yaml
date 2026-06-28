@@ -1,16 +1,26 @@
-# CIFAR10 hybrid anchor — frozen hyperparams from W&B t8prvgqr (sweep f2pecp63).
-# best/test_accuracy ≈ 0.7998 | a4g4, d_h=128, layers_mp=10, GATEDGCN MP, seed 0.
-# Virtual-node ablation: bash_interface/cluster/submit_cifar10_hybrid_vn_ablation.sh
+# CIFAR10 hybrid anchor — frozen from W&B t8prvgqr (best-hybrid sweep a4g4).
+#
+# Parent run: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/t8prvgqr
+# Base sweep: configs/gated_hybrid/cifar10-gatedgcn-best-hybrid.yaml
+# Paper repro: 5 seeds via submit_cifar10_hybrid_t8prvgqr_paper_repro.sh
+# W&B group: paper_bestmodel_v2_cifar10_t8prvgqr | tags: paper_repro, bestmodel_v2
+#
+# Architecture: 4×attn + 4×GATEDGCN MP (a4g4), d_h=128, layers_mp=10.
 out_dir: results
 metric_best: accuracy
 wandb:
   use: False
   project: GNNPlus
+  group: paper_bestmodel_v2_cifar10_t8prvgqr
   tags:
     - gnnplus
     - hybrid_gnn
-    - cifar10_anchor_t8prvgqr
-    - cifar10_vn_ablation
+    - paper_repro
+    - bestmodel_v2
+    - cifar10
+    - anchor_t8prvgqr
+    - hybrid_a4g4
+    - gate_headwise
 dataset:
   format: PyG-GNNBenchmarkDataset
   name: CIFAR10
@@ -23,8 +33,6 @@ dataset:
   edge_encoder: True
   edge_encoder_name: LinearEdge
   edge_encoder_bn: False
-  add_virtual_nodes: False
-  num_virtual_nodes: 0
 posenc_RWSE:
   enable: False
   kernel:
@@ -43,7 +51,7 @@ model:
   edge_decoding: dot
   graph_pooling: mean
 gnn:
-  head: graph
+  head: default
   layers_mp: 10
   layers_pre_mp: 0
   layers_post_mp: 1
