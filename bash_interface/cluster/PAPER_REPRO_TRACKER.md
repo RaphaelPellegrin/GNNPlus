@@ -51,6 +51,7 @@ https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/<GROUP>
 | CLUSTER | v1 | `paper_bestmodel_v1_cluster_ht9bntg2` | — | *(pending)* | not submitted |
 | PATTERN | v1 | `paper_bestmodel_v1_pattern_ta9qtxb9` | — | *(pending)* | not submitted |
 | peptides-struct | v1 | `paper_bestmodel_v1_peptides_struct_rholn782` | — | *(pending)* | not submitted |
+| peptides-struct | v2 | `paper_bestmodel_v2_peptides_struct_rholn782_lr6e-4` | — | *(pending)* | not submitted |
 
 ---
 
@@ -580,6 +581,42 @@ grep "View run at" logs_gnnplus/peptides_struct_paper_v1_<JOBID>_*.log
 
 python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_bestmodel_v1_peptides_struct_rholn782
+```
+
+### `bestmodel_v2` — peptides-struct — [tfeksgbl](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/tfeksgbl) *(lr=6e-4)*
+
+| Field | Value |
+|-------|--------|
+| **Dataset** | peptides-structural (OGB graph regression, 11 targets) |
+| **Architecture** | L12/H96, a2g2 GINE+GGNN, `d_h=16`, vn=4, pyramid readout, RWSE k=20 |
+| **Parent run** | [tfeksgbl](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/tfeksgbl) (v1 seed 2, `best_test_perf` **0.242**) |
+| **Change vs v1** | `optim.base_lr` **0.0004 → 0.0006** (cosine_with_warmup, 10 warmup epochs) |
+| **Config** | `configs/gated_hybrid/peptides-struct-hybrid-rholn782-lr6e-4-anchor.yaml` |
+| **Submit** | `bash bash_interface/cluster/submit_peptides_struct_hybrid_rholn782_lr6e-4_paper_repro.sh` |
+| **SLURM array** | *(pending)* |
+| **W&B group** | `paper_bestmodel_v2_peptides_struct_rholn782_lr6e-4` |
+| **Group URL** | https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/paper_bestmodel_v2_peptides_struct_rholn782_lr6e-4 |
+| **Tags** | `paper_repro`, `bestmodel_v2`, `peptides_struct`, `anchor_rholn782`, `lr6e-4` |
+| **Metric** | `best_test_perf` (`metric_best: mae`) |
+| **Logs** | `logs_gnnplus/peptides_struct_paper_v2_<JOBID>_<TASK>.log` |
+| **Status** | not submitted |
+
+| Seed | SLURM task | Run name | W&B run id | `best_test_perf` |
+|------|------------|----------|------------|------------------|
+| 0 | 1 | `peptides_struct_hybrid_rholn782_lr6e4_a2g2_seed0_job<JOBID>_1` | | |
+| 1 | 2 | `peptides_struct_hybrid_rholn782_lr6e4_a2g2_seed1_job<JOBID>_2` | | |
+| 2 | 3 | `peptides_struct_hybrid_rholn782_lr6e4_a2g2_seed2_job<JOBID>_3` | | |
+| 3 | 4 | `peptides_struct_hybrid_rholn782_lr6e4_a2g2_seed3_job<JOBID>_4` | | |
+| 4 | 5 | `peptides_struct_hybrid_rholn782_lr6e4_a2g2_seed4_job<JOBID>_5` | | |
+| **mean ± std** | | | | |
+
+```bash
+bash bash_interface/cluster/submit_peptides_struct_hybrid_rholn782_lr6e-4_paper_repro.sh
+
+grep "View run at" logs_gnnplus/peptides_struct_paper_v2_<JOBID>_*.log
+
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_bestmodel_v2_peptides_struct_rholn782_lr6e-4
 ```
 
 ---

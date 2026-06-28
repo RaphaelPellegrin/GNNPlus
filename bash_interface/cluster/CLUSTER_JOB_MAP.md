@@ -465,6 +465,14 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_bestmodel_v1_peptides_struct_rholn782
 ```
 
+peptides-struct rholn782 lr=6e-4 (v2, parent [tfeksgbl](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/tfeksgbl)):
+
+```bash
+bash bash_interface/cluster/submit_peptides_struct_hybrid_rholn782_lr6e-4_paper_repro.sh
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_bestmodel_v2_peptides_struct_rholn782_lr6e-4
+```
+
 ## COCO hybrid anchored on 5b4z9l3u (GatedGCN+ baseline)
 
 Best MP-only baseline: [5b4z9l3u](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/5b4z9l3u)  

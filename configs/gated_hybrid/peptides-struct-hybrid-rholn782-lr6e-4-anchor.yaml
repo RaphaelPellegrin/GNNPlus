@@ -1,0 +1,94 @@
+# Peptides-struct hybrid anchor — rholn782 architecture, lr sweep v2 (base_lr=6e-4).
+#
+# Parent GNNPlus run: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/tfeksgbl
+# MOE anchor: https://wandb.ai/weber-geoml-harvard-university/MOE_6/runs/rholn782
+# vs v1 anchor yaml: identical except optim.base_lr 0.0004 → 0.0006
+# Paper repro: 5 seeds via submit_peptides_struct_hybrid_rholn782_lr6e-4_paper_repro.sh
+# W&B group: paper_bestmodel_v2_peptides_struct_rholn782_lr6e-4
+#
+# Architecture: L12/H96, a2g2 GINE+GGNN, d_h=16, ffn+skip, vn=4, pyramid readout, RWSE k=20.
+out_dir: results
+metric_best: mae
+metric_agg: argmin
+wandb:
+  use: False
+  project: GNNPlus
+  group: paper_bestmodel_v2_peptides_struct_rholn782_lr6e-4
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - paper_repro
+    - bestmodel_v2
+    - peptides_struct
+    - anchor_rholn782
+    - hybrid_a2g2
+    - gate_headwise
+    - gine_ggnn
+    - virtual_nodes
+    - vn4
+    - pyramid_readout
+    - rwse
+    - moe6_rholn782_anchor
+    - lr6e-4
+dataset:
+  format: OGB
+  name: peptides-structural
+  task: graph
+  task_type: regression
+  transductive: False
+  add_virtual_nodes: True
+  num_virtual_nodes: 4
+  node_encoder: True
+  node_encoder_name: Atom+RWSE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: Bond
+  edge_encoder_bn: False
+posenc_RWSE:
+  enable: True
+  kernel:
+    times_func: range(1,21)
+  model: Linear
+  dim_pe: 28
+  raw_norm_type: BatchNorm
+train:
+  mode: custom
+  batch_size: 64
+  eval_period: 1
+  ckpt_period: 100
+  eval_smoothing_metrics: False
+model:
+  type: hybrid_gnn
+  loss_fun: l1
+  graph_pooling: mean
+gnn:
+  head: mlp_graph
+  readout_mlp: pyramid
+  ffn: True
+  layers_pre_mp: 0
+  layers_mp: 12
+  layers_post_mp: 3
+  dim_inner: 96
+  act: gelu
+  residual: True
+  dropout: 0.0
+  hybrid:
+    num_attn_heads: 2
+    num_gnn_heads: 2
+    d_h: 16
+    attn_mask: full
+    gate: headwise
+    norm: layernorm
+    gnn_types: "GINE,GGNN"
+    attn_dropout: 0.0
+    mp_dropout: 0.0
+    block_bn: false
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 0.0
+  base_lr: 0.0006
+  max_epoch: 250
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10
+  min_lr: 0.0
