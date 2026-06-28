@@ -43,6 +43,7 @@ https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/<GROUP>
 | MalNet | v1 | `paper_bestmodel_v1_malnet_9h3jqzkm` | 5 | **0.9340 ± 0.0072** | done |
 | MalNet | v2 | `paper_bestmodel_v2_malnet_4j21kp8d` | 1/5 | 0.8990 (seed 0 only) | in progress |
 | MalNet | v3 | `paper_bestmodel_v3_malnet_vcb1cuql` | — | *(pending)* | not submitted |
+| MalNet | v4 | `paper_bestmodel_v4_malnet_apiw6l3u` | — | *(pending)* | not submitted |
 | VOC-SP | v1 | `paper_bestmodel_v1_voc_j7ukyzdm` | 5 | **0.2814 ± 0.0702** (test/f1) | done — high variance |
 | COCO-SP | v1 | `paper_bestmodel_v1_coco_o5hr3tma` | — | *(pending)* | not submitted |
 | CLUSTER | v1 | `paper_bestmodel_v1_cluster_ht9bntg2` | — | *(pending)* | not submitted |
@@ -273,6 +274,42 @@ grep "View run at" logs_gnnplus/malnet_paper_v3_<JOBID>_*.log
 
 python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_bestmodel_v3_malnet_vcb1cuql
+```
+
+### `bestmodel_v4` — MalNet-Tiny — [apiw6l3u](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/apiw6l3u) *(a0g3)*
+
+| Field | Value |
+|-------|--------|
+| **Dataset** | MalNet-Tiny (LDP) |
+| **Architecture** | **0×attn + 3×GCNE MP (a0g3)**, `d_h=110`, graph_restricted, elementwise+rmsnorm, L8 |
+| **Parent run** | [apiw6l3u](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/apiw6l3u) (v1 repro seed 2, **a0g2**, `best_test_perf` **0.944**) |
+| **Change vs parent** | `num_gnn_heads`: 2 → **3** |
+| **Config** | `configs/gated_hybrid/malnet-hybrid-apiw6l3u-a0g3-anchor.yaml` |
+| **Submit** | `bash bash_interface/cluster/submit_malnet_hybrid_apiw6l3u_paper_repro.sh` |
+| **SLURM array** | *(pending)* |
+| **W&B group** | `paper_bestmodel_v4_malnet_apiw6l3u` |
+| **Group URL** | https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/paper_bestmodel_v4_malnet_apiw6l3u |
+| **Tags** | `paper_repro`, `bestmodel_v4`, `malnet`, `anchor_apiw6l3u`, `hybrid_a0g3` |
+| **Metric** | `best_test_perf` (`metric_best: accuracy`) |
+| **Logs** | `logs_gnnplus/malnet_paper_v4_<JOBID>_<TASK>.log` |
+| **Status** | not submitted |
+
+| Seed | SLURM task | Run name | W&B run id | `best_test_perf` |
+|------|------------|----------|------------|------------------|
+| 0 | 1 | `malnet_hybrid_apiw6l3u_a0g3_seed0_job<JOBID>_1` | | |
+| 1 | 2 | `malnet_hybrid_apiw6l3u_a0g3_seed1_job<JOBID>_2` | | |
+| 2 | 3 | `malnet_hybrid_apiw6l3u_a0g3_seed2_job<JOBID>_3` | | |
+| 3 | 4 | `malnet_hybrid_apiw6l3u_a0g3_seed3_job<JOBID>_4` | | |
+| 4 | 5 | `malnet_hybrid_apiw6l3u_a0g3_seed4_job<JOBID>_5` | | |
+| **mean ± std** | | | | |
+
+```bash
+bash bash_interface/cluster/submit_malnet_hybrid_apiw6l3u_paper_repro.sh
+
+grep "View run at" logs_gnnplus/malnet_paper_v4_<JOBID>_*.log
+
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_bestmodel_v4_malnet_apiw6l3u
 ```
 
 ### `bestmodel_v1` — VOC-SP — [j7ukyzdm](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/j7ukyzdm)
