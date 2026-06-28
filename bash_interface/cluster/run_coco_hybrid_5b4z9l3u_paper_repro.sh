@@ -9,10 +9,10 @@
 
 #SBATCH --job-name=coco_paper_v2
 #SBATCH --ntasks=1
-#SBATCH --time=192:00:00
+#SBATCH --time=72:00:00
 #SBATCH --mem=128GB
 #SBATCH --output=logs_gnnplus/%x_%A_%a.log
-#SBATCH --partition=mweber_gpu
+#SBATCH --partition=gpu_h200
 #SBATCH --gpus=1
 #SBATCH --export=ALL
 

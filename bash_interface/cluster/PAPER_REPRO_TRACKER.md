@@ -435,6 +435,7 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 | **Baseline** | [5b4z9l3u](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/5b4z9l3u) (GatedGCN+ MP-only) |
 | **Config** | `configs/gated_hybrid/coco-hybrid-5b4z9l3u-a1g1-anchor.yaml` |
 | **Submit** | `bash bash_interface/cluster/submit_coco_hybrid_5b4z9l3u_paper_repro.sh` |
+| **Partition** | `gpu_h200` (72h; override: `COCO_PAPER_PARTITION=mweber_gpu`) |
 | **SLURM array** | *(pending)* |
 | **W&B group** | `paper_bestmodel_v2_coco_5b4z9l3u` |
 | **Group URL** | https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/paper_bestmodel_v2_coco_5b4z9l3u |

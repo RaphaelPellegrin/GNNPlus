@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Submit COCO-SP paper repro v2: 5b4z9l3u / q57ng7d2 anchor (a1g1) × 5 seeds.
+# Submit COCO-SP paper repro v2: 5b4z9l3u / q57ng7d2 anchor (a1g1) × 5 seeds on gpu_h200.
 #
 # Parent run: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/q57ng7d2
 # Baseline:   https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/5b4z9l3u
@@ -11,6 +11,8 @@
 #   cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 #   source bash_interface/cluster/common_env.sh
 #   bash bash_interface/cluster/submit_coco_hybrid_5b4z9l3u_paper_repro.sh
+#
+# Override partition: COCO_PAPER_PARTITION=mweber_gpu bash ...
 
 set -euo pipefail
 
@@ -22,13 +24,14 @@ mkdir -p logs_gnnplus
 NUM_SEEDS="${PAPER_NUM_SEEDS:-5}"
 PARALLEL="${PAPER_REPRO_PARALLEL:-3}"
 MEM="${COCO_PAPER_MEM:-128GB}"
-TIME="${COCO_PAPER_TIME:-192:00:00}"
+TIME="${COCO_PAPER_TIME:-72:00:00}"
+PARTITION="${COCO_PAPER_PARTITION:-gpu_h200}"
 
 job_id="$(
     sbatch --parsable \
         --job-name=coco_paper_v2 \
         --array="1-${NUM_SEEDS}%${PARALLEL}" \
-        --partition=mweber_gpu \
+        --partition="${PARTITION}" \
         --mem="${MEM}" \
         --time="${TIME}" \
         --gpus=1 \
@@ -40,6 +43,8 @@ job_id="$(
 echo ""
 echo "=== COCO-SP paper repro v2 (bestmodel_v2) submitted ==="
 echo "  ARRAY JOBID:  ${job_id}"
+echo "  Partition:    ${PARTITION}"
+echo "  Time limit:   ${TIME} (300 epochs ≈ 65h on H200; gpu_h200 cap 72h)"
 echo "  Tasks:        1-${NUM_SEEDS} (seeds 0-$((NUM_SEEDS - 1))), parallel=${PARALLEL}"
 echo "  Config:       configs/gated_hybrid/coco-hybrid-5b4z9l3u-a1g1-anchor.yaml"
 echo "  Logs:         logs_gnnplus/coco_paper_v2_${job_id}_<TASK>.log"
