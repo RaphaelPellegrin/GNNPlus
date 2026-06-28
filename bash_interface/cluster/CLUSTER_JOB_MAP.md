@@ -338,6 +338,7 @@ See **`bash_interface/cluster/PAPER_REPRO_TRACKER.md`** for `bestmodel_v1` cohor
 | COCO-SP | [o5hr3tma](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/o5hr3tma) | *(pending)* | `paper_bestmodel_v1_coco_o5hr3tma` |
 | CLUSTER | [ht9bntg2](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ht9bntg2) (v1, a1g1+RWSE) | *(pending)* | `paper_bestmodel_v1_cluster_ht9bntg2` |
 | PATTERN | [ta9qtxb9](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ta9qtxb9) (v1, a2g2+RWSE) | *(pending)* | `paper_bestmodel_v1_pattern_ta9qtxb9` |
+| peptides-struct | [rholn782](https://wandb.ai/weber-geoml-harvard-university/MOE_6/runs/rholn782) (v1, MOE hybrid+VN) | *(pending)* | `paper_bestmodel_v1_peptides_struct_rholn782` |
 
 Quick start (CIFAR10 ulij45a2):
 
@@ -419,6 +420,14 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_bestmodel_v1_pattern_ta9qtxb9
 ```
 
+peptides-struct rholn782 (v1, MOE hybrid a2g2 GINE+GGNN + vn4):
+
+```bash
+bash bash_interface/cluster/submit_peptides_struct_hybrid_rholn782_paper_repro.sh
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_bestmodel_v1_peptides_struct_rholn782
+```
+
 ## COCO hybrid anchored on 5b4z9l3u (GatedGCN+ baseline)
 
 Best MP-only baseline: [5b4z9l3u](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/5b4z9l3u)  
@@ -492,3 +501,4 @@ squeue -u $USER -n sweep_agent -o "%.10i %.12j %.8T %.10M"
 | 2026-06-07 | CIFAR10 paper repro ulij45a2: anchor yaml, 5-seed array, W&B group + aggregate script |
 | 2026-06-07 | Submitted CIFAR10 paper repro array `25310487` (seeds 0–4, group `paper_bestmodel_v1_cifar10_ulij45a2`) |
 | 2026-06-07 | Added `PAPER_REPRO_TRACKER.md` for bestmodel_v1 cohorts |
+| 2026-06-07 | peptides-struct MOE rholn782 hybrid+VN paper repro (5 seeds, 128GB/192h) |

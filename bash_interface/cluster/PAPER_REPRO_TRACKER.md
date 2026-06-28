@@ -47,6 +47,7 @@ https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/<GROUP>
 | COCO-SP | v1 | `paper_bestmodel_v1_coco_o5hr3tma` | — | *(pending)* | not submitted |
 | CLUSTER | v1 | `paper_bestmodel_v1_cluster_ht9bntg2` | — | *(pending)* | not submitted |
 | PATTERN | v1 | `paper_bestmodel_v1_pattern_ta9qtxb9` | — | *(pending)* | not submitted |
+| peptides-struct | v1 | `paper_bestmodel_v1_peptides_struct_rholn782` | — | *(pending)* | not submitted |
 
 ---
 
@@ -428,6 +429,50 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 
 ---
 
+### `bestmodel_v1` — peptides-struct — [rholn782](https://wandb.ai/weber-geoml-harvard-university/MOE_6/runs/rholn782) (MOE_6 anchor)
+
+| Field | Value |
+|-------|--------|
+| **Dataset** | peptides-structural (OGB graph regression, 11 targets) |
+| **Architecture** | 2×attn + 2×MP (GINE+GGNN), `d_h=16`, `layers_mp=12`, `dim_inner=96`, vn=4, pyramid readout, RWSE |
+| **MOE anchor** | [rholn782](https://wandb.ai/weber-geoml-harvard-university/MOE_6/runs/rholn782) (`test_mean` ≈ **0.229**) |
+| **GNNPlus baseline** | [xfb9wdir](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/xfb9wdir) (standard GINE L5/H200, no VN, `test/mae` ≈ **0.242**) |
+| **Config** | `configs/gated_hybrid/peptides-struct-hybrid-rholn782-anchor.yaml` |
+| **Submit** | `bash bash_interface/cluster/submit_peptides_struct_hybrid_rholn782_paper_repro.sh` |
+| **SLURM array** | *(pending)* |
+| **W&B group** | `paper_bestmodel_v1_peptides_struct_rholn782` |
+| **Group URL** | https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/paper_bestmodel_v1_peptides_struct_rholn782 |
+| **Tags** | `paper_repro`, `bestmodel_v1`, `peptides_struct`, `anchor_rholn782`, `hybrid_a2g2`, `vn4`, `pyramid_readout` |
+| **Metric** | `best_test_perf` (`metric_best: mae`) |
+| **Resources** | 128GB, 192h, parallel=3 (VN graphs are memory-heavy) |
+| **Logs** | `logs_gnnplus/peptides_struct_paper_v1_<JOBID>_<TASK>.log` |
+| **Status** | not submitted |
+| **Aggregate result** | *(pending)* |
+
+**VN reliability note:** GNNPlus best-hybrid sweep with `add_virtual_nodes=true` had only **2 finished** runs ([jy7xsmrb](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/jy7xsmrb), [sy0apx7e](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/sy0apx7e)) vs 2 crashed (likely SLURM time/OOM on 120h sweep agents). Paper repro uses **192h / 128GB**; set `PEPTIDES_PAPER_BATCH_SIZE=32` if needed.
+
+**Expected run names** (fill W&B run id after submit):
+
+| Seed | SLURM task | Run name | W&B run id | `best_test_perf` |
+|------|------------|----------|------------|------------------|
+| 0 | 1 | `peptides_struct_hybrid_rholn782_a2g2_seed0_job<JOBID>_1` | | |
+| 1 | 2 | `peptides_struct_hybrid_rholn782_a2g2_seed1_job<JOBID>_2` | | |
+| 2 | 3 | `peptides_struct_hybrid_rholn782_a2g2_seed2_job<JOBID>_3` | | |
+| 3 | 4 | `peptides_struct_hybrid_rholn782_a2g2_seed3_job<JOBID>_4` | | |
+| 4 | 5 | `peptides_struct_hybrid_rholn782_a2g2_seed4_job<JOBID>_5` | | |
+| **mean ± std** | | | | |
+
+```bash
+bash bash_interface/cluster/submit_peptides_struct_hybrid_rholn782_paper_repro.sh
+
+grep "View run at" logs_gnnplus/peptides_struct_paper_v1_<JOBID>_*.log
+
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_bestmodel_v1_peptides_struct_rholn782
+```
+
+---
+
 ## Planned / template (copy for next dataset)
 
 ```markdown
@@ -467,3 +512,4 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 | 2026-06-07 | MalNet v3 vcb1cuql (a1g1, d_h=64) anchor config + 5-seed submit scripts |
 | 2026-06-07 | CLUSTER ht9bntg2 (a1g1+RWSE) paper repro config + 5-seed submit scripts |
 | 2026-06-07 | PATTERN ta9qtxb9 (a2g2+RWSE) paper repro config + 5-seed submit scripts |
+| 2026-06-07 | peptides-struct rholn782 (MOE hybrid+VN) paper repro config + 5-seed submit scripts |
