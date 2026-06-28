@@ -329,7 +329,8 @@ See **`bash_interface/cluster/PAPER_REPRO_TRACKER.md`** for `bestmodel_v1` cohor
 | Dataset | Anchor | SLURM array | W&B group |
 |---------|--------|-------------|-----------|
 | CIFAR10 | [ulij45a2](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ulij45a2) | `25310487` | `paper_bestmodel_v1_cifar10_ulij45a2` |
-| MNIST | [lcvbyyss](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/lcvbyyss) | `25313521` | `paper_bestmodel_v1_mnist_lcvbyyss` |
+| MNIST | [lcvbyyss](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/lcvbyyss) (v1, a2g2) | `25313521` | `paper_bestmodel_v1_mnist_lcvbyyss` |
+| MNIST | [429u8olp](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/429u8olp) (v2, a8g2) | *(pending)* | `paper_bestmodel_v2_mnist_429u8olp` |
 | MalNet-Tiny | [9h3jqzkm](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/9h3jqzkm) (v1, a0g2) | `25313522` | `paper_bestmodel_v1_malnet_9h3jqzkm` |
 | MalNet-Tiny | [4j21kp8d](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/4j21kp8d) (v2, a1g2) | `25324182` | `paper_bestmodel_v2_malnet_4j21kp8d` |
 | VOC-SP | [j7ukyzdm](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/j7ukyzdm) | `25322496` | `paper_bestmodel_v1_voc_j7ukyzdm` |
@@ -343,12 +344,20 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_bestmodel_v1_cifar10_ulij45a2
 ```
 
-MNIST lcvbyyss:
+MNIST lcvbyyss (v1, a2g2):
 
 ```bash
 bash bash_interface/cluster/submit_mnist_hybrid_lcvbyyss_paper_repro.sh
 python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_bestmodel_v1_mnist_lcvbyyss
+```
+
+MNIST 429u8olp (v2, a8g2):
+
+```bash
+bash bash_interface/cluster/submit_mnist_hybrid_429u8olp_paper_repro.sh
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_bestmodel_v2_mnist_429u8olp
 ```
 
 MalNet-Tiny 9h3jqzkm (v1, a0g2):

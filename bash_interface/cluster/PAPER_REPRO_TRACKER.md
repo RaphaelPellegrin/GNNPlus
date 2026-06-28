@@ -39,6 +39,7 @@ https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/<GROUP>
 |---------|---------|-------|---|------------------|--------|
 | CIFAR10 | v1 | `paper_bestmodel_v1_cifar10_ulij45a2` | 5 | **0.7290 ± 0.0078** | done |
 | MNIST | v1 | `paper_bestmodel_v1_mnist_lcvbyyss` | 5 | **0.9820 ± 0.0008** | done |
+| MNIST | v2 | `paper_bestmodel_v2_mnist_429u8olp` | — | *(pending)* | not submitted |
 | MalNet | v1 | `paper_bestmodel_v1_malnet_9h3jqzkm` | 5 | **0.9340 ± 0.0072** | done |
 | MalNet | v2 | `paper_bestmodel_v2_malnet_4j21kp8d` | 1/5 | 0.8990 (seed 0 only) | in progress |
 | VOC-SP | v1 | `paper_bestmodel_v1_voc_j7ukyzdm` | 5 | **0.2814 ± 0.0702** (test/f1) | done — high variance |
@@ -85,7 +86,7 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_bestmodel_v1_cifar10_ulij45a2
 ```
 
-### `bestmodel_v1` — MNIST — [lcvbyyss](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/lcvbyyss)
+### `bestmodel_v1` — MNIST — [lcvbyyss](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/lcvbyyss) *(v1, a2g2)*
 
 | Field | Value |
 |-------|--------|
@@ -118,6 +119,45 @@ grep "View run at" logs_gnnplus/mnist_paper_v1_25313521_*.log
 
 python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_bestmodel_v1_mnist_lcvbyyss
+```
+
+### `bestmodel_v2` — MNIST — [429u8olp](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/429u8olp) *(v2, a8g2 — lower variance check)*
+
+| Field | Value |
+|-------|--------|
+| **Dataset** | MNIST |
+| **Architecture** | 8×attn + 2×GATEDGCN/GAT MP (a8g2), `d_h=32`, **headwise** gate |
+| **Anchor W&B** | [429u8olp](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/429u8olp) (seed 0 discovery run) |
+| **Repro commit** | `0ce0d126bd765a345fe953a7a31bd692675ef35e` |
+| **Config** | `configs/gated_hybrid/mnist-hybrid-429u8olp-anchor.yaml` |
+| **Submit** | `bash bash_interface/cluster/submit_mnist_hybrid_429u8olp_paper_repro.sh` |
+| **SLURM array** | *(pending)* |
+| **W&B group** | `paper_bestmodel_v2_mnist_429u8olp` |
+| **Group URL** | https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/paper_bestmodel_v2_mnist_429u8olp |
+| **Tags** | `paper_repro`, `bestmodel_v2`, `mnist`, `anchor_429u8olp`, `hybrid_a8g2`, `gate_headwise` |
+| **Metric** | `best_test_perf` (`metric_best: accuracy`) |
+| **Logs** | `logs_gnnplus/mnist_paper_v2_<JOBID>_<TASK>.log` |
+| **Status** | not submitted |
+| **Aggregate result** | *(pending)* |
+
+**Expected run names** (fill W&B run id after submit):
+
+| Seed | SLURM task | Run name | W&B run id | `best_test_perf` |
+|------|------------|----------|------------|------------------|
+| 0 | 1 | `mnist_hybrid_v2_429u8olp_a8g2_seed0_job<JOBID>_1` | | |
+| 1 | 2 | `mnist_hybrid_v2_429u8olp_a8g2_seed1_job<JOBID>_2` | | |
+| 2 | 3 | `mnist_hybrid_v2_429u8olp_a8g2_seed2_job<JOBID>_3` | | |
+| 3 | 4 | `mnist_hybrid_v2_429u8olp_a8g2_seed3_job<JOBID>_4` | | |
+| 4 | 5 | `mnist_hybrid_v2_429u8olp_a8g2_seed4_job<JOBID>_5` | | |
+| **mean ± std** | | | | |
+
+```bash
+bash bash_interface/cluster/submit_mnist_hybrid_429u8olp_paper_repro.sh
+
+grep "View run at" logs_gnnplus/mnist_paper_v2_<JOBID>_*.log
+
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_bestmodel_v2_mnist_429u8olp
 ```
 
 ### `bestmodel_v1` — MalNet-Tiny — [9h3jqzkm](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/9h3jqzkm) *(v1, a0g2)*
@@ -303,3 +343,4 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 | 2026-06-07 | MalNet v1 `25313522` finished: **0.9340 ± 0.0072**; v2 `25324182`, VOC `25322496` submitted |
 | 2026-06-07 | Full aggregate: CIFAR **0.729±0.008**, MNIST **0.982±0.001**, VOC **0.281±0.070** (f1); MalNet v2 1/5 |
 | 2026-06-07 | COCO-SP o5hr3tma anchor config + 5-seed submit scripts |
+| 2026-06-07 | MNIST 429u8olp (v2, a8g2) anchor config + 5-seed submit scripts |
