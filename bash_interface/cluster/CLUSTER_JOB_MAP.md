@@ -337,6 +337,7 @@ See **`bash_interface/cluster/PAPER_REPRO_TRACKER.md`** for `bestmodel_v1` cohor
 | VOC-SP | [j7ukyzdm](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/j7ukyzdm) | `25322496` | `paper_bestmodel_v1_voc_j7ukyzdm` |
 | COCO-SP | [o5hr3tma](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/o5hr3tma) | *(pending)* | `paper_bestmodel_v1_coco_o5hr3tma` |
 | CLUSTER | [ht9bntg2](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ht9bntg2) (v1, a1g1+RWSE) | *(pending)* | `paper_bestmodel_v1_cluster_ht9bntg2` |
+| PATTERN | [ta9qtxb9](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ta9qtxb9) (v1, a2g2+RWSE) | *(pending)* | `paper_bestmodel_v1_pattern_ta9qtxb9` |
 
 Quick start (CIFAR10 ulij45a2):
 
@@ -408,6 +409,14 @@ CLUSTER ht9bntg2 (v1, a1g1+RWSE):
 bash bash_interface/cluster/submit_cluster_hybrid_ht9bntg2_paper_repro.sh
 python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_bestmodel_v1_cluster_ht9bntg2
+```
+
+PATTERN ta9qtxb9 (v1, a2g2+RWSE):
+
+```bash
+bash bash_interface/cluster/submit_pattern_hybrid_ta9qtxb9_paper_repro.sh
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_bestmodel_v1_pattern_ta9qtxb9
 ```
 
 ## COCO hybrid anchored on 5b4z9l3u (GatedGCN+ baseline)

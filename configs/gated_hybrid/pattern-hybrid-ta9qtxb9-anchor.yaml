@@ -1,16 +1,27 @@
-# PATTERN hybrid anchor — frozen hyperparams from W&B ta9qtxb9 (sweep ve1sldtl).
-# best/test_accuracy-SBM ≈ 0.8713 | a2g2, d_h=90, GCNE,GCNE MP, seed 0.
+# PATTERN hybrid anchor — frozen hyperparams from W&B ta9qtxb9 (seed 0).
+#
+# Repro commit: c62ea95f392c56d5b330edcfeda0c460b416683b
+# Paper repro: 5 seeds via submit_pattern_hybrid_ta9qtxb9_paper_repro.sh
+# W&B group: paper_bestmodel_v1_pattern_ta9qtxb9 | tags: paper_repro, bestmodel_v1
+#
+# best/test_accuracy-SBM ≈ 0.8713 | a2g2+RWSE, d_h=90, GCNE,GCNE MP, elementwise gate.
 # Virtual-node ablation: bash_interface/cluster/submit_pattern_hybrid_vn_ablation.sh
 out_dir: results
 metric_best: accuracy-SBM
 wandb:
   use: False
   project: GNNPlus
+  group: paper_bestmodel_v1_pattern_ta9qtxb9
   tags:
     - gnnplus
     - hybrid_gnn
-    - pattern_anchor_ta9qtxb9
-    - pattern_vn_ablation
+    - paper_repro
+    - bestmodel_v1
+    - pattern
+    - anchor_ta9qtxb9
+    - hybrid_a2g2
+    - gate_elementwise
+    - rwse
 dataset:
   format: PyG-GNNBenchmarkDataset
   name: PATTERN
