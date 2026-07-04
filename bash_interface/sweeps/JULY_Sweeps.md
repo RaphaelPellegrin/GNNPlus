@@ -127,6 +127,7 @@ Monitor: `squeue -u $USER | grep gnnplus_sweep`
 | **Architecture** | a2g3: 2 attn + 3× GINE, d_h=64, lr≈4.53e-4, ep=250 |
 | **Submit** | `bash bash_interface/cluster/submit_peptides_struct_hybrid_bvw3v272_a2g3_paper_repro.sh` |
 | **Seeds** | 0–4 (task_id 1–5) |
+| **SLURM job** | `28133112` |
 
 ```bash
 source ~/.gnnplus_env
@@ -146,6 +147,7 @@ bash bash_interface/cluster/submit_peptides_struct_hybrid_bvw3v272_a2g3_paper_re
 | **Architecture** | a1g1: 1 attn + 1× GINE, d_h=64, lr≈5.89e-4, ep=400 |
 | **Submit** | `bash bash_interface/cluster/submit_peptides_struct_hybrid_48z1z9zi_a1g1_paper_repro.sh` |
 | **Seeds** | 0–4 (task_id 1–5) |
+| **SLURM job** | `28133099` |
 
 ```bash
 source ~/.gnnplus_env
@@ -153,4 +155,23 @@ export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 bash bash_interface/cluster/submit_peptides_struct_hybrid_48z1z9zi_a1g1_paper_repro.sh
+```
+
+### Peptides-struct fn30nnxg a8g3 (from sweep o8wijtq7 / rholn782 lineage)
+
+| Field | Value |
+|-------|-------|
+| **Source run** | https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/fn30nnxg |
+| **W&B group** | `paper_bestmodel_v2_peptides_struct_fn30nnxg_a8g3_ep250` |
+| **Config** | `configs/gated_hybrid/peptides-struct-hybrid-fn30nnxg-a8g3-anchor.yaml` |
+| **Architecture** | a8g3: 8 attn + GINE,GINE,GGNN, d_h=16, VN=4, lr≈2.02e-4, ep=250 |
+| **Submit** | `bash bash_interface/cluster/submit_peptides_struct_hybrid_fn30nnxg_a8g3_paper_repro.sh` |
+| **Seeds** | 0–4 (task_id 1–5) |
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+bash bash_interface/cluster/submit_peptides_struct_hybrid_fn30nnxg_a8g3_paper_repro.sh
 ```
