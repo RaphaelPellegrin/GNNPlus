@@ -3,6 +3,14 @@ import torch_geometric.graphgym.register as register
 from torch_geometric.graphgym import cfg
 from torch_geometric.graphgym.register import register_head
 
+from GNNPlus.head.readout_mlp import build_readout_mlp
+
+
+def _readout_uses_preset() -> bool:
+    """Return True when ``gnn.readout_mlp`` selects a named preset."""
+    preset = str(getattr(cfg.gnn, 'readout_mlp', '') or '').strip().lower()
+    return preset not in ('', 'mlp_graph', 'legacy')
+
 
 @register_head('mlp_graph')
 class MLPGraphHead(nn.Module):
@@ -27,15 +35,18 @@ class MLPGraphHead(nn.Module):
         dropout = cfg.gnn.dropout
         L = cfg.gnn.layers_post_mp
 
-        layers = []
-        for _ in range(L-1):
-            layers.append(nn.Dropout(dropout))
-            layers.append(nn.Linear(dim_in, dim_in, bias=True))
-            layers.append(register.act_dict[cfg.gnn.act]())
+        if _readout_uses_preset():
+            self.mlp = build_readout_mlp(dim_in, dim_out, str(cfg.gnn.readout_mlp))
+        else:
+            layers = []
+            for _ in range(L - 1):
+                layers.append(nn.Dropout(dropout))
+                layers.append(nn.Linear(dim_in, dim_in, bias=True))
+                layers.append(register.act_dict[cfg.gnn.act]())
 
-        layers.append(nn.Dropout(dropout))
-        layers.append(nn.Linear(dim_in, dim_out, bias=True))
-        self.mlp = nn.Sequential(*layers)
+            layers.append(nn.Dropout(dropout))
+            layers.append(nn.Linear(dim_in, dim_out, bias=True))
+            self.mlp = nn.Sequential(*layers)
 
     def _scale_and_shift(self, x):
         return x
