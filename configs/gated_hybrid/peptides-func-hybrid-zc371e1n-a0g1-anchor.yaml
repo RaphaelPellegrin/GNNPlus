@@ -6,7 +6,8 @@
 # Parent hybrid: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/zc371e1n (a1g1, AP 0.7170)
 #
 # Paper repro: 5 seeds via submit_peptides_func_hybrid_zc371e1n_a0g1_paper_repro.sh
-# W&B group: paper_bestmodel_v2_peptides_func_zc371e1n_a0g1
+# W&B group: paper_bestmodel_v2_peptides_func_zc371e1n_a0g1_ep1200
+# max_epoch: 1200 (2× original 600-epoch zc371e1n cohort)
 #
 # Architecture: 0×attn + 1×GCN MP (a0g1), d_h=64, elementwise gate, rmsnorm, Atom+RWSE.
 out_dir: results
@@ -14,13 +15,14 @@ metric_best: ap
 wandb:
   use: False
   project: GNNPlus
-  group: paper_bestmodel_v2_peptides_func_zc371e1n_a0g1
+  group: paper_bestmodel_v2_peptides_func_zc371e1n_a0g1_ep1200
   tags:
     - gnnplus
     - hybrid_gnn
     - paper_repro
     - bestmodel_v2
     - peptides_func
+    - max_epoch_1200
     - anchor_zc371e1n
     - anchor_3g180qle
     - hybrid_a0g1
@@ -80,6 +82,6 @@ optim:
   optimizer: adamW
   weight_decay: 0.0
   base_lr: 0.0004727701466266201
-  max_epoch: 600
+  max_epoch: 1200
   scheduler: cosine_with_warmup
   num_warmup_epochs: 10

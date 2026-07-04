@@ -4,7 +4,8 @@
 #   (configs/gine/peptides-struct.yaml, seed 3, test MAE 0.24231)
 #
 # Paper repro: 5 seeds via submit_peptides_struct_hybrid_xfb9wdir_a0g1_paper_repro.sh
-# W&B group: paper_bestmodel_v2_peptides_struct_xfb9wdir_a0g1
+# W&B group: paper_bestmodel_v2_peptides_struct_xfb9wdir_a0g1_ep500
+# max_epoch: 500 (2× original 250-epoch xfb9wdir cohort)
 #
 # Architecture: 0×attn + 1×GINE MP (a0g1), d_h=200, headwise gate, layernorm, Atom+RWSE.
 out_dir: results
@@ -13,13 +14,14 @@ metric_agg: argmin
 wandb:
   use: False
   project: GNNPlus
-  group: paper_bestmodel_v2_peptides_struct_xfb9wdir_a0g1
+  group: paper_bestmodel_v2_peptides_struct_xfb9wdir_a0g1_ep500
   tags:
     - gnnplus
     - hybrid_gnn
     - paper_repro
     - bestmodel_v2
     - peptides_struct
+    - max_epoch_500
     - anchor_xfb9wdir
     - hybrid_a0g1
     - gate_headwise
@@ -79,6 +81,6 @@ optim:
   optimizer: adamW
   weight_decay: 0.0
   base_lr: 0.001
-  max_epoch: 250
+  max_epoch: 500
   scheduler: cosine_with_warmup
   num_warmup_epochs: 5

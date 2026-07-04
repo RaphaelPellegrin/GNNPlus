@@ -13,7 +13,7 @@
 
 #SBATCH --job-name=peptides_struct_a0g1_v2
 #SBATCH --ntasks=1
-#SBATCH --time=120:00:00
+#SBATCH --time=240:00:00
 #SBATCH --mem=64GB
 #SBATCH --output=logs_gnnplus/%x_%A_%a.log
 #SBATCH --partition=mweber_gpu
