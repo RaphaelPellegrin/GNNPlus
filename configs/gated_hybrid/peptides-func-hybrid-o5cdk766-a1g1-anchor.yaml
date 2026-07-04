@@ -1,0 +1,88 @@
+# Peptides-func hybrid anchor — frozen hyperparams from sweep run o5cdk766.
+#
+# Source run: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/o5cdk766
+# Sweep: nuvkhnfr (peptides_func_hybrid_gated_mp_sweep)
+# Base config: peptides-func-hybrid-zc371e1n-a0g1-anchor.yaml (zc371e1n / RWSE lineage)
+#
+# Paper repro: 5 seeds via submit_peptides_func_hybrid_o5cdk766_a1g1_paper_repro.sh
+# W&B group: paper_bestmodel_v2_peptides_func_o5cdk766_a1g1_ep900
+#
+# Architecture: a1g1 — 1×attn + 1× GCN MP, d_h=128, elementwise gate, rmsnorm,
+#   graph_restricted mask, Atom+RWSE, L3/H275, max_epoch=900.
+out_dir: results
+metric_best: ap
+wandb:
+  use: False
+  project: GNNPlus
+  group: paper_bestmodel_v2_peptides_func_o5cdk766_a1g1_ep900
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - paper_repro
+    - bestmodel_v2
+    - peptides_func
+    - max_epoch_900
+    - anchor_o5cdk766
+    - hybrid_a1g1
+    - gate_elementwise
+    - gcn
+    - rwse
+    - sweep_nuvkhnfr
+dataset:
+  format: OGB
+  name: peptides-functional
+  task: graph
+  task_type: classification_multilabel
+  transductive: False
+  node_encoder: True
+  node_encoder_name: Atom+RWSE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: Bond
+  edge_encoder_bn: False
+posenc_RWSE:
+  enable: True
+  kernel:
+    times_func: range(1,33)
+  model: Linear
+  dim_pe: 28
+  raw_norm_type: BatchNorm
+train:
+  mode: custom
+  batch_size: 16
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: hybrid_gnn
+  loss_fun: cross_entropy
+  graph_pooling: mean
+gnn:
+  head: mlp_graph
+  ffn: False
+  layers_pre_mp: 0
+  layers_mp: 3
+  layers_post_mp: 4
+  dim_inner: 275
+  act: gelu
+  residual: False
+  dropout: 0.2
+  hybrid:
+    num_attn_heads: 1
+    num_gnn_heads: 1
+    d_h: 128
+    attn_mask: graph_restricted
+    gate: elementwise
+    norm: rmsnorm
+    gnn_types: "GCN"
+    attn_dropout: 0.1
+    mp_dropout: 0.2
+    block_bn: false
+    log_gate_stats: True
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 0.0
+  base_lr: 0.00020830328241707908
+  max_epoch: 900
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10

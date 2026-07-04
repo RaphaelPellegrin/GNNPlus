@@ -167,6 +167,7 @@ bash bash_interface/cluster/submit_peptides_struct_hybrid_48z1z9zi_a1g1_paper_re
 | **Architecture** | a8g3: 8 attn + GINE,GINE,GGNN, d_h=16, VN=4, lr≈2.02e-4, ep=250 |
 | **Submit** | `bash bash_interface/cluster/submit_peptides_struct_hybrid_fn30nnxg_a8g3_paper_repro.sh` |
 | **Seeds** | 0–4 (task_id 1–5) |
+| **SLURM job** | `28145547` |
 
 ```bash
 source ~/.gnnplus_env
@@ -174,4 +175,23 @@ export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 bash bash_interface/cluster/submit_peptides_struct_hybrid_fn30nnxg_a8g3_paper_repro.sh
+```
+
+### Peptides-func o5cdk766 a1g1 (from sweep nuvkhnfr / zc371e1n lineage)
+
+| Field | Value |
+|-------|-------|
+| **Source run** | https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/o5cdk766 |
+| **W&B group** | `paper_bestmodel_v2_peptides_func_o5cdk766_a1g1_ep900` |
+| **Config** | `configs/gated_hybrid/peptides-func-hybrid-o5cdk766-a1g1-anchor.yaml` |
+| **Architecture** | a1g1: 1 attn + 1× GCN, d_h=128, graph_restricted, lr≈2.08e-4, ep=900 |
+| **Submit** | `bash bash_interface/cluster/submit_peptides_func_hybrid_o5cdk766_a1g1_paper_repro.sh` |
+| **Seeds** | 0–4 (task_id 1–5) |
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+bash bash_interface/cluster/submit_peptides_func_hybrid_o5cdk766_a1g1_paper_repro.sh
 ```
