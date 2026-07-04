@@ -1,0 +1,66 @@
+# Peptides-struct gated hybrid sweep (GINE MP family, xfb9wdir / a0g1 lineage).
+#
+# Optimize **validation** metric (not test):
+#   metric: best/val_mae  (lower is better)
+#
+# Swept (6): lr, max_epoch, num MP heads, num attn heads, d_h, gate
+# Fixed MP type: GINE (parse_hybrid_gnn_types duplicates to num_gnn_heads)
+# Fixed: layernorm, mp_dropout=0.2, attn_dropout=0.1, full attn mask
+#
+# Create + launch (cluster login):
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/peptides_struct_hybrid_gated_mp_sweep.yaml
+#   SWEEP_SLURM_TIME=240:00:00 SWEEP_ARRAY_TASKS=16 SWEEP_ARRAY_PARALLEL=4 RUNS_PER_AGENT=3 \
+#     bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+#       peptides_struct weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: minimize
+  name: best/val_mae
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_hybrid_gated-peptides_struct-GINE-val_mae
+
+early_terminate:
+  type: hyperband
+  min_iter: 40
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/peptides-struct-hybrid-xfb9wdir-a0g1-anchor.yaml
+  - --molecular=true
+  - --seed=3
+  - ${args}
+
+parameters:
+  hybrid_gnn_types:
+    value: GINE
+  hybrid_num_gnn_heads:
+    values: [1, 2, 3]
+  hybrid_num_attn_heads:
+    values: [0, 1, 2]
+  optim.base_lr:
+    distribution: log_uniform_values
+    min: 0.0002
+    max: 0.003
+  hybrid_max_epoch:
+    values: [250, 400, 500]
+  hybrid_d_h:
+    values: [64, 128, 200]
+  hybrid_gate:
+    values: [elementwise, headwise]
+  hybrid_norm:
+    value: layernorm
+  hybrid_mp_dropout:
+    value: 0.2
+  hybrid_attn_dropout:
+    value: 0.1
+  hybrid_attn_mask:
+    value: full
