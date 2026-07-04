@@ -1,0 +1,86 @@
+# Peptides-struct hybrid anchor — gated GINE MP only (a0g2), no attention.
+#
+# Same as a0g1 (xfb9wdir lineage) but 2× identical GINE MP heads.
+# Sibling a0g1: peptides-struct-hybrid-xfb9wdir-a0g1-anchor.yaml
+#
+# Paper repro: 5 seeds via submit_peptides_struct_hybrid_xfb9wdir_a0g2_paper_repro.sh
+# W&B group: paper_bestmodel_v2_peptides_struct_xfb9wdir_a0g2_ep500
+# max_epoch: 500
+#
+# Architecture: 0×attn + 2×GINE MP (a0g2), d_h=200, headwise gate, layernorm, Atom+RWSE.
+out_dir: results
+metric_best: mae
+metric_agg: argmin
+wandb:
+  use: False
+  project: GNNPlus
+  group: paper_bestmodel_v2_peptides_struct_xfb9wdir_a0g2_ep500
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - paper_repro
+    - bestmodel_v2
+    - peptides_struct
+    - max_epoch_500
+    - anchor_xfb9wdir
+    - hybrid_a0g2
+    - gate_headwise
+    - gine
+    - rwse
+dataset:
+  format: OGB
+  name: peptides-structural
+  task: graph
+  task_type: regression
+  transductive: False
+  node_encoder: True
+  node_encoder_name: Atom+RWSE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: Bond
+  edge_encoder_bn: False
+posenc_RWSE:
+  enable: True
+  kernel:
+    times_func: range(1,33)
+  model: Linear
+  dim_pe: 28
+  raw_norm_type: BatchNorm
+train:
+  mode: custom
+  batch_size: 32
+  eval_period: 1
+  ckpt_period: 100
+  eval_smoothing_metrics: False
+model:
+  type: hybrid_gnn
+  loss_fun: l1
+  graph_pooling: mean
+gnn:
+  head: mlp_graph
+  ffn: False
+  layers_pre_mp: 0
+  layers_mp: 5
+  layers_post_mp: 3
+  dim_inner: 200
+  act: gelu
+  residual: False
+  dropout: 0.2
+  hybrid:
+    num_attn_heads: 0
+    num_gnn_heads: 2
+    d_h: 200
+    gate: headwise
+    norm: layernorm
+    gnn_types: "GINE,GINE"
+    mp_dropout: 0.2
+    block_bn: false
+    log_gate_stats: True
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 0.0
+  base_lr: 0.001
+  max_epoch: 500
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 5
