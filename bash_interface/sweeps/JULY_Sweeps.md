@@ -187,6 +187,7 @@ bash bash_interface/cluster/submit_peptides_struct_hybrid_fn30nnxg_a8g3_paper_re
 | **Architecture** | a1g1: 1 attn + 1× GCN, d_h=128, graph_restricted, lr≈2.08e-4, ep=900 |
 | **Submit** | `bash bash_interface/cluster/submit_peptides_func_hybrid_o5cdk766_a1g1_paper_repro.sh` |
 | **Seeds** | 0–4 (task_id 1–5) |
+| **SLURM job** | `28147236` |
 
 ```bash
 source ~/.gnnplus_env
@@ -194,4 +195,23 @@ export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 bash bash_interface/cluster/submit_peptides_func_hybrid_o5cdk766_a1g1_paper_repro.sh
+```
+
+### Peptides-func 3g180qle a1g8 (GCN baseline → hybrid 1 attn + 8× GCN)
+
+| Field | Value |
+|-------|-------|
+| **MP baseline** | https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/3g180qle |
+| **W&B group** | `paper_bestmodel_v2_peptides_func_3g180qle_a1g8_ep300` |
+| **Config** | `configs/gated_hybrid/peptides-func-hybrid-3g180qle-a1g8-anchor.yaml` |
+| **Architecture** | a1g8: 1 attn + 8× GCN, d_h=64, outer = gcn/peptides-func.yaml, ep=300 |
+| **Submit** | `bash bash_interface/cluster/submit_peptides_func_hybrid_3g180qle_a1g8_paper_repro.sh` |
+| **Seeds** | 0–4 (task_id 1–5) |
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+bash bash_interface/cluster/submit_peptides_func_hybrid_3g180qle_a1g8_paper_repro.sh
 ```
