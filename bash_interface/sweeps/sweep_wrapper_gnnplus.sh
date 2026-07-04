@@ -151,6 +151,24 @@ num_gnn="${OPTS[gnn.hybrid.num_gnn_heads]:-2}"
 if [ -z "${OPTS[gnn.hybrid.gnn_types]:-}" ]; then
     gnn_types="$(_expand_gnn_types "${num_gnn}" "${MOLECULAR}")"
     _set_opt "gnn.hybrid.gnn_types" "${gnn_types}"
+elif [[ "${OPTS[gnn.hybrid.gnn_types]}" == *,* ]]; then
+    # Explicit multi-head preset (e.g. GINE,GGNN or GINE×4,GGNN×4): match MP head count.
+    _infer_gnn_heads=0
+    _gt="${OPTS[gnn.hybrid.gnn_types]}"
+    _old_ifs="${IFS}"
+    IFS=','
+    for _part in ${_gt}; do
+        _part="${_part#"${_part%%[![:space:]]*}"}"
+        _part="${_part%"${_part##*[![:space:]]}"}"
+        if [ -n "${_part}" ]; then
+            _infer_gnn_heads=$((_infer_gnn_heads + 1))
+        fi
+    done
+    IFS="${_old_ifs}"
+    if [ "${_infer_gnn_heads}" -gt 0 ]; then
+        _set_opt "gnn.hybrid.num_gnn_heads" "${_infer_gnn_heads}"
+        num_gnn="${_infer_gnn_heads}"
+    fi
 fi
 # parse_hybrid_gnn_types in Python pads/truncates gnn_types to num_gnn_heads.
 

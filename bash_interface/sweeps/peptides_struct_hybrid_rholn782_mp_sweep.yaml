@@ -1,0 +1,64 @@
+# Peptides-struct hybrid sweep — rholn782 anchor (tfeksgbl / a2g2 GINE+GGNN lineage).
+#
+# Anchor run: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/tfeksgbl
+# MOE source: https://wandb.ai/weber-geoml-harvard-university/MOE_6/runs/rholn782
+#
+# Fixed from anchor: L12/H96, d_h=16, VN=4, pyramid readout, RWSE k=20, batch 64,
+#   ffn+skip, layernorm, headwise gate, max_epoch=250, seed=2.
+#
+# Swept:
+#   optim.base_lr
+#   hybrid_num_attn_heads: 0, 1, 2, 4, 8
+#   hybrid_gnn_types (MP presets; num_gnn_heads inferred from comma list in wrapper):
+#     - GINE,GGNN                    (2 MP heads — anchor)
+#     - GINE,GINE,GGNN               (3 MP heads)
+#     - GINE×7,GGNN                  (8 MP heads)
+#     - GINE×4,GGNN×4                (8 MP heads)
+#
+# Metric: best/val_mae (validation, not test).
+#
+# Create + launch (cluster):
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/peptides_struct_hybrid_rholn782_mp_sweep.yaml
+#   SWEEP_SLURM_TIME=240:00:00 SWEEP_ARRAY_TASKS=16 SWEEP_ARRAY_PARALLEL=4 RUNS_PER_AGENT=3 \
+#     bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+#       peptides_struct weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: minimize
+  name: best/val_mae
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_hybrid_rholn782-peptides_struct-lr_attn_mp
+
+early_terminate:
+  type: hyperband
+  min_iter: 40
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/peptides-struct-hybrid-rholn782-anchor.yaml
+  - --molecular=true
+  - --seed=2
+  - ${args}
+
+parameters:
+  optim.base_lr:
+    distribution: log_uniform_values
+    min: 0.0001
+    max: 0.002
+  hybrid_num_attn_heads:
+    values: [0, 1, 2, 4, 8]
+  hybrid_gnn_types:
+    values:
+      - "GINE,GGNN"
+      - "GINE,GINE,GGNN"
+      - "GINE,GINE,GINE,GINE,GINE,GINE,GINE,GGNN"
+      - "GINE,GINE,GINE,GINE,GGNN,GGNN,GGNN,GGNN"
