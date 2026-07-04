@@ -3,12 +3,13 @@
 # Anchor run: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/tfeksgbl
 # MOE source: https://wandb.ai/weber-geoml-harvard-university/MOE_6/runs/rholn782
 #
-# Fixed from anchor: L12/H96, d_h=16, VN=4, pyramid readout, RWSE k=20, batch 64,
-#   ffn+skip, layernorm, headwise gate, max_epoch=250, seed=2.
+# Fixed from anchor: L12/H96, d_h=16, num_virtual_nodes=4 (when VN on), pyramid readout,
+#   RWSE k=20, batch 64, ffn+skip, layernorm, headwise gate, max_epoch=250, seed=2.
 #
 # Swept:
 #   optim.base_lr
 #   hybrid_num_attn_heads: 0, 1, 2, 4, 8
+#   add_virtual_nodes: true / false  (false → num_virtual_nodes=0)
 #   hybrid_gnn_types (MP presets; num_gnn_heads inferred from comma list in wrapper):
 #     - GINE,GGNN                    (2 MP heads — anchor)
 #     - GINE,GINE,GGNN               (3 MP heads)
@@ -32,7 +33,7 @@ metric:
 
 entity: weber-geoml-harvard-university
 project: GNNPlus
-name: GNNplus_hybrid_rholn782-peptides_struct-lr_attn_mp
+name: GNNplus_hybrid_rholn782-peptides_struct-lr_attn_mp_vn
 
 early_terminate:
   type: hyperband
@@ -56,6 +57,8 @@ parameters:
     max: 0.002
   hybrid_num_attn_heads:
     values: [0, 1, 2, 4, 8]
+  add_virtual_nodes:
+    values: [true, false]
   hybrid_gnn_types:
     values:
       - "GINE,GGNN"

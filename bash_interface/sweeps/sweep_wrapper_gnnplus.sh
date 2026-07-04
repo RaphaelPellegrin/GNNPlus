@@ -110,6 +110,8 @@ while [ "$#" -gt 0 ]; do
                 hybrid_gnn_types) _set_opt "gnn.hybrid.gnn_types" "${val}" ;;
                 hybrid_layers_mp) _set_opt "gnn.layers_mp" "${val}" ;;
                 hybrid_max_epoch) _set_opt "optim.max_epoch" "${val}" ;;
+                add_virtual_nodes|dataset.add_virtual_nodes) _set_opt "dataset.add_virtual_nodes" "${val}" ;;
+                num_virtual_nodes|dataset.num_virtual_nodes) _set_opt "dataset.num_virtual_nodes" "${val}" ;;
                 base_lr|optim.base_lr) _set_opt "optim.base_lr" "${val}" ;;
                 batch_size) _set_opt "train.batch_size" "${val}" ;;
                 *) _set_opt "${key}" "${val}" ;;
@@ -135,6 +137,8 @@ while [ "$#" -gt 0 ]; do
                 hybrid_gnn_types) _set_opt "gnn.hybrid.gnn_types" "${val}" ;;
                 hybrid_layers_mp) _set_opt "gnn.layers_mp" "${val}" ;;
                 hybrid_max_epoch) _set_opt "optim.max_epoch" "${val}" ;;
+                add_virtual_nodes|dataset.add_virtual_nodes) _set_opt "dataset.add_virtual_nodes" "${val}" ;;
+                num_virtual_nodes|dataset.num_virtual_nodes) _set_opt "dataset.num_virtual_nodes" "${val}" ;;
                 base_lr|optim.base_lr) _set_opt "optim.base_lr" "${val}" ;;
                 batch_size) _set_opt "train.batch_size" "${val}" ;;
                 *) _set_opt "${key}" "${val}" ;;
@@ -172,6 +176,16 @@ elif [[ "${OPTS[gnn.hybrid.gnn_types]}" == *,* ]]; then
 fi
 # parse_hybrid_gnn_types in Python pads/truncates gnn_types to num_gnn_heads.
 
+_num_vn="${OPTS[dataset.num_virtual_nodes]:-0}"
+if _is_truthy "${OPTS[dataset.add_virtual_nodes]:-false}"; then
+    :
+elif [ "${_num_vn}" -gt 0 ] 2>/dev/null; then
+    _set_opt "dataset.add_virtual_nodes" "True"
+else
+    _set_opt "dataset.add_virtual_nodes" "False"
+    _set_opt "dataset.num_virtual_nodes" "0"
+fi
+
 extra_args=()
 for key in "${!OPTS[@]}"; do
     extra_args+=("${key}" "${OPTS[$key]}")
@@ -185,7 +199,8 @@ export WANDB_ENTITY="${WANDB_ENTITY:-weber-geoml-harvard-university}"
 export WANDB_PROJECT="${WANDB_PROJECT:-GNNPlus}"
 
 echo "[sweep_wrapper_gnnplus] cfg=${CFG} seed=${SEED} molecular=${MOLECULAR}"
-echo "[sweep_wrapper_gnnplus] hybrid opts: num_attn=${num_attn} num_gnn=${num_gnn} gnn_types=${OPTS[gnn.hybrid.gnn_types]}"
+echo "[sweep_wrapper_gnnplus] hybrid opts: num_attn=${num_attn} num_gnn=${num_gnn} gnn_types=${OPTS[gnn.hybrid.gnn_types]:-}"
+echo "[sweep_wrapper_gnnplus] preprocess: add_vn=${OPTS[dataset.add_virtual_nodes]:-false} num_vn=${OPTS[dataset.num_virtual_nodes]:-0}"
 
 exec python main.py \
     --cfg "${CFG}" \
