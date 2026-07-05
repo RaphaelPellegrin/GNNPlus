@@ -109,6 +109,16 @@ while [ "$#" -gt 0 ]; do
                 hybrid_mp_dropout) _set_opt "gnn.hybrid.mp_dropout" "${val}" ;;
                 hybrid_gnn_types) _set_opt "gnn.hybrid.gnn_types" "${val}" ;;
                 hybrid_layers_mp) _set_opt "gnn.layers_mp" "${val}" ;;
+                hybrid_dim_inner|gnn.dim_inner) _set_opt "gnn.dim_inner" "${val}" ;;
+                hybrid_readout_mlp|gnn.readout_mlp)
+                    if [ "${val}" = "legacy" ] || [ "${val}" = "mlp_graph" ]; then
+                        _set_opt "gnn.readout_mlp" ""
+                    else
+                        _set_opt "gnn.readout_mlp" "${val}"
+                    fi
+                    ;;
+                gnn_ffn|gnn.ffn) _set_opt "gnn.ffn" "${val}" ;;
+                gnn_residual|gnn.residual) _set_opt "gnn.residual" "${val}" ;;
                 hybrid_max_epoch) _set_opt "optim.max_epoch" "${val}" ;;
                 add_virtual_nodes|dataset.add_virtual_nodes) _set_opt "dataset.add_virtual_nodes" "${val}" ;;
                 num_virtual_nodes|dataset.num_virtual_nodes) _set_opt "dataset.num_virtual_nodes" "${val}" ;;
@@ -136,6 +146,16 @@ while [ "$#" -gt 0 ]; do
                 hybrid_mp_dropout) _set_opt "gnn.hybrid.mp_dropout" "${val}" ;;
                 hybrid_gnn_types) _set_opt "gnn.hybrid.gnn_types" "${val}" ;;
                 hybrid_layers_mp) _set_opt "gnn.layers_mp" "${val}" ;;
+                hybrid_dim_inner|gnn.dim_inner) _set_opt "gnn.dim_inner" "${val}" ;;
+                hybrid_readout_mlp|gnn.readout_mlp)
+                    if [ "${val}" = "legacy" ] || [ "${val}" = "mlp_graph" ]; then
+                        _set_opt "gnn.readout_mlp" ""
+                    else
+                        _set_opt "gnn.readout_mlp" "${val}"
+                    fi
+                    ;;
+                gnn_ffn|gnn.ffn) _set_opt "gnn.ffn" "${val}" ;;
+                gnn_residual|gnn.residual) _set_opt "gnn.residual" "${val}" ;;
                 hybrid_max_epoch) _set_opt "optim.max_epoch" "${val}" ;;
                 add_virtual_nodes|dataset.add_virtual_nodes) _set_opt "dataset.add_virtual_nodes" "${val}" ;;
                 num_virtual_nodes|dataset.num_virtual_nodes) _set_opt "dataset.num_virtual_nodes" "${val}" ;;
@@ -200,7 +220,7 @@ export WANDB_PROJECT="${WANDB_PROJECT:-GNNPlus}"
 
 echo "[sweep_wrapper_gnnplus] cfg=${CFG} seed=${SEED} molecular=${MOLECULAR}"
 echo "[sweep_wrapper_gnnplus] hybrid opts: num_attn=${num_attn} num_gnn=${num_gnn} gnn_types=${OPTS[gnn.hybrid.gnn_types]:-}"
-echo "[sweep_wrapper_gnnplus] preprocess: add_vn=${OPTS[dataset.add_virtual_nodes]:-false} num_vn=${OPTS[dataset.num_virtual_nodes]:-0}"
+echo "[sweep_wrapper_gnnplus] preprocess: add_vn=${OPTS[dataset.add_virtual_nodes]:-false} num_vn=${OPTS[dataset.num_virtual_nodes]:-0} readout=${OPTS[gnn.readout_mlp]:-mlp_graph}"
 
 exec python main.py \
     --cfg "${CFG}" \

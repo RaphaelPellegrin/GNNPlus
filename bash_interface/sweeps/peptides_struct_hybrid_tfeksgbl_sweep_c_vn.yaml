@@ -1,0 +1,42 @@
+# Peptides-struct phase-2 sweep C — virtual nodes + readout (tfeksgbl / rholn782 backbone).
+#
+# Anchor run: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/tfeksgbl
+# Fixed: a2g2 GINE+GGNN, L12/H96, d_h=16, reg from anchor
+#
+# Swept: add_virtual_nodes, num_virtual_nodes, readout_mlp, ffn
+# Metric: best/val_mae (minimize)
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: minimize
+  name: best/val_mae
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_tfeksgbl-peptides_struct-sweepC_vn
+
+early_terminate:
+  type: hyperband
+  min_iter: 40
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/peptides-struct-hybrid-rholn782-anchor.yaml
+  - --molecular=true
+  - --seed=2
+  - ${args}
+
+parameters:
+  add_virtual_nodes:
+    values: [true, false]
+  num_virtual_nodes:
+    values: [2, 4, 8]
+  hybrid_readout_mlp:
+    values: [pyramid, narrow2, linear, legacy]
+  gnn_ffn:
+    values: [true, false]

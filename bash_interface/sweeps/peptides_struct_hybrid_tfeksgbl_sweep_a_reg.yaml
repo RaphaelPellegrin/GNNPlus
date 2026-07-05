@@ -1,0 +1,46 @@
+# Peptides-struct phase-2 sweep A — regularization (tfeksgbl / rholn782 backbone).
+#
+# Anchor run: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/tfeksgbl
+# Fixed: a2g2 GINE+GGNN, L12/H96, d_h=16, VN=4, pyramid, ffn+skip, lr, ep=250
+#
+# Swept: attn_mask, norm, attn/mp dropout, gate, batch_size
+# Metric: best/val_mae (minimize)
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: minimize
+  name: best/val_mae
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_tfeksgbl-peptides_struct-sweepA_reg
+
+early_terminate:
+  type: hyperband
+  min_iter: 40
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/peptides-struct-hybrid-rholn782-anchor.yaml
+  - --molecular=true
+  - --seed=2
+  - ${args}
+
+parameters:
+  hybrid_attn_mask:
+    values: [full, graph_restricted]
+  hybrid_norm:
+    values: [layernorm, rmsnorm]
+  hybrid_attn_dropout:
+    values: [0, 0.1, 0.2]
+  hybrid_mp_dropout:
+    values: [0, 0.1, 0.2]
+  hybrid_gate:
+    values: [headwise, elementwise]
+  batch_size:
+    values: [32, 64]

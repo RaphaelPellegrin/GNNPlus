@@ -1,0 +1,46 @@
+# Peptides-struct phase-2 sweep B — architecture scale (tfeksgbl / rholn782 backbone).
+#
+# Anchor run: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/tfeksgbl
+# Fixed: a2g2 GINE+GGNN, attn=2, mp=2, VN=4, reg from anchor (full, layernorm, drop0)
+#
+# Swept: layers_mp, dim_inner, d_h, readout_mlp, ffn, residual
+# Metric: best/val_mae (minimize)
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: minimize
+  name: best/val_mae
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_tfeksgbl-peptides_struct-sweepB_scale
+
+early_terminate:
+  type: hyperband
+  min_iter: 40
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/peptides-struct-hybrid-rholn782-anchor.yaml
+  - --molecular=true
+  - --seed=2
+  - ${args}
+
+parameters:
+  hybrid_layers_mp:
+    values: [8, 10, 12, 14]
+  hybrid_dim_inner:
+    values: [64, 96, 128]
+  hybrid_d_h:
+    values: [16, 32, 64]
+  hybrid_readout_mlp:
+    values: [pyramid, narrow2, linear, legacy]
+  gnn_ffn:
+    values: [true, false]
+  gnn_residual:
+    values: [true, false]

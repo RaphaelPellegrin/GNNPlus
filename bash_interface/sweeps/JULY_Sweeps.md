@@ -215,3 +215,23 @@ cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 bash bash_interface/cluster/submit_peptides_func_hybrid_3g180qle_a1g8_paper_repro.sh
 ```
+
+---
+
+## Phase-2 sweeps — tfeksgbl / rholn782 backbone ([tfeksgbl](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/tfeksgbl))
+
+Anchor: `configs/gated_hybrid/peptides-struct-hybrid-rholn782-anchor.yaml` (a2g2 GINE+GGNN, L12/H96, VN=4)
+
+| Sweep | YAML | Swept |
+|-------|------|-------|
+| **A reg** | `peptides_struct_hybrid_tfeksgbl_sweep_a_reg.yaml` | attn_mask, norm, dropouts, gate, batch |
+| **B scale** | `peptides_struct_hybrid_tfeksgbl_sweep_b_scale.yaml` | layers_mp, dim_inner, d_h, readout, ffn, residual |
+| **C vn** | `peptides_struct_hybrid_tfeksgbl_sweep_c_vn.yaml` | add_virtual_nodes, num_vn, readout, ffn |
+
+**12 GPUs max** (4 per sweep):
+
+```bash
+bash bash_interface/sweeps/launch_peptides_struct_tfeksgbl_phase2_sweeps.sh --create
+# relaunch only:
+bash bash_interface/sweeps/launch_peptides_struct_tfeksgbl_phase2_sweeps.sh
+```

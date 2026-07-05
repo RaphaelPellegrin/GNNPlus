@@ -97,6 +97,11 @@ elif [[ "${_yaml_stem}" == *_hybrid_rholn782_mp_sweep ]]; then
     RUNS_PER_AGENT=3
     ARRAY_SPEC="1-16%4"
     TIME_LIMIT="240:00:00"
+elif [[ "${_yaml_stem}" == peptides_struct_hybrid_tfeksgbl_sweep_* ]]; then
+    DATASET_SLUG="peptides_struct"
+    RUNS_PER_AGENT=3
+    ARRAY_SPEC="1-16%4"
+    TIME_LIMIT="240:00:00"
 elif [[ "${_yaml_stem}" == *_best_hybrid_sweep ]]; then
     DATASET_SLUG="${_yaml_stem%%_best_hybrid_sweep}"
 else
