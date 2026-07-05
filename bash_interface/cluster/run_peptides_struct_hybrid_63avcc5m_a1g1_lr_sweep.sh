@@ -52,17 +52,17 @@ seed=$((idx % num_seeds))
 case "${lr_idx}" in
     0)
         base_lr="0.0005583531449037443"
-        min_lr="0"
+        min_lr="0.0"
         lr_tag="b558_m0"
         ;;
     1)
         base_lr="0.0007"
-        min_lr="0"
+        min_lr="0.0"
         lr_tag="b7_m0"
         ;;
     2)
         base_lr="0.0009"
-        min_lr="0"
+        min_lr="0.0"
         lr_tag="b9_m0"
         ;;
     3)
