@@ -1,0 +1,85 @@
+# PATTERN hybrid anchor — frozen hyperparams from run ta9qtxb9.
+#
+# Source run: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ta9qtxb9
+# Architecture: a2g2 — 2×attn + 2×GCNE MP, d_h=90, elementwise gate, rmsnorm,
+#   graph_restricted mask, LinearNode+RWSE, no VN, ep=200.
+# Source test accuracy-SBM (seed 0): 0.87129
+#
+# LR ablation: submit_pattern_hybrid_ta9qtxb9_lr_sweep.sh
+out_dir: results
+metric_best: accuracy-SBM
+wandb:
+  use: False
+  project: GNNPlus
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - pattern
+    - anchor_ta9qtxb9
+    - hybrid_a2g2
+    - gcne
+    - rwse
+    - gate_elementwise
+    - graph_restricted
+dataset:
+  format: PyG-GNNBenchmarkDataset
+  name: PATTERN
+  task: graph
+  task_type: classification
+  transductive: False
+  split_mode: standard
+  add_virtual_nodes: False
+  num_virtual_nodes: 0
+  node_encoder: True
+  node_encoder_name: LinearNode+RWSE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: DummyEdge
+  edge_encoder_bn: False
+posenc_RWSE:
+  enable: True
+  kernel:
+    times_func: range(1,33)
+  model: Linear
+  raw_norm_type: BatchNorm
+train:
+  mode: custom
+  batch_size: 32
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: hybrid_gnn
+  loss_fun: weighted_cross_entropy
+  edge_decoding: dot
+gnn:
+  head: inductive_node
+  layers_mp: 12
+  layers_pre_mp: 0
+  layers_post_mp: 3
+  dim_inner: 90
+  act: relu
+  dropout: 0.05
+  agg: mean
+  ffn: True
+  residual: True
+  hybrid:
+    num_attn_heads: 2
+    num_gnn_heads: 2
+    d_h: 90
+    attn_mask: graph_restricted
+    gate: elementwise
+    norm: rmsnorm
+    gnn_types: "GCNE,GCNE"
+    attn_dropout: 0.2
+    mp_dropout: 0.15
+    block_bn: false
+    log_gate_stats: True
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 1.0e-5
+  base_lr: 0.0022173922801332815
+  min_lr: 0.0
+  max_epoch: 200
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 5
