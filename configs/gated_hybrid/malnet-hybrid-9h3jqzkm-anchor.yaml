@@ -1,0 +1,81 @@
+# MalNet-Tiny hybrid anchor — frozen hyperparams from run 9h3jqzkm / paper repro apiw6l3u.
+#
+# Source run: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/apiw6l3u
+# Lineage: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/9h3jqzkm
+# Architecture: a0g2 — 0×attn + 2×GCNE MP, d_h=110, elementwise gate, rmsnorm,
+#   graph_restricted mask, L8, graph head, ep=250 (LR ablation).
+# Source test accuracy (seed 2, ep=150): 0.944
+#
+# LR ablation: submit_malnet_hybrid_9h3jqzkm_lr_sweep.sh
+out_dir: results
+metric_best: accuracy
+wandb:
+  use: False
+  project: GNNPlus
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - malnet
+    - anchor_9h3jqzkm
+    - hybrid_a0g2
+    - gcne
+    - gate_elementwise
+    - graph_restricted
+dataset:
+  format: PyG-MalNetTiny
+  name: LocalDegreeProfile
+  task: graph
+  task_type: classification
+  transductive: False
+  split_mode: standard
+  node_encoder: False
+  node_encoder_name: Atom
+  node_encoder_bn: True
+  edge_encoder: True
+  edge_encoder_name: DummyEdge
+  edge_encoder_bn: False
+  add_virtual_nodes: False
+  num_virtual_nodes: 0
+train:
+  mode: custom
+  batch_size: 16
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: hybrid_gnn
+  loss_fun: cross_entropy
+  edge_decoding: dot
+  graph_pooling: max
+gnn:
+  head: graph
+  layers_mp: 8
+  layers_pre_mp: 1
+  layers_post_mp: 1
+  dim_inner: 110
+  act: relu
+  dropout: 0.0
+  agg: mean
+  ffn: False
+  residual: True
+  batchnorm: True
+  hybrid:
+    num_attn_heads: 0
+    num_gnn_heads: 2
+    d_h: 110
+    attn_mask: graph_restricted
+    gate: elementwise
+    norm: rmsnorm
+    gnn_types: "GCNE"
+    attn_dropout: 0.1
+    mp_dropout: 0.05
+    block_bn: false
+    log_gate_stats: True
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 1.0e-5
+  base_lr: 0.0019142361730964056
+  min_lr: 1.0e-6
+  max_epoch: 250
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10
