@@ -1,0 +1,79 @@
+# PATTERN hybrid sweep — ta9qtxb9 anchor (best test accuracy-SBM ≈ 0.871).
+#
+# Source run: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ta9qtxb9
+# GCNE+GINE reference: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/4iojhpts
+#
+# Fixed from anchor (pattern-gcne-best-hybrid.yaml):
+#   a2g2 lineage, L12, d_h=90, elementwise gate, rmsnorm, graph_restricted mask,
+#   mp_dropout=0.15, LinearNode+RWSE, no VN, ep=200, seed=0.
+#
+# Swept:
+#   optim.base_lr          log-uniform around ta9qtxb9 (2.217e-3)
+#   hybrid_num_attn_heads  1, 2, 4
+#   hybrid_gnn_types       2 / 4 / 8 MP heads — GCNE & GINE mixes (num_gnn_heads inferred)
+#   hybrid_attn_dropout    uniform around 0.2
+#   hybrid_d_h             64, 90, 128
+#   hybrid_dim_inner       64, 90, 128  (keep width in sync when possible)
+#
+# Metric: best/val_accuracy-SBM (validation; not test).
+#
+# Create + launch (cluster login):
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/pattern_hybrid_ta9qtxb9_gcne_gine_sweep.yaml
+#   SWEEP_SLURM_TIME=96:00:00 SWEEP_ARRAY_TASKS=16 SWEEP_ARRAY_PARALLEL=4 RUNS_PER_AGENT=3 \
+#     bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+#       pattern weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: maximize
+  name: best/val_accuracy-SBM
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_hybrid_gated-pattern-ta9qtxb9-gcne_gine
+
+early_terminate:
+  type: hyperband
+  min_iter: 30
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/pattern-gcne-best-hybrid.yaml
+  - --molecular=false
+  - --seed=0
+  - ${args}
+
+parameters:
+  optim.base_lr:
+    distribution: log_uniform_values
+    min: 0.0005
+    max: 0.005
+  hybrid_num_attn_heads:
+    values: [1, 2, 4]
+  hybrid_gnn_types:
+    values:
+      # 2 MP heads (anchor + 4iojhpts-style mix)
+      - "GCNE,GCNE"
+      - "GCNE,GINE"
+      - "GINE,GINE"
+      # 4 MP heads
+      - "GCNE,GCNE,GCNE,GCNE"
+      - "GCNE,GCNE,GCNE,GINE"
+      - "GINE,GINE,GCNE,GCNE"
+      # 8 MP heads
+      - "GCNE,GCNE,GCNE,GCNE,GCNE,GCNE,GCNE,GCNE"
+      - "GCNE,GCNE,GCNE,GCNE,GINE,GINE,GINE,GINE"
+  hybrid_attn_dropout:
+    distribution: uniform
+    min: 0.05
+    max: 0.35
+  hybrid_d_h:
+    values: [64, 90, 128]
+  hybrid_dim_inner:
+    values: [64, 90, 128]
