@@ -1,0 +1,60 @@
+# CLUSTER hybrid sweep — ht9bntg2 / vkno6rq8 anchor (GATEDGCN MP family).
+#
+# Source run: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/vkno6rq8
+# Fixed from anchor: L16, dim_inner=56, headwise gate, layernorm, full mask,
+#   GATEDGCN MP, mp_dropout=0.2, attn_dropout=0.1, ep=100, seed=3.
+#
+# Swept:
+#   hybrid_num_gnn_heads   0, 1, 2, 4  (0 = attention-only block)
+#   hybrid_num_attn_heads  0, 1, 2     (0 = MP-only block)
+#   optim.base_lr          log-uniform around 0.001492
+#   hybrid_d_h             48, 64, 80
+#
+# Requires num_attn_heads + num_gnn_heads >= 1 (Bayes may rarely sample 0+0 → crash).
+# Metric: best/val_accuracy-SBM (validation; not test).
+#
+# Create + launch (cluster login):
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/cluster_hybrid_ht9bntg2_sweep.yaml
+#   SWEEP_SLURM_TIME=96:00:00 SWEEP_ARRAY_TASKS=16 SWEEP_ARRAY_PARALLEL=4 RUNS_PER_AGENT=3 \
+#     bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+#       cluster weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: maximize
+  name: best/val_accuracy-SBM
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_hybrid_gated-cluster-ht9bntg2
+
+early_terminate:
+  type: hyperband
+  min_iter: 25
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/cluster-hybrid-ht9bntg2-anchor.yaml
+  - --molecular=false
+  - --seed=3
+  - ${args}
+
+parameters:
+  hybrid_gnn_types:
+    value: GATEDGCN
+  hybrid_num_gnn_heads:
+    values: [0, 1, 2, 4]
+  hybrid_num_attn_heads:
+    values: [0, 1, 2]
+  optim.base_lr:
+    distribution: log_uniform_values
+    min: 0.0004
+    max: 0.004
+  hybrid_d_h:
+    values: [48, 64, 80]
