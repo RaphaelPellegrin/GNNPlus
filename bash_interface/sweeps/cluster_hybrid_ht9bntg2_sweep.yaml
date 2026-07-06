@@ -55,6 +55,6 @@ parameters:
   optim.base_lr:
     distribution: log_uniform_values
     min: 0.0004
-    max: 0.004
+    max: 0.006
   hybrid_d_h:
     values: [48, 64, 80]
