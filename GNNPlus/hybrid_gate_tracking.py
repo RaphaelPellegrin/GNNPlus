@@ -22,6 +22,8 @@ def hybrid_gate_logging_enabled() -> bool:
         if hybrid_cfg is None:
             return False
         return bool(getattr(hybrid_cfg, 'log_gate_stats', True))
+    if model_type == 'custom_gnn_gated':
+        return bool(getattr(cfg.gnn, 'log_gate_stats', False))
     if model_type == 'custom_gnn':
         if str(getattr(cfg.gnn, 'layer_type', '')) != 'gcne':
             return False

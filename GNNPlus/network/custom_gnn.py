@@ -73,3 +73,8 @@ class CustomGNN(torch.nn.Module):
             if gate_mean is not None:
                 stats[f'layer{layer_idx}/gcne_gate_mean'] = float(gate_mean)
         return stats
+
+
+@register_network('custom_gnn_gated')
+class CustomGNNGated(CustomGNN):
+    """``custom_gnn`` with per-layer γ gates on GCNE (fairness ladder level 1)."""

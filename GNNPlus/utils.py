@@ -135,7 +135,7 @@ def make_wandb_name(cfg):
     
     # Format model name.
     model_name = cfg.model.type
-    if cfg.model.type in ['gnn', 'custom_gnn']:
+    if cfg.model.type in ['gnn', 'custom_gnn', 'custom_gnn_gated']:
         model_name += f".{cfg.gnn.layer_type}"
     elif cfg.model.type == 'hybrid_gnn':
         ha = cfg.gnn.hybrid.num_attn_heads

@@ -38,7 +38,7 @@ train:
   eval_period: 1
   ckpt_period: 100
 model:
-  type: custom_gnn
+  type: custom_gnn_gated
   loss_fun: l1
   edge_decoding: dot
   graph_pooling: add
