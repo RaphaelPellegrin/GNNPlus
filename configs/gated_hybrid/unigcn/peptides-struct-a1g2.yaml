@@ -1,0 +1,76 @@
+# Peptides-struct: hybrid a1g2 — 1×attn + gated UniGCN + GINE MP heads.
+out_dir: results
+metric_best: mae
+metric_agg: argmin
+wandb:
+  use: False
+  project: GNNPlus
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - unigcn
+    - peptides_struct
+    - hybrid_a1g2
+    - gine
+dataset:
+  format: OGB
+  name: peptides-structural
+  task: graph
+  task_type: regression
+  transductive: False
+  node_encoder: True
+  node_encoder_name: Atom+RWSE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: Bond
+  edge_encoder_bn: False
+posenc_RWSE:
+  enable: True
+  kernel:
+    times_func: range(1,33)
+  model: Linear
+  dim_pe: 28
+  raw_norm_type: BatchNorm
+train:
+  mode: custom
+  batch_size: 32
+  eval_period: 1
+  ckpt_period: 100
+  eval_smoothing_metrics: False
+model:
+  type: hybrid_gnn
+  loss_fun: l1
+  graph_pooling: mean
+gnn:
+  head: mlp_graph
+  ffn: False
+  layers_pre_mp: 0
+  layers_mp: 5
+  layers_post_mp: 3
+  dim_inner: 255
+  act: gelu
+  residual: False
+  dropout: 0.2
+  use_hermitian: False
+  unitary_taylor_order: 16
+  unitary_return_real: True
+  hybrid:
+    num_attn_heads: 1
+    num_gnn_heads: 2
+    d_h: 64
+    attn_mask: full
+    gate: headwise
+    norm: layernorm
+    gnn_types: "UNIGCN,GINE"
+    attn_dropout: 0.1
+    mp_dropout: 0.2
+    block_bn: false
+    log_gate_stats: True
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 0.0
+  base_lr: 0.001
+  max_epoch: 300
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 5

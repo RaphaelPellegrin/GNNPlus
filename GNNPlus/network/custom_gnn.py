@@ -53,6 +53,9 @@ class CustomGNN(torch.nn.Module):
         elif model_type == 'gcne':
             from GNNPlus.layer.gcn_conv_layer_e import GCNConvLayer
             return GCNConvLayer
+        elif model_type in ('unitarygcn', 'unigcn', 'unitarygcnconv'):
+            from GNNPlus.layer.unitary_conv_layer import UnitaryGCNConvLayer
+            return UnitaryGCNConvLayer
         else:
             raise ValueError("Model {} unavailable".format(model_type))
 

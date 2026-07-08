@@ -42,6 +42,7 @@ def _build_gin_conv(in_dim: int, out_dim: int) -> GINConv:
 
 from GNNPlus.layer.gcn_conv_layer_e import GCNConvLayer, GCNConvWithEdges
 from GNNPlus.layer.gatedgcn_layer import GatedGCNLayer
+from GNNPlus.layer.unitary_conv_layer import build_unitary_taylor_conv
 from torch_geometric.graphgym.config import cfg
 
 
@@ -298,6 +299,41 @@ class _GatedGraphHybridMPHead(nn.Module):
         return F.dropout(out, p=self._gnn_dropout, training=self.training)
 
 
+class _UnitaryGCNHybridMPHead(nn.Module):
+    """Message-passing head using Taylor unitary GCN at hidden width ``d_h``."""
+
+    def __init__(
+        self,
+        d_h: int,
+        *,
+        gnn_dropout: float = 0.0,
+        use_hermitian: bool = False,
+        taylor_order: int = 16,
+    ) -> None:
+        super().__init__()
+        self.d_h = d_h
+        self.conv = build_unitary_taylor_conv(
+            d_h,
+            d_h,
+            use_hermitian=use_hermitian,
+            taylor_order=taylor_order,
+            return_real=True,
+            conv_bias=False,
+        )
+        self._gnn_dropout = float(gnn_dropout)
+
+    def forward(
+        self,
+        x_h: Tensor,
+        edge_index: Tensor,
+        edge_attr: Optional[Tensor] = None,
+    ) -> Tensor:
+        """Run UniGCN on hidden features (edge attributes are ignored)."""
+        del edge_attr
+        out = self.conv(x_h, edge_index)
+        return F.dropout(out, p=self._gnn_dropout, training=self.training)
+
+
 class _ProjectedMPHead(nn.Module):
     """Projected MP head with shared-source gating (hidden + gate from one linear).
 
@@ -399,11 +435,21 @@ class _ProjectedMPHead(nn.Module):
                 nn.Module,
                 _ResGatedHybridMPHead(d_h, gnn_dropout=gnn_dropout),
             )
+        elif self.kind in ("UNIGCN", "UNITARYGCN", "UNITARYGCNCONV"):
+            self.conv = cast(
+                nn.Module,
+                _UnitaryGCNHybridMPHead(
+                    d_h,
+                    gnn_dropout=gnn_dropout,
+                    use_hermitian=bool(cfg.gnn.use_hermitian),
+                    taylor_order=int(cfg.gnn.unitary_taylor_order),
+                ),
+            )
         else:
             raise ValueError(
                 f"Unknown MP head type: {kind!r} "
                 "(expected GCN, GCNE, GCNE_CONV, GIN, GINE, GGNN, "
-                "GATEDGCN, RESGATEDGCN, SAGE, or GAT)"
+                "GATEDGCN, RESGATEDGCN, UNIGCN, SAGE, or GAT)"
             )
 
     def forward(
@@ -434,6 +480,7 @@ class _ProjectedMPHead(nn.Module):
                 _GINEHybridMPHead,
                 _GatedGraphHybridMPHead,
                 _ResGatedHybridMPHead,
+                _UnitaryGCNHybridMPHead,
             ),
         ):
             raw = self.conv(h, edge_index, edge_attr)
