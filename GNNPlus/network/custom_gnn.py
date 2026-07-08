@@ -5,6 +5,8 @@ from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.models.gnn import FeatureEncoder, GNNPreMP
 from torch_geometric.graphgym.register import register_network
 
+from typing import Any, Dict
+
 from GNNPlus.layer.gatedgcn_layer import GatedGCNLayer
 from GNNPlus.layer.gine_conv_layer import GINEConvLayer
 
@@ -58,3 +60,16 @@ class CustomGNN(torch.nn.Module):
         for module in self.children():
             batch = module(batch)
         return batch
+
+    def collect_gate_stats(self, batch: Any) -> Dict[str, float]:
+        """Run encoder + MP layers; return per-layer GCNE gate means."""
+        batch = self.encoder(batch)
+        if hasattr(self, 'pre_mp'):
+            batch = self.pre_mp(batch)
+        stats: dict[str, float] = {}
+        for layer_idx, layer in enumerate(self.gnn_layers):
+            batch = layer(batch)
+            gate_mean = getattr(layer, 'last_gate_mean', None)
+            if gate_mean is not None:
+                stats[f'layer{layer_idx}/gcne_gate_mean'] = float(gate_mean)
+        return stats

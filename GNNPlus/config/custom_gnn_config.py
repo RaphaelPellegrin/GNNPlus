@@ -15,3 +15,8 @@ def custom_gnn_cfg(cfg):
     # Empty / mlp_graph: legacy ``layers_post_mp`` same-width hidden stack.
     # linear | narrow2 | pyramid | deep4
     cfg.gnn.readout_mlp = ''
+
+    # Optional output gating on ``gcne`` / ``gcn`` layers (Level-1 fairness repro).
+    # Values: '' (none) | headwise | elementwise
+    cfg.gnn.gate = ''
+    cfg.gnn.log_gate_stats = False

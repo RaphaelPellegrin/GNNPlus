@@ -16,12 +16,20 @@ def hybrid_gate_logging_enabled() -> bool:
     """Return whether gate means should be logged this run."""
     if not bool(getattr(cfg.wandb, 'use', False)):
         return False
-    if str(getattr(cfg.model, 'type', '')) != 'hybrid_gnn':
-        return False
-    hybrid_cfg = getattr(cfg.gnn, 'hybrid', None)
-    if hybrid_cfg is None:
-        return False
-    return bool(getattr(hybrid_cfg, 'log_gate_stats', True))
+    model_type = str(getattr(cfg.model, 'type', ''))
+    if model_type == 'hybrid_gnn':
+        hybrid_cfg = getattr(cfg.gnn, 'hybrid', None)
+        if hybrid_cfg is None:
+            return False
+        return bool(getattr(hybrid_cfg, 'log_gate_stats', True))
+    if model_type == 'custom_gnn':
+        if str(getattr(cfg.gnn, 'layer_type', '')) != 'gcne':
+            return False
+        gate = str(getattr(cfg.gnn, 'gate', '') or '').lower()
+        if gate not in ('headwise', 'elementwise'):
+            return False
+        return bool(getattr(cfg.gnn, 'log_gate_stats', False))
+    return False
 
 
 def _unwrap_model(model: nn.Module) -> nn.Module:
@@ -93,11 +101,12 @@ def build_hybrid_gate_wandb_log(
             sample_batch = sample_batch.to(device)
             stats = collect_hybrid_gate_stats(model, sample_batch)
             if not stats:
+                gate_hint = getattr(cfg.gnn.hybrid, 'gate', '?') if hasattr(cfg.gnn, 'hybrid') else getattr(cfg.gnn, 'gate', '?')
                 logging.warning(
                     'Hybrid gate stats: collect_gate_stats returned no values '
                     '(model=%s, gate=%s).',
                     type(core).__name__,
-                    getattr(cfg.gnn.hybrid, 'gate', '?'),
+                    gate_hint,
                 )
                 return {}
             gate_log = {f'gates/{key}': float(val) for key, val in stats.items()}
