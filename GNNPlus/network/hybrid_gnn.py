@@ -77,6 +77,7 @@ class HybridGNN(torch.nn.Module):
             num_gnn,
         )
 
+        hybrid_residual = bool(getattr(hcfg, 'residual', True))
         self.layers = nn.ModuleList([
             GatedHybridGraphLayer(
                 d_model=cfg.gnn.dim_inner,
@@ -91,6 +92,7 @@ class HybridGNN(torch.nn.Module):
                 mp_gnn_dropout=mp_drop,
                 block_bn=bool(hcfg.block_bn),
                 block_dropout=mp_drop,
+                residual=hybrid_residual,
             )
             for _ in range(cfg.gnn.layers_mp)
         ])

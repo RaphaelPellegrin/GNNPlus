@@ -25,7 +25,7 @@ from torch_geometric.utils import to_undirected
 
 AttnMaskType = Literal["full", "graph_restricted"]
 GateMode = Literal["elementwise", "headwise"]
-NormType = Literal["layernorm", "rmsnorm"]
+NormType = Literal["layernorm", "rmsnorm", "none"]
 
 
 def _build_gin_conv(in_dim: int, out_dim: int) -> GINConv:
@@ -496,9 +496,9 @@ def _graph_adjacency_mask(
 
 
 class GatedHybridGraphLayer(nn.Module):
-    """Hybrid block: gated attention heads + gated message-passing heads + residual.
+    """Hybrid block: gated attention heads + gated message-passing heads.
 
-    See Heterogeneity_Profile ``gated_hybrid_layer.py`` for design notes.
+    Optional pre-norm (LN/RMS) and optional residual after fuse/out_proj.
     """
 
     def __init__(
@@ -515,6 +515,7 @@ class GatedHybridGraphLayer(nn.Module):
         mp_gnn_dropout: float = 0.0,
         block_bn: bool = False,
         block_dropout: float = 0.0,
+        residual: bool = True,
     ) -> None:
         super().__init__()
         if num_attn_heads < 0 or num_gnn_heads < 0:
@@ -534,9 +535,10 @@ class GatedHybridGraphLayer(nn.Module):
         self._mp_gnn_dropout = float(mp_gnn_dropout)
         self.block_bn = bool(block_bn)
         self._block_dropout = float(block_dropout)
+        self.residual = bool(residual)
 
         self.norm: nn.Module
-        if self.block_bn:
+        if self.block_bn or norm_type in ("none", "identity", ""):
             self.norm = nn.Identity()
         elif norm_type == "layernorm":
             self.norm = nn.LayerNorm(d_model)
@@ -707,7 +709,8 @@ class GatedHybridGraphLayer(nn.Module):
                 assert self.norm1_attn is not None
                 h_attn = self.out_proj_attn(torch.cat(attn_outputs, dim=-1))
                 h_attn = self.dropout_attn(h_attn)
-                h_attn = x + h_attn
+                if self.residual:
+                    h_attn = x + h_attn
                 h_attn = self.norm1_attn(h_attn)
                 branch_outs.append(h_attn)
             if self.num_gnn_heads > 0:
@@ -716,7 +719,8 @@ class GatedHybridGraphLayer(nn.Module):
                 assert self.norm1_local is not None
                 h_mp = self.out_proj_mp(torch.cat(mp_outputs, dim=-1))
                 h_mp = self.dropout_local(h_mp)
-                h_mp = x + h_mp
+                if self.residual:
+                    h_mp = x + h_mp
                 h_mp = self.norm1_local(h_mp)
                 branch_outs.append(h_mp)
             if len(branch_outs) == 1:
@@ -730,7 +734,7 @@ class GatedHybridGraphLayer(nn.Module):
             if len(fused_inputs) == 0:
                 raise RuntimeError("gated hybrid layer has no head outputs")
             fused = cast(Tensor, self.out_proj(torch.cat(fused_inputs, dim=-1)))
-            out = x + fused
+            out = x + fused if self.residual else fused
 
         aux: Dict[str, Any] = {}
         if return_gate_stats:
