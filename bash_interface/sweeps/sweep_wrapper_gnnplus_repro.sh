@@ -6,6 +6,8 @@
 #
 #   repro_variant=baseline     → original GNN+ yaml (custom_gnn)
 #   repro_variant=hybrid_attn1 → gated_hybrid *-repro-a1.yaml (1 MP + 1 attn)
+#   repro_variant=hybrid_a0g1  → 0 attn + 1×GCNE MP (gated MP only)
+#   repro_variant=hybrid_a0g2  → 0 attn + 2×GCNE MP (gated MP only)
 #
 # Leading arg: --dataset=cifar10 | mnist | peptides_func
 # W&B may also pass: --hybrid_d_h=128, --optim.base_lr=..., etc.
@@ -18,6 +20,7 @@ cd "${REPO_ROOT}"
 
 DATASET="${SWEEP_DATASET:-cifar10}"
 VARIANT="${REPRO_VARIANT:-baseline}"
+REPRO_TASK=""
 REPEAT=1
 HYBRID_DH=""
 
@@ -45,6 +48,13 @@ while [ "$#" -gt 0 ]; do
             ;;
         --repro_variant)
             VARIANT="${1:?missing --repro_variant value}"
+            shift
+            ;;
+        --repro_task=*)
+            REPRO_TASK="${tok#--repro_task=}"
+            ;;
+        --repro_task)
+            REPRO_TASK="${1:?missing --repro_task value}"
             shift
             ;;
         --repeat=*)
@@ -87,6 +97,22 @@ while [ "$#" -gt 0 ]; do
             ;;
     esac
 done
+
+if [ -n "${REPRO_TASK}" ]; then
+    case "${REPRO_TASK}" in
+        baseline) VARIANT="baseline" ;;
+        hybrid_a0g1_dh128) VARIANT="hybrid_a0g1"; HYBRID_DH="128"; _set_opt "gnn.hybrid.d_h" "128" ;;
+        hybrid_a0g1_dh192) VARIANT="hybrid_a0g1"; HYBRID_DH="192"; _set_opt "gnn.hybrid.d_h" "192" ;;
+        hybrid_a0g1_dh275) VARIANT="hybrid_a0g1"; HYBRID_DH="275"; _set_opt "gnn.hybrid.d_h" "275" ;;
+        hybrid_a0g2_dh128) VARIANT="hybrid_a0g2"; HYBRID_DH="128"; _set_opt "gnn.hybrid.d_h" "128" ;;
+        hybrid_a0g2_dh192) VARIANT="hybrid_a0g2"; HYBRID_DH="192"; _set_opt "gnn.hybrid.d_h" "192" ;;
+        hybrid_a0g2_dh275) VARIANT="hybrid_a0g2"; HYBRID_DH="275"; _set_opt "gnn.hybrid.d_h" "275" ;;
+        *)
+            echo "Unknown repro_task: ${REPRO_TASK}" >&2
+            exit 2
+            ;;
+    esac
+fi
 
 CFG=""
 SEED="0"
@@ -145,6 +171,18 @@ case "${DATASET}" in
                 WANDB_NAME="peptides-func_gcn_seed2_repro_hybrid_attn1"
                 EXTRA_ARGS+=(gnn.hybrid.log_gate_stats True)
                 ;;
+            hybrid_a0g1)
+                CFG="configs/gated_hybrid/peptides-func-gcn-repro-a0g1.yaml"
+                SEED="2"
+                WANDB_NAME="peptides-func_gcn_seed2_repro_hybrid_a0g1"
+                EXTRA_ARGS+=(gnn.hybrid.log_gate_stats True)
+                ;;
+            hybrid_a0g2)
+                CFG="configs/gated_hybrid/peptides-func-gcn-repro-a0g2.yaml"
+                SEED="2"
+                WANDB_NAME="peptides-func_gcn_seed2_repro_hybrid_a0g2"
+                EXTRA_ARGS+=(gnn.hybrid.log_gate_stats True)
+                ;;
             *)
                 echo "Unknown repro_variant for peptides_func: ${VARIANT}" >&2
                 exit 2
@@ -157,7 +195,7 @@ case "${DATASET}" in
         ;;
 esac
 
-if [ -n "${HYBRID_DH}" ] && [ "${VARIANT}" = "hybrid_attn1" ]; then
+if [ -n "${HYBRID_DH}" ] && [[ "${VARIANT}" == hybrid_* ]]; then
     WANDB_NAME="${WANDB_NAME}_dh${HYBRID_DH}"
 fi
 
