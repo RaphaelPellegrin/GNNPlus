@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 
 import numpy as np
@@ -22,13 +23,20 @@ from GNNPlus.hybrid_gate_tracking import (
 
 
 def _parse_wandb_tags() -> list[str]:
-    """Return W&B tags from ``cfg.wandb.tags`` (list or comma-separated string)."""
+    """Return W&B tags from ``cfg.wandb.tags`` plus optional ``WANDB_EXTRA_TAGS`` env."""
+    tags: list[str] = []
     raw = getattr(cfg.wandb, 'tags', None)
-    if raw is None or raw == '' or raw == []:
-        return []
-    if isinstance(raw, (list, tuple)):
-        return [str(tag).strip() for tag in raw if str(tag).strip()]
-    return [part.strip() for part in str(raw).split(',') if part.strip()]
+    if raw is not None and raw != '' and raw != []:
+        if isinstance(raw, (list, tuple)):
+            tags.extend(str(tag).strip() for tag in raw if str(tag).strip())
+        else:
+            tags.extend(
+                part.strip() for part in str(raw).split(',') if part.strip()
+            )
+    extra = os.environ.get('WANDB_EXTRA_TAGS', '').strip()
+    if extra:
+        tags.extend(part.strip() for part in extra.split(',') if part.strip())
+    return tags
 
 def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation):
     model.train()

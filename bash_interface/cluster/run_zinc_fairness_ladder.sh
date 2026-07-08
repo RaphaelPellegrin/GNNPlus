@@ -95,6 +95,9 @@ if [ -n "${GNNPLUS_DATASET_DIR:-}" ]; then
     extra_args+=(dataset.dir "${GNNPLUS_DATASET_DIR}")
 fi
 
+# YACS cannot override yaml list fields via CLI (wandb.tags); use env instead.
+export WANDB_EXTRA_TAGS="${wandb_tags}"
+
 exec python main.py \
     --cfg "${cfg}" \
     --repeat 1 \
@@ -104,5 +107,4 @@ exec python main.py \
     wandb.project GNNPlus \
     wandb.group "${wandb_group}" \
     wandb.name "${wandb_name}" \
-    wandb.tags "${wandb_tags}" \
     "${extra_args[@]}"
