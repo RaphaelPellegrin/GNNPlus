@@ -20,4 +20,7 @@ def gated_hybrid_cfg(cfg: CN) -> None:
     cfg.gnn.hybrid.block_bn = False
     # Block residual after fuse/out_proj (default True). Set False for L2bis ablations.
     cfg.gnn.hybrid.residual = True
+    # When True (a0g1 + d_h == d), skip in/out Linear maps so MP runs on full-width x.
+    # Gate uses a separate Linear (Level-1 style), not split(W_hg · x).
+    cfg.gnn.hybrid.identity_proj = False
     cfg.gnn.hybrid.log_gate_stats = True  # W&B gates/layer*/attn_* (headwise + elementwise)

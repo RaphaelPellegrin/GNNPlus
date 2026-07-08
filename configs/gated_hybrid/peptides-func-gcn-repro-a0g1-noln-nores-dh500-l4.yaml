@@ -1,6 +1,6 @@
-# Peptides-func Level 2bis: hybrid a0g1 WITHOUT LayerNorm and WITHOUT block residual.
-# Still clearly hybrid_gnn: LN→proj→gated GCNE→out_proj structure, minus pre-norm/skip.
-# Same outer hyperparams as configs/gcn/peptides-func.yaml (300 ep, lr=1e-3).
+# Peptides-func Level 2bisbis: hybrid a0g1, no LN, no residual,
+# wider MP proj (d_h=500) and deeper stack (4× GCNE hybrid blocks).
+# Hypothesis probe: projection bottleneck / capacity may be hurting L2/L2bis.
 out_dir: results
 metric_best: ap
 wandb:
@@ -10,11 +10,13 @@ wandb:
     - gnnplus
     - hybrid_gnn
     - fairness_ladder
-    - level2bis
-    - level_2bis
+    - level2bis_bis
+    - level_2bisbis
     - hybrid_a0g1
     - no_ln
     - no_residual
+    - dh500
+    - layers4
 dataset:
   format: OGB
   name: peptides-functional
@@ -47,7 +49,7 @@ gnn:
   head: mlp_graph
   ffn: False
   layers_pre_mp: 0
-  layers_mp: 3
+  layers_mp: 4
   layers_post_mp: 4
   dim_inner: 275
   act: gelu
@@ -56,7 +58,7 @@ gnn:
   hybrid:
     num_attn_heads: 0
     num_gnn_heads: 1
-    d_h: 275
+    d_h: 500
     attn_mask: full
     gate: headwise
     norm: none

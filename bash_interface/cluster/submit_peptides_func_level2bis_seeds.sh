@@ -3,7 +3,7 @@
 #
 # Still hybrid_gnn (proj → gated GCNE MP → out_proj), without pre-norm / block skip.
 #
-# Defaults: max 2 concurrent GPUs, --nice=10000.
+# Defaults: max 5 concurrent GPUs, --nice=10000.
 #
 # Usage:
 #   source ~/.gnnplus_env
@@ -21,7 +21,7 @@ mkdir -p logs_gnnplus
 
 NUM_TASKS="${LEVEL2BIS_NUM_TASKS:-10}"
 ARRAY_SPEC="${LEVEL2BIS_ARRAY:-1-${NUM_TASKS}}"
-PARALLEL="${LEVEL2BIS_PARALLEL:-2}"
+PARALLEL="${LEVEL2BIS_PARALLEL:-5}"
 NICE="${LEVEL2BIS_NICE:-10000}"
 MEM="${LEVEL2BIS_MEM:-64GB}"
 TIME="${LEVEL2BIS_TIME:-120:00:00}"
@@ -60,5 +60,5 @@ echo "  Logs:         logs_gnnplus/peptides_l2bis_${job_id}_<TASK>.log"
 echo ""
 echo "Aggregate:"
 echo "  python scripts/api_wanndb_query/aggregate_paper_repro.py \\"
-echo "    --group ${WANDB_GROUP} --metric best_test_perf --tag level_2bis"
+echo "    --group ${WANDB_GROUP} --metric best_test_perf --tag level2bis"
 echo ""

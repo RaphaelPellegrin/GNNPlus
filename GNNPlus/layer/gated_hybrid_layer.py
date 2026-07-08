@@ -299,7 +299,11 @@ class _GatedGraphHybridMPHead(nn.Module):
 
 
 class _ProjectedMPHead(nn.Module):
-    """Projected MP head with shared-source gating (hidden + gate from one linear)."""
+    """Projected MP head with shared-source gating (hidden + gate from one linear).
+
+    With ``identity_proj=True`` and ``d_h == d_model``, features pass through
+    unchanged and the gate is a separate linear (Level-1 style).
+    """
 
     def __init__(
         self,
@@ -309,15 +313,28 @@ class _ProjectedMPHead(nn.Module):
         gate_mode: GateMode,
         *,
         gnn_dropout: float = 0.0,
+        identity_proj: bool = False,
     ) -> None:
         super().__init__()
         self.kind = kind.upper()
         self.d_h = d_h
+        self.d_model = d_model
         self.gate_mode = gate_mode
         self._gnn_dropout = float(gnn_dropout)
+        self.identity_proj = bool(identity_proj)
+
+        if self.identity_proj and d_h != d_model:
+            raise ValueError(
+                f"identity_proj requires d_h == d_model (got d_h={d_h}, d_model={d_model})"
+            )
 
         gate_out = 1 if gate_mode == "headwise" else d_h
-        self.hg_proj = nn.Linear(d_model, d_h + gate_out)
+        if self.identity_proj:
+            self.hg_proj = None
+            self.gate_proj = nn.Linear(d_model, gate_out)
+        else:
+            self.hg_proj = nn.Linear(d_model, d_h + gate_out)
+            self.gate_proj = None
 
         if self.kind == "GCN":
             self.conv = cast(nn.Module, GCNConv(d_h, d_h))
@@ -396,11 +413,17 @@ class _ProjectedMPHead(nn.Module):
         edge_attr: Optional[Tensor] = None,
     ) -> Tuple[Tensor, Tensor]:
         """Return ``(gated_mp_output, gate_value)``."""
-        hg = self.hg_proj(x)
-        if self.gate_mode == "headwise":
-            h, g = torch.split(hg, [self.d_h, 1], dim=-1)
+        if self.identity_proj:
+            assert self.gate_proj is not None
+            h = x
+            g = self.gate_proj(x)
         else:
-            h, g = torch.split(hg, [self.d_h, self.d_h], dim=-1)
+            assert self.hg_proj is not None
+            hg = self.hg_proj(x)
+            if self.gate_mode == "headwise":
+                h, g = torch.split(hg, [self.d_h, 1], dim=-1)
+            else:
+                h, g = torch.split(hg, [self.d_h, self.d_h], dim=-1)
 
         if isinstance(
             self.conv,
@@ -428,6 +451,7 @@ def _make_mp_head(
     gate_mode: GateMode,
     *,
     gnn_dropout: float = 0.0,
+    identity_proj: bool = False,
 ) -> nn.Module:
     """Instantiate a projected MP head."""
     return _ProjectedMPHead(
@@ -436,6 +460,7 @@ def _make_mp_head(
         d_h=d_h,
         gate_mode=gate_mode,
         gnn_dropout=gnn_dropout,
+        identity_proj=identity_proj,
     )
 
 
@@ -516,6 +541,7 @@ class GatedHybridGraphLayer(nn.Module):
         block_bn: bool = False,
         block_dropout: float = 0.0,
         residual: bool = True,
+        identity_proj: bool = False,
     ) -> None:
         super().__init__()
         if num_attn_heads < 0 or num_gnn_heads < 0:
@@ -524,6 +550,18 @@ class GatedHybridGraphLayer(nn.Module):
             raise ValueError("Need at least one head total")
         if d_h < 1:
             raise ValueError("d_h must be positive")
+
+        use_identity = bool(identity_proj)
+        if use_identity:
+            if num_attn_heads != 0 or num_gnn_heads != 1:
+                raise ValueError(
+                    "identity_proj currently requires a0g1 "
+                    f"(got a{num_attn_heads}g{num_gnn_heads})"
+                )
+            if d_h != d_model:
+                raise ValueError(
+                    f"identity_proj requires d_h == d_model (got {d_h} vs {d_model})"
+                )
 
         self.d_model = d_model
         self.num_attn_heads = num_attn_heads
@@ -536,6 +574,7 @@ class GatedHybridGraphLayer(nn.Module):
         self.block_bn = bool(block_bn)
         self._block_dropout = float(block_dropout)
         self.residual = bool(residual)
+        self.identity_proj = use_identity
 
         self.norm: nn.Module
         if self.block_bn or norm_type in ("none", "identity", ""):
@@ -570,6 +609,7 @@ class GatedHybridGraphLayer(nn.Module):
                     d_h,
                     gate_mode,
                     gnn_dropout=self._mp_gnn_dropout,
+                    identity_proj=use_identity,
                 )
                 for t in types
             ]
@@ -599,6 +639,15 @@ class GatedHybridGraphLayer(nn.Module):
             self.dropout_local = (
                 nn.Dropout(self._block_dropout) if num_gnn_heads > 0 else None
             )
+        elif use_identity:
+            # a0g1 @ d_h==d: gated MP output already in R^d — no fuse Linear.
+            self.out_proj = nn.Identity()
+            self.out_proj_attn = None
+            self.out_proj_mp = None
+            self.norm1_attn = None
+            self.norm1_local = None
+            self.dropout_attn = None
+            self.dropout_local = None
         else:
             self.out_proj = nn.Linear(total_heads * d_h, d_model)
             self.out_proj_attn = None

@@ -1,6 +1,13 @@
-# Peptides-func Level 2bis: hybrid a0g1 WITHOUT LayerNorm and WITHOUT block residual.
-# Still clearly hybrid_gnn: LN→proj→gated GCNE→out_proj structure, minus pre-norm/skip.
-# Same outer hyperparams as configs/gcn/peptides-func.yaml (300 ep, lr=1e-3).
+# Peptides-func Level 2ter (= "2bis_bis 2"): SiGMA hybrid collapsed toward Level 1.
+#
+# Still model.type: hybrid_gnn (gated hybrid block API), but:
+#   - a0g1, d_h = dim_inner = 275
+#   - norm: none, residual: false
+#   - identity_proj: true  → NO Linear(d→d_h), NO out_proj Linear; GCNE on full x
+#   - gate: separate Linear(d→1) like Level 1 (not split(W_hg · x))
+#
+# Intended check: if this matches Level 1, the hybrid *projection* (not "being hybrid")
+# was the performance gap.
 out_dir: results
 metric_best: ap
 wandb:
@@ -10,11 +17,11 @@ wandb:
     - gnnplus
     - hybrid_gnn
     - fairness_ladder
-    - level2bis
-    - level_2bis
+    - level_2ter
     - hybrid_a0g1
     - no_ln
     - no_residual
+    - identity_proj
 dataset:
   format: OGB
   name: peptides-functional
@@ -61,6 +68,7 @@ gnn:
     gate: headwise
     norm: none
     residual: false
+    identity_proj: true
     gnn_types: "GCNE"
     attn_dropout: 0.1
     mp_dropout: 0.2
