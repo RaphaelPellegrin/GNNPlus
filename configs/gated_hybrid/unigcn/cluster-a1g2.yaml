@@ -64,6 +64,8 @@ gnn:
     attn_dropout: 0.1
     mp_dropout: 0.1
     block_bn: false
+    residual: true
+    identity_proj: false
     log_gate_stats: True
 optim:
   clip_grad_norm: True

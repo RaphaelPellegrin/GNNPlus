@@ -83,6 +83,8 @@ wandb_name="unigcn_${dataset_tag}_${variant}_seed${seed}_job${job_tag}_${task_id
 
 extra_args=(
     model.type hybrid_gnn
+    gnn.hybrid.identity_proj False
+    gnn.hybrid.residual True
     "gnn.hybrid.gnn_types" "${gnn_types}"
     gnn.hybrid.log_gate_stats True
 )

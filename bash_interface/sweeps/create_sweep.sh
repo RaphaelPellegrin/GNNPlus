@@ -87,6 +87,11 @@ elif [[ "${_yaml_stem}" == *_mp_only_sweep ]]; then
     ARRAY_SPEC="1-1"
     JOB_PREFIX="gnnplus_sanity"
     TIME_LIMIT="120:00:00"
+elif [[ "${_yaml_stem}" == *_hybrid_unigcn_sweep ]]; then
+    DATASET_SLUG="${_yaml_stem%%_hybrid_unigcn_sweep}"
+    RUNS_PER_AGENT=2
+    ARRAY_SPEC="1-16%3"
+    TIME_LIMIT="240:00:00"
 elif [[ "${_yaml_stem}" == *_hybrid_gated_mp_sweep ]]; then
     DATASET_SLUG="${_yaml_stem%%_hybrid_gated_mp_sweep}"
     RUNS_PER_AGENT=3

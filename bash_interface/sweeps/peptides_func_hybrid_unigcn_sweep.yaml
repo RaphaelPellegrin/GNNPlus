@@ -1,0 +1,105 @@
+# Peptides-func UniGCN **SiGMA hybrid_gnn** Bayesian sweep (always gated, never custom_gnn).
+#
+# Architecture (fixed): model.type=hybrid_gnn, identity_proj=false, hybrid.residual=true,
+#   layernorm + headwise γ gating on every MP/attn head (W_hg → MP @ d_h → gate → out_proj).
+#
+# Swept dimensions:
+#   optim.base_lr              log-uniform LR
+#   hybrid_num_attn_heads      0 … 10
+#   hybrid_gnn_types           MP-head presets (UNIGCN ± GINE/GCNE/GATEDGCN; num_gnn inferred)
+#   hybrid_d_h                 hidden MP width
+#   unitary_taylor_order       Taylor order T for exp(iA) (paper/repo hyperparam)
+#
+# Fixed: separable UniConv (use_hermitian=False), unitary_return_real=True,
+#   dim_inner=275, layers_mp=3, SiGMA hybrid block (LN, proj, gate, block residual).
+#
+# Metric: best/val_ap (validation AP; not test).
+#
+# Create + launch (cluster login):
+#   source ~/.gnnplus_env
+#   export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+#   cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/peptides_func_hybrid_unigcn_sweep.yaml
+#   SWEEP_SLURM_TIME=240:00:00 SWEEP_ARRAY_TASKS=16 SWEEP_ARRAY_PARALLEL=3 RUNS_PER_AGENT=2 \
+#     bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+#       peptides_func weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: maximize
+  name: best/val_ap
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_hybrid_unigcn-peptides_func-val_ap
+
+early_terminate:
+  type: hyperband
+  min_iter: 80
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/unigcn/peptides-func-sweep-base.yaml
+  - --molecular=true
+  - --seed=0
+  - ${args}
+
+parameters:
+  model.type:
+    value: hybrid_gnn
+  hybrid_identity_proj:
+    value: false
+  hybrid_residual:
+    value: true
+  hybrid_gate:
+    value: headwise
+  hybrid_norm:
+    value: layernorm
+  hybrid_attn_mask:
+    value: full
+
+  optim.base_lr:
+    distribution: log_uniform_values
+    min: 0.0002
+    max: 0.003
+
+  hybrid_num_attn_heads:
+    values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+  hybrid_gnn_types:
+    values:
+      # MP-only / single UniGCN
+      - "UNIGCN"
+      # UniGCN + edge-aware mixes (1–2 heads)
+      - "UNIGCN,GINE"
+      - "UNIGCN,GCNE"
+      - "UNIGCN,GATEDGCN"
+      - "GINE,UNIGCN"
+      - "GCNE,UNIGCN"
+      - "UNIGCN,UNIGCN"
+      # 3-head mixes
+      - "UNIGCN,UNIGCN,GINE"
+      - "UNIGCN,GINE,GCNE"
+      - "UNIGCN,GCNE,GATEDGCN"
+      - "GINE,GCNE,UNIGCN"
+      # 4-head mixes
+      - "UNIGCN,UNIGCN,UNIGCN,UNIGCN"
+      - "UNIGCN,UNIGCN,GINE,GINE"
+      - "UNIGCN,GCNE,GCNE,GINE"
+      - "UNIGCN,GINE,GCNE,GATEDGCN"
+      # 6-head (heavier)
+      - "UNIGCN,UNIGCN,UNIGCN,GINE,GCNE,GATEDGCN"
+      # 8-head (anchor-style width)
+      - "UNIGCN,UNIGCN,UNIGCN,UNIGCN,GINE,GINE,GCNE,GCNE"
+
+  hybrid_d_h:
+    values: [32, 64, 96, 128, 192, 256]
+
+  unitary_taylor_order:
+    values: [6, 10, 16, 24]

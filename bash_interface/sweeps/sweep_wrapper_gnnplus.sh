@@ -108,6 +108,9 @@ while [ "$#" -gt 0 ]; do
                 hybrid_norm) _set_opt "gnn.hybrid.norm" "${val}" ;;
                 hybrid_mp_dropout) _set_opt "gnn.hybrid.mp_dropout" "${val}" ;;
                 hybrid_gnn_types) _set_opt "gnn.hybrid.gnn_types" "${val}" ;;
+                hybrid_identity_proj|gnn.hybrid.identity_proj)
+                    _set_opt "gnn.hybrid.identity_proj" "${val}" ;;
+                hybrid_residual|gnn.hybrid.residual) _set_opt "gnn.hybrid.residual" "${val}" ;;
                 hybrid_layers_mp) _set_opt "gnn.layers_mp" "${val}" ;;
                 hybrid_dim_inner|gnn.dim_inner) _set_opt "gnn.dim_inner" "${val}" ;;
                 hybrid_readout_mlp|gnn.readout_mlp)
@@ -124,6 +127,12 @@ while [ "$#" -gt 0 ]; do
                 num_virtual_nodes|dataset.num_virtual_nodes) _set_opt "dataset.num_virtual_nodes" "${val}" ;;
                 base_lr|optim.base_lr) _set_opt "optim.base_lr" "${val}" ;;
                 batch_size) _set_opt "train.batch_size" "${val}" ;;
+                unitary_taylor_order|gnn.unitary_taylor_order)
+                    _set_opt "gnn.unitary_taylor_order" "${val}" ;;
+                use_hermitian|gnn.use_hermitian) _set_opt "gnn.use_hermitian" "${val}" ;;
+                unitary_return_real|gnn.unitary_return_real)
+                    _set_opt "gnn.unitary_return_real" "${val}" ;;
+                model_type|model.type) _set_opt "model.type" "${val}" ;;
                 *) _set_opt "${key}" "${val}" ;;
             esac
             ;;
@@ -145,6 +154,9 @@ while [ "$#" -gt 0 ]; do
                 hybrid_norm) _set_opt "gnn.hybrid.norm" "${val}" ;;
                 hybrid_mp_dropout) _set_opt "gnn.hybrid.mp_dropout" "${val}" ;;
                 hybrid_gnn_types) _set_opt "gnn.hybrid.gnn_types" "${val}" ;;
+                hybrid_identity_proj|gnn.hybrid.identity_proj)
+                    _set_opt "gnn.hybrid.identity_proj" "${val}" ;;
+                hybrid_residual|gnn.hybrid.residual) _set_opt "gnn.hybrid.residual" "${val}" ;;
                 hybrid_layers_mp) _set_opt "gnn.layers_mp" "${val}" ;;
                 hybrid_dim_inner|gnn.dim_inner) _set_opt "gnn.dim_inner" "${val}" ;;
                 hybrid_readout_mlp|gnn.readout_mlp)
@@ -161,6 +173,12 @@ while [ "$#" -gt 0 ]; do
                 num_virtual_nodes|dataset.num_virtual_nodes) _set_opt "dataset.num_virtual_nodes" "${val}" ;;
                 base_lr|optim.base_lr) _set_opt "optim.base_lr" "${val}" ;;
                 batch_size) _set_opt "train.batch_size" "${val}" ;;
+                unitary_taylor_order|gnn.unitary_taylor_order)
+                    _set_opt "gnn.unitary_taylor_order" "${val}" ;;
+                use_hermitian|gnn.use_hermitian) _set_opt "gnn.use_hermitian" "${val}" ;;
+                unitary_return_real|gnn.unitary_return_real)
+                    _set_opt "gnn.unitary_return_real" "${val}" ;;
+                model_type|model.type) _set_opt "model.type" "${val}" ;;
                 *) _set_opt "${key}" "${val}" ;;
             esac
             ;;
@@ -204,6 +222,15 @@ elif [ "${_num_vn}" -gt 0 ] 2>/dev/null; then
 else
     _set_opt "dataset.add_virtual_nodes" "False"
     _set_opt "dataset.num_virtual_nodes" "0"
+fi
+
+# All GNNPlus sweeps target SiGMA-style hybrid_gnn (gated MP + optional attn), never custom_gnn.
+_set_opt "model.type" "hybrid_gnn"
+if [ -z "${OPTS[gnn.hybrid.identity_proj]:-}" ]; then
+    _set_opt "gnn.hybrid.identity_proj" "False"
+fi
+if [ -z "${OPTS[gnn.hybrid.residual]:-}" ]; then
+    _set_opt "gnn.hybrid.residual" "True"
 fi
 
 extra_args=()

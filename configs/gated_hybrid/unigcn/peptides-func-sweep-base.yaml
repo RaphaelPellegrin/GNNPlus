@@ -1,10 +1,16 @@
-# Native custom_gnn with stacked UniGCN (NOT SiGMA hybrid_gnn — no projection/gating block).
-# For SiGMA/hybrid gated UniGCN use configs/gated_hybrid/unigcn/*.yaml instead.
+# Peptides-func UniGCN **SiGMA hybrid** sweep anchor (model.type=hybrid_gnn).
+# Block: LN → W_hg split → gated MP (UNIGCN/…) @ d_h → out_proj → (+ block residual).
 out_dir: results
 metric_best: ap
 wandb:
   use: False
-  project: peptides-func
+  project: GNNPlus
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - unigcn
+    - peptides_func
+    - unigcn_sweep
 dataset:
   format: OGB
   name: peptides-functional
@@ -30,7 +36,7 @@ train:
   eval_period: 1
   ckpt_period: 100
 model:
-  type: custom_gnn
+  type: hybrid_gnn
   loss_fun: cross_entropy
   graph_pooling: mean
 gnn:
@@ -40,13 +46,26 @@ gnn:
   layers_mp: 3
   layers_post_mp: 4
   dim_inner: 275
-  layer_type: unitarygcn
   act: gelu
   residual: False
   dropout: 0.2
   use_hermitian: False
   unitary_taylor_order: 16
   unitary_return_real: True
+  hybrid:
+    num_attn_heads: 0
+    num_gnn_heads: 1
+    d_h: 128
+    attn_mask: full
+    gate: headwise
+    norm: layernorm
+    gnn_types: "UNIGCN"
+    attn_dropout: 0.1
+    mp_dropout: 0.2
+    block_bn: false
+    residual: true
+    identity_proj: false
+    log_gate_stats: True
 optim:
   clip_grad_norm: True
   optimizer: adamW
