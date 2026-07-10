@@ -218,38 +218,44 @@ bash bash_interface/cluster/submit_peptides_func_hybrid_3g180qle_a1g8_paper_repr
 
 ---
 
-### Peptides-struct UniGCN hybrid v2 (best hybrid + UniGCN)
+## UniGCN campaign (Jul 8–9 2026) — IDs cheat sheet
+
+Entity/project: `weber-geoml-harvard-university/GNNPlus`  
+Branch: `paper_repro_m04v86sm`
+
+| Kind | SLURM / W&B ID | Name / group | Notes |
+|------|----------------|--------------|-------|
+| **W&B sweep** | `bq62chmz` | `GNNplus_hybrid_unigcn-peptides_func-val_ap` | [sweep](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/sweeps/bq62chmz) |
+| Sweep agents (1 GPU) | `29513197` | `gnnplus_sweep_peptides_func` | `%1`, 10 agents × 4 runs |
+| Sweep agents (5 GPU) | `29854262` | same sweep | 20×4, `%5` |
+| Sweep agents (5 GPU) | `29859293` | same sweep | 20×4, `%5` (2nd relaunch) |
+| UniGCN few-runs (old) | `29436702` | `unigcn_hybrid` | pre–SiGMA-lock submit |
+| UniGCN few-runs | `29466653` | `unigcn_hybrid_few_runs_*` | 36 tasks, `%5`, SiGMA lock |
+| PS baseline vs hybrid | `29874107` | `peptides_struct_unigcn_baseline_vs_hybrid` | custom + a1g2 GINE+UNIGCN |
+| PS paper UniGCN | `29874935` | `peptides_struct_unigcn_paper` | arXiv:2410.05499 params |
+| PS hybrid v2 | `29874936` | `peptides_struct_unigcn_hybrid_v2` | a2g2 L8 ep300 |
+| Anchor run (hybrid) | `y3ygn39y` | 63avcc5m a1g1 GINE | [run](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/y3ygn39y) |
+| PF UniGCN seed×LR | *(submit)* | `peptides_func_2i5psq22_a5g3_lr_seeds_{b455,b45,b5}` | [2i5psq22](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/2i5psq22) × 3 LR × 10 seeds |
+
+### Peptides-func UniGCN: 2i5psq22 a5g3 × 3 LR × 10 seeds
 
 | Field | Value |
 |-------|-------|
-| **Config** | `configs/gated_hybrid/peptides-struct-hybrid-y3ygn39y-a2g2-gine-unigcn-v2.yaml` |
-| **Anchor** | [y3ygn39y](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/y3ygn39y) (63avcc5m a1g1 GINE) |
-| **Upgrades** | a2g2 (2×attn + GINE + UNIGCN), L8, ep=300, lr=7e-4 |
-| **W&B group** | `peptides_struct_unigcn_hybrid_v2` |
-| **Submit** | `bash bash_interface/cluster/submit_peptides_struct_unigcn_hybrid_v2.sh` |
+| **Source run** | [2i5psq22](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/2i5psq22) (sweep `bq62chmz`) |
+| **Config** | `configs/gated_hybrid/peptides-func-hybrid-2i5psq22-a5g3-unigcn-anchor.yaml` |
+| **Arch** | a5g3 = 5×attn + `GINE,GCNE,UNIGCN`, d_h=128, T=10, headwise, LN, full mask, ep=300 |
+| **Tasks** | 30 = 3 LR × 10 seeds (0–9), parallel `%2` |
+| **LRs** | `0.000455` (`_b455`), `0.00045` (`_b45`), `0.0005` (`_b5`) |
+| **W&B groups** | `peptides_func_2i5psq22_a5g3_lr_seeds_{b455,b45,b5}` |
+| **Submit** | `bash bash_interface/cluster/submit_peptides_func_hybrid_2i5psq22_a5g3_lr_seeds.sh` |
 
-### Peptides-struct UniGCN paper baseline (custom_gnn)
-
-| Field | Value |
-|-------|-------|
-| **Config** | `configs/gcn/peptides-struct-unigcn-paper.yaml` |
-| **Source** | arXiv:2410.05499 / `peptides-struct-UnitaryGCN-final.yaml` |
-| **Key params** | Atom+LapPE, L8, H160, residual=True, drop=0.1, bs=200, ep=250, T=16 |
-| **W&B group** | `peptides_struct_unigcn_paper` |
-| **Submit** | `bash bash_interface/cluster/submit_peptides_struct_unigcn_paper.sh` |
-
-### Peptides-struct UniGCN: custom_gnn vs hybrid (y3ygn39y + UNIGCN)
-
-| Field | Value |
-|-------|-------|
-| **SLURM array** | `29874107` |
-| **W&B group** | `peptides_struct_unigcn_baseline_vs_hybrid` |
-| **Tasks** | 1–6 (2 variants × 3 seeds), parallel=5 |
-| **(A) custom** | `configs/gcn/peptides-struct-unigcn.yaml` (`custom_gnn` + `unitarygcn`) |
-| **(B) hybrid** | `configs/gated_hybrid/peptides-struct-hybrid-y3ygn39y-a1g2-gine-unigcn.yaml` |
-| **Source run** | https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/y3ygn39y (63avcc5m a1g1 GINE → +1×UNIGCN = a1g2) |
-| **Logs** | `logs_gnnplus/ps_unigcn_29874107_<TASK>.log` |
-| **Submit** | `bash bash_interface/cluster/submit_peptides_struct_unigcn_baseline_vs_hybrid.sh` |
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+bash bash_interface/cluster/submit_peptides_func_hybrid_2i5psq22_a5g3_lr_seeds.sh
+```
 
 ### Peptides-func UniGCN hybrid W&B sweep
 
@@ -259,7 +265,8 @@ bash bash_interface/cluster/submit_peptides_func_hybrid_3g180qle_a1g8_paper_repr
 | **Full path** | `weber-geoml-harvard-university/GNNPlus/bq62chmz` |
 | **YAML** | `bash_interface/sweeps/peptides_func_hybrid_unigcn_sweep.yaml` |
 | **W&B** | https://wandb.ai/weber-geoml-harvard-university/GNNPlus/sweeps/bq62chmz |
-| **Few-run array** | `29466653` (4 datasets × 3 variants × 3 seeds, `UNIGCN_PARALLEL=5`) |
+| **Few-run arrays** | `29436702` (early), `29466653` (SiGMA-locked, `%5`) |
+| **Agent arrays** | `29513197` (`%1`); `29854262`, `29859293` (`%5`, 20×4 each) |
 
 Relaunch sweep agents (example 5 GPUs):
 
@@ -269,7 +276,45 @@ SWEEP_SLURM_TIME=240:00:00 SWEEP_ARRAY_TASKS=20 SWEEP_ARRAY_PARALLEL=5 RUNS_PER_
     peptides_func weber-geoml-harvard-university/GNNPlus/bq62chmz
 ```
 
+### Peptides-struct UniGCN: custom_gnn vs hybrid (y3ygn39y + UNIGCN)
+
+| Field | Value |
+|-------|-------|
+| **SLURM array** | `29874107` |
+| **W&B group** | `peptides_struct_unigcn_baseline_vs_hybrid` |
+| **Tasks** | 1–6 (2 variants × 3 seeds), parallel=5 |
+| **(A) custom** | `configs/gcn/peptides-struct-unigcn.yaml` (`custom_gnn` + `unitarygcn`, GNNPlus outer hparams) |
+| **(B) hybrid** | `configs/gated_hybrid/peptides-struct-hybrid-y3ygn39y-a1g2-gine-unigcn.yaml` |
+| **Source run** | https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/y3ygn39y |
+| **Logs** | `logs_gnnplus/ps_unigcn_29874107_<TASK>.log` |
+| **Submit** | `bash bash_interface/cluster/submit_peptides_struct_unigcn_baseline_vs_hybrid.sh` |
+
+### Peptides-struct UniGCN paper baseline (custom_gnn)
+
+| Field | Value |
+|-------|-------|
+| **SLURM array** | `29874935` |
+| **Config** | `configs/gcn/peptides-struct-unigcn-paper.yaml` |
+| **Source** | arXiv:2410.05499 / `peptides-struct-UnitaryGCN-final.yaml` |
+| **Key params** | Atom+LapPE, L8, H160, residual=True, drop=0.1, bs=200, ep=250, T=16 |
+| **W&B group** | `peptides_struct_unigcn_paper` |
+| **Logs** | `logs_gnnplus/ps_unigcn_paper_29874935_<TASK>.log` |
+| **Submit** | `bash bash_interface/cluster/submit_peptides_struct_unigcn_paper.sh` |
+
+### Peptides-struct UniGCN hybrid v2 (best hybrid + UniGCN)
+
+| Field | Value |
+|-------|-------|
+| **SLURM array** | `29874936` |
+| **Config** | `configs/gated_hybrid/peptides-struct-hybrid-y3ygn39y-a2g2-gine-unigcn-v2.yaml` |
+| **Anchor** | [y3ygn39y](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/y3ygn39y) (63avcc5m a1g1 GINE) |
+| **Upgrades** | a2g2 (2×attn + GINE + UNIGCN), L8, ep=300, lr=7e-4 |
+| **W&B group** | `peptides_struct_unigcn_hybrid_v2` |
+| **Logs** | `logs_gnnplus/ps_unigcn_v2_29874936_<TASK>.log` |
+| **Submit** | `bash bash_interface/cluster/submit_peptides_struct_unigcn_hybrid_v2.sh` |
+
 ---
+
 
 ## Phase-2 sweeps — tfeksgbl / rholn782 backbone ([tfeksgbl](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/tfeksgbl))
 
