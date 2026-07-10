@@ -235,19 +235,86 @@ Branch: `paper_repro_m04v86sm`
 | PS paper UniGCN | `29874935` | `peptides_struct_unigcn_paper` | arXiv:2410.05499 params |
 | PS hybrid v2 | `29874936` | `peptides_struct_unigcn_hybrid_v2` | a2g2 L8 ep300 |
 | Anchor run (hybrid) | `y3ygn39y` | 63avcc5m a1g1 GINE | [run](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/y3ygn39y) |
-| PF UniGCN seed×LR | *(submit)* | `peptides_func_2i5psq22_a5g3_lr_seeds_{b455,b45,b5}` | [2i5psq22](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/2i5psq22) × 3 LR × 10 seeds |
+| PF UniGCN seed×LR | `29933958` | `peptides_func_2i5psq22_a5g3_lr_seeds_{b455,b45,b5}` | [2i5psq22](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/2i5psq22) × 3 LR × 10 seeds, `%2` |
+| PF UniGCN 10 seeds | *(fill SLURM after submit)* | `peptides_func_124caj93_a2g3_seeds` | [124caj93](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/124caj93) a2g3 × 10 seeds, `%2` |
 
-### Peptides-func UniGCN: 2i5psq22 a5g3 × 3 LR × 10 seeds
+### Peptides-func UniGCN: 124caj93 a2g3 × 10 seeds
+
+Tracked: Jul 10 2026 · branch `paper_repro_m04v86sm`
 
 | Field | Value |
 |-------|-------|
-| **Source run** | [2i5psq22](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/2i5psq22) (sweep `bq62chmz`) |
+| **Source run** | [124caj93](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/124caj93) |
+| **Sweep** | [bq62chmz](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/sweeps/bq62chmz) |
+| **SLURM array** | *(paste JOBID after submit)* |
+| **Job name** | `pf_124caj93_seeds` |
+| **Config** | `configs/gated_hybrid/peptides-func-hybrid-124caj93-a2g3-unigcn-anchor.yaml` |
+| **Run / submit** | `run_` / `submit_peptides_func_hybrid_124caj93_a2g3_seeds.sh` |
+| **Arch** | a2g3 = 2×attn + `GINE,GCNE,UNIGCN`, d_h=128, T=16, headwise, LN, full mask, Atom+RWSE, ep=300 |
+| **LR** | `0.0005650212198206989` (sweep exact) |
+| **Tasks** | `1-10%2` seeds 0–9, max **2 GPUs** |
+| **W&B group** | `peptides_func_124caj93_a2g3_seeds` |
+| **Logs** | `logs_gnnplus/pf_124caj93_seeds_<JOBID>_<TASK>.log` |
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+bash bash_interface/cluster/submit_peptides_func_hybrid_124caj93_a2g3_seeds.sh
+```
+
+Aggregate:
+
+```bash
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group peptides_func_124caj93_a2g3_seeds --metric best_test_perf
+```
+
+### Peptides-func UniGCN: 2i5psq22 a5g3 × 3 LR × 10 seeds
+
+Tracked: Jul 10 2026 · branch `paper_repro_m04v86sm`
+
+| Field | Value |
+|-------|-------|
+| **Source run** | [2i5psq22](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/2i5psq22) |
+| **Sweep** | [bq62chmz](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/sweeps/bq62chmz) |
+| **SLURM array** | `29933958` |
+| **Job name** | `pf_2i5psq22_lr` |
 | **Config** | `configs/gated_hybrid/peptides-func-hybrid-2i5psq22-a5g3-unigcn-anchor.yaml` |
-| **Arch** | a5g3 = 5×attn + `GINE,GCNE,UNIGCN`, d_h=128, T=10, headwise, LN, full mask, ep=300 |
-| **Tasks** | 30 = 3 LR × 10 seeds (0–9), parallel `%2` |
-| **LRs** | `0.000455` (`_b455`), `0.00045` (`_b45`), `0.0005` (`_b5`) |
-| **W&B groups** | `peptides_func_2i5psq22_a5g3_lr_seeds_{b455,b45,b5}` |
-| **Submit** | `bash bash_interface/cluster/submit_peptides_func_hybrid_2i5psq22_a5g3_lr_seeds.sh` |
+| **Run script** | `bash_interface/cluster/run_peptides_func_hybrid_2i5psq22_a5g3_lr_seeds.sh` |
+| **Submit script** | `bash_interface/cluster/submit_peptides_func_hybrid_2i5psq22_a5g3_lr_seeds.sh` |
+| **Arch** | a5g3 = 5×attn + `GINE,GCNE,UNIGCN`, d_h=128, T=10, headwise, LN, full mask, Atom+RWSE, ep=300 |
+| **Sweep exact LR** | `0.0004546350916048615` (grid uses rounded LRs below) |
+| **Tasks** | `1-30%2` = 3 LR × 10 seeds (0–9), max **2 GPUs** |
+| **Logs** | `logs_gnnplus/pf_2i5psq22_lr_29933958_<TASK>.log` |
+| **Entity/project** | `weber-geoml-harvard-university/GNNPlus` |
+
+| Tasks | Seeds | `optim.base_lr` | W&B group | Status (Jul 10) | `best_test_perf` (AP ↑) |
+|-------|-------|-----------------|-----------|-----------------|-------------------------|
+| 1–10 | 0–9 | `0.000455` | `peptides_func_2i5psq22_a5g3_lr_seeds_b455` | **6/10** (seeds 0–5; 4–5 still running) | **0.6962 ± 0.0025** (n=6) |
+| 11–20 | 0–9 | `0.00045` | `peptides_func_2i5psq22_a5g3_lr_seeds_b45` | 0/10 (not started) | — |
+| 21–30 | 0–9 | `0.0005` | `peptides_func_2i5psq22_a5g3_lr_seeds_b5` | 0/10 (not started) | — |
+
+Partial per-seed (`_b455`, metric=`best_test_perf`):
+
+| seed | AP | run | state |
+|------|-----|-----|-------|
+| 0 | 0.6957 | `oajamg1b` | finished |
+| 1 | 0.6992 | `gfjwknse` | finished |
+| 2 | 0.6952 | `3kph2iff` | finished |
+| 3 | 0.6941 | `5no3qi0b` | finished |
+| 4 | 0.6935 | `6ensjgld` | running |
+| 5 | 0.6994 | `rl3oqz9x` | running |
+
+Re-aggregate when more finish:
+
+```bash
+for g in b455 b45 b5; do
+  python scripts/api_wanndb_query/aggregate_paper_repro.py \
+    --group peptides_func_2i5psq22_a5g3_lr_seeds_${g} --metric best_test_perf
+done
+```
 
 ```bash
 source ~/.gnnplus_env
@@ -255,8 +322,8 @@ export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 bash bash_interface/cluster/submit_peptides_func_hybrid_2i5psq22_a5g3_lr_seeds.sh
+# Then paste ARRAY JOBID into the SLURM row above and the cheat-sheet table.
 ```
-
 ### Peptides-func UniGCN hybrid W&B sweep
 
 | Field | Value |
