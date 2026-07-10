@@ -1,0 +1,94 @@
+# Peptides-struct hybrid v2: best hybrid (y3ygn39y / 63avcc5m) + UniGCN, upgraded.
+#
+# Base: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/y3ygn39y
+#   a1g1 GINE, d_h=200, elementwise, layernorm, Atom+RWSE, test MAE ≈ 0.2406
+#
+# Improvements vs plain a1g2 (GINE,UNIGCN):
+#   - a2g2: 2×attn + GINE + UNIGCN (more attention capacity)
+#   - layers_mp: 8 (paper UniGCN depth on peptides-struct)
+#   - max_epoch: 300 (more room for deeper stack)
+#   - base_lr: 7e-4 (slightly cooler than y3y 9e-4 for Taylor UniGCN)
+#   - SiGMA block residual + identity_proj=false
+#   - unitary_taylor_order: 16 (paper default)
+out_dir: results
+metric_best: mae
+metric_agg: argmin
+wandb:
+  use: False
+  project: GNNPlus
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - unigcn
+    - peptides_struct
+    - hybrid_a2g2
+    - gine
+    - anchor_y3ygn39y
+    - anchor_63avcc5m
+    - unigcn_hybrid_v2
+dataset:
+  format: OGB
+  name: peptides-structural
+  task: graph
+  task_type: regression
+  transductive: False
+  add_virtual_nodes: False
+  num_virtual_nodes: 0
+  node_encoder: True
+  node_encoder_name: Atom+RWSE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: Bond
+  edge_encoder_bn: False
+posenc_RWSE:
+  enable: True
+  kernel:
+    times_func: range(1,33)
+  model: Linear
+  dim_pe: 28
+  raw_norm_type: BatchNorm
+train:
+  mode: custom
+  batch_size: 32
+  eval_period: 1
+  ckpt_period: 100
+  eval_smoothing_metrics: False
+model:
+  type: hybrid_gnn
+  loss_fun: l1
+  graph_pooling: mean
+gnn:
+  head: mlp_graph
+  ffn: False
+  layers_pre_mp: 0
+  layers_mp: 8
+  layers_post_mp: 3
+  dim_inner: 200
+  act: gelu
+  residual: False
+  dropout: 0.2
+  use_hermitian: False
+  unitary_taylor_order: 16
+  unitary_return_real: True
+  hybrid:
+    num_attn_heads: 2
+    num_gnn_heads: 2
+    d_h: 200
+    attn_mask: full
+    gate: elementwise
+    norm: layernorm
+    gnn_types: "GINE,UNIGCN"
+    attn_dropout: 0.1
+    mp_dropout: 0.2
+    block_bn: false
+    residual: true
+    identity_proj: false
+    log_gate_stats: True
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 0.0
+  base_lr: 0.0007
+  max_epoch: 300
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 5

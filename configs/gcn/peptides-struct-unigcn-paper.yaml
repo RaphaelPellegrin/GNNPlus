@@ -1,0 +1,84 @@
+# Peptides-struct custom_gnn UniGCN — paper / official Unitary_Convolutions params.
+#
+# Source: https://arxiv.org/abs/2410.05499
+# Official yaml: Unitary_Convolutions/lrgb/configs/peptides-struct-UnitaryGCN-final.yaml
+#
+# Notes vs upstream:
+#   - unitary_return_real=True so GraphGym mlp_graph head stays real-valued
+#     (paper keeps complex + c_gelu; we take .real after Taylor then gelu)
+#   - Taylor order T=16 (upstream TaylorGCNConv default)
+out_dir: results
+metric_best: mae
+metric_agg: argmin
+wandb:
+  use: False
+  project: GNNPlus
+  tags:
+    - gnnplus
+    - custom_gnn
+    - unigcn
+    - peptides_struct
+    - paper_unigcn
+    - arxiv_2410_05499
+dataset:
+  format: OGB
+  name: peptides-structural
+  task: graph
+  task_type: regression
+  transductive: False
+  node_encoder: True
+  node_encoder_name: Atom+LapPE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: Bond
+  edge_encoder_bn: False
+posenc_LapPE:
+  enable: True
+  eigen:
+    laplacian_norm: none
+    eigvec_norm: L2
+    max_freqs: 10
+  model: DeepSet
+  dim_pe: 16
+  layers: 2
+  raw_norm_type: none
+posenc_RWSE:
+  enable: False
+  kernel:
+    times_func: range(1,21)
+  model: Linear
+  dim_pe: 28
+  raw_norm_type: BatchNorm
+train:
+  mode: custom
+  batch_size: 200
+  eval_period: 1
+  ckpt_period: 100
+  eval_smoothing_metrics: False
+model:
+  type: custom_gnn
+  loss_fun: l1
+  graph_pooling: mean
+gnn:
+  head: mlp_graph
+  ffn: False
+  layers_pre_mp: 0
+  layers_mp: 8
+  layers_post_mp: 3
+  dim_inner: 160
+  layer_type: unitarygcn
+  act: gelu
+  residual: True
+  dropout: 0.1
+  use_hermitian: False
+  unitary_taylor_order: 16
+  unitary_return_real: True
+optim:
+  clip_grad_norm: False
+  optimizer: adamW
+  weight_decay: 0.0
+  base_lr: 0.001
+  min_lr: 0.000001
+  max_epoch: 250
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 5
