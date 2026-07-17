@@ -2,7 +2,7 @@
 # Launch SiGMA paper Table 5 ablations on mweber_gpu.
 #
 # 4 LRGB datasets × {SiGMA, SiGMA_ungated, Attn_only, MP_only} × 5 seeds = 80 jobs.
-# Max concurrent GPUs: PAPER_T5_PARALLEL (default 2).
+# Max concurrent GPUs: PAPER_T5_PARALLEL (default 18).
 #
 # Prerequisites (login node):
 #   source ~/.gnnplus_env
@@ -27,7 +27,7 @@ NUM_DATASETS="${PAPER_T5_NUM_DATASETS:-4}"
 NUM_VARIANTS="${PAPER_T5_NUM_VARIANTS:-4}"
 NUM_TASKS="${PAPER_T5_NUM_TASKS:-$((NUM_DATASETS * NUM_VARIANTS * NUM_SEEDS))}"
 ARRAY_SPEC="${PAPER_T5_ARRAY:-1-${NUM_TASKS}}"
-PARALLEL="${PAPER_T5_PARALLEL:-2}"
+PARALLEL="${PAPER_T5_PARALLEL:-18}"
 NICE="${PAPER_T5_NICE:-10000}"
 MEM="${PAPER_T5_MEM:-128GB}"
 TIME="${PAPER_T5_TIME:-120:00:00}"

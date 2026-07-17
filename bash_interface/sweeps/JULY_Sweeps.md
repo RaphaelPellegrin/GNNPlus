@@ -237,7 +237,7 @@ Branch: `paper_repro_m04v86sm`
 | Anchor run (hybrid) | `y3ygn39y` | 63avcc5m a1g1 GINE | [run](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/y3ygn39y) |
 | PF UniGCN seed×LR | `29933958` | `peptides_func_2i5psq22_a5g3_lr_seeds_{b455,b45,b5}` | [2i5psq22](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/2i5psq22) × 3 LR × 10 seeds, `%2` |
 | PF UniGCN 10 seeds | *(fill SLURM after submit)* | `peptides_func_124caj93_a2g3_seeds` | [124caj93](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/124caj93) a2g3 × 10 seeds, `%2` |
-| PF UniGCN high LR | *(fill SLURM after submit)* | `peptides_func_2i5psq22_a5g3_lr_high_{b5,b7,b9}` | [fpfl6ve9](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/fpfl6ve9) × LR 5e-4/7e-4/9e-4 × 10 seeds, `%5` |
+| PF UniGCN high LR | `30132672` | `peptides_func_2i5psq22_a5g3_lr_high_{b5,b7,b9}` | [fpfl6ve9](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/fpfl6ve9) × LR 5e-4/7e-4/9e-4 × 10 seeds, `%5` |
 
 ### Peptides-func UniGCN: 2i5psq22 a5g3 high-LR × 10 seeds
 
@@ -247,19 +247,19 @@ Tracked: Jul 11 2026 · branch `paper_repro_m04v86sm`
 |-------|-------|
 | **Anchor run** | [fpfl6ve9](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/fpfl6ve9) (seed0 @ lr=5e-4 from job `29933958`) |
 | **Sweep source** | [2i5psq22](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/2i5psq22) / [bq62chmz](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/sweeps/bq62chmz) |
-| **SLURM array** | *(paste JOBID after submit)* |
+| **SLURM array** | `30132672` |
 | **Job name** | `pf_2i5_lrhigh` |
 | **Config** | `configs/gated_hybrid/peptides-func-hybrid-2i5psq22-a5g3-unigcn-anchor.yaml` |
 | **Run / submit** | `run_` / `submit_peptides_func_hybrid_2i5psq22_a5g3_lr_high_seeds.sh` |
 | **Arch** | a5g3 = 5×attn + `GINE,GCNE,UNIGCN`, d_h=128, T=10, headwise, LN, full mask, ep=300 |
 | **Tasks** | `1-30%5` = 3 LR × 10 seeds, max **5 GPUs** |
-| **Logs** | `logs_gnnplus/pf_2i5_lrhigh_<JOBID>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/pf_2i5_lrhigh_30132672_<TASK>.log` |
 
-| Tasks | Seeds | `optim.base_lr` | W&B group |
-|-------|-------|-----------------|-----------|
-| 1–10 | 0–9 | `0.0005` | `peptides_func_2i5psq22_a5g3_lr_high_b5` |
-| 11–20 | 0–9 | `0.0007` | `peptides_func_2i5psq22_a5g3_lr_high_b7` |
-| 21–30 | 0–9 | `0.0009` | `peptides_func_2i5psq22_a5g3_lr_high_b9` |
+| Tasks | Seeds | `optim.base_lr` | W&B group | Status | `best_test_perf` (AP ↑) |
+|-------|-------|-----------------|-----------|--------|-------------------------|
+| 1–10 | 0–9 | `0.0005` | `peptides_func_2i5psq22_a5g3_lr_high_b5` | **10/10** finished | **0.7039 ± 0.0062** |
+| 11–20 | 0–9 | `0.0007` | `peptides_func_2i5psq22_a5g3_lr_high_b7` | **10/10** finished | **0.7040 ± 0.0059** |
+| 21–30 | 0–9 | `0.0009` | `peptides_func_2i5psq22_a5g3_lr_high_b9` | **10/10** finished | **0.7000 ± 0.0062** |
 
 ```bash
 source ~/.gnnplus_env
@@ -328,11 +328,11 @@ Tracked: Jul 10 2026 · branch `paper_repro_m04v86sm`
 | **Logs** | `logs_gnnplus/pf_2i5psq22_lr_29933958_<TASK>.log` |
 | **Entity/project** | `weber-geoml-harvard-university/GNNPlus` |
 
-| Tasks | Seeds | `optim.base_lr` | W&B group | Status (Jul 10) | `best_test_perf` (AP ↑) |
-|-------|-------|-----------------|-----------|-----------------|-------------------------|
-| 1–10 | 0–9 | `0.000455` | `peptides_func_2i5psq22_a5g3_lr_seeds_b455` | **6/10** (seeds 0–5; 4–5 still running) | **0.6962 ± 0.0025** (n=6) |
-| 11–20 | 0–9 | `0.00045` | `peptides_func_2i5psq22_a5g3_lr_seeds_b45` | 0/10 (not started) | — |
-| 21–30 | 0–9 | `0.0005` | `peptides_func_2i5psq22_a5g3_lr_seeds_b5` | 0/10 (not started) | — |
+| Tasks | Seeds | `optim.base_lr` | W&B group | Status | `best_test_perf` (AP ↑) |
+|-------|-------|-----------------|-----------|--------|-------------------------|
+| 1–10 | 0–9 | `0.000455` | `peptides_func_2i5psq22_a5g3_lr_seeds_b455` | **10/10** finished | **0.6943 ± 0.0063** |
+| 11–20 | 0–9 | `0.00045` | `peptides_func_2i5psq22_a5g3_lr_seeds_b45` | **10/10** finished | **0.7002 ± 0.0056** |
+| 21–30 | 0–9 | `0.0005` | `peptides_func_2i5psq22_a5g3_lr_seeds_b5` | **10/10** finished | **0.7033 ± 0.0064** |
 
 Partial per-seed (`_b455`, metric=`best_test_perf`):
 
@@ -342,8 +342,12 @@ Partial per-seed (`_b455`, metric=`best_test_perf`):
 | 1 | 0.6992 | `gfjwknse` | finished |
 | 2 | 0.6952 | `3kph2iff` | finished |
 | 3 | 0.6941 | `5no3qi0b` | finished |
-| 4 | 0.6935 | `6ensjgld` | running |
-| 5 | 0.6994 | `rl3oqz9x` | running |
+| 4 | 0.6935 | `6ensjgld` | finished |
+| 5 | 0.6971 | `rl3oqz9x` | finished |
+| 6 | 0.6949 | `zsqmnihz` | finished |
+| 7 | 0.6815 | `lgpe1ewd` | finished |
+| 8 | 0.6874 | `b4al0umv` | finished |
+| 9 | 0.7049 | `leb2qw4o` | finished |
 
 Re-aggregate when more finish:
 

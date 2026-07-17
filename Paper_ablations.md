@@ -57,7 +57,7 @@ git pull
 bash bash_interface/cluster/submit_paper_table5_ablations.sh
 ```
 
-Optional: `PAPER_T5_PARALLEL=5` for more GPUs; default is **2**.
+Optional: override with `PAPER_T5_PARALLEL=N`; default is **18**.
 
 | Field | Value |
 |-------|-------|
