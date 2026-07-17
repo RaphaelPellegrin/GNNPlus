@@ -69,7 +69,9 @@ class HybridGNN(torch.nn.Module):
 
         d_h = int(hcfg.d_h)
         attn_mask = cast(AttnMaskType, str(hcfg.attn_mask))
-        gate_mode = cast(GateMode, str(hcfg.gate))
+        from GNNPlus.layer.gated_hybrid_layer import _normalize_gate_mode
+
+        gate_mode = cast(GateMode, _normalize_gate_mode(str(hcfg.gate)))
         norm_type = cast(NormType, str(hcfg.norm))
         mp_drop = float(hcfg.mp_dropout) if float(hcfg.mp_dropout) > 0 else float(cfg.gnn.dropout)
         gnn_types: List[str] = parse_hybrid_gnn_types(

@@ -12,7 +12,7 @@ def gated_hybrid_cfg(cfg: CN) -> None:
     cfg.gnn.hybrid.num_gnn_heads = 2
     cfg.gnn.hybrid.d_h = 16
     cfg.gnn.hybrid.attn_mask = 'full'  # full | graph_restricted
-    cfg.gnn.hybrid.gate = 'headwise'  # elementwise | headwise
+    cfg.gnn.hybrid.gate = 'headwise'  # elementwise | headwise | none (ungated)
     cfg.gnn.hybrid.norm = 'layernorm'  # layernorm | rmsnorm | none
     cfg.gnn.hybrid.gnn_types = ''  # e.g. "GCN,GIN,GCNE,GATEDGCN" — see configs/gated_hybrid/README.md (GATEDGCN semantics)
     cfg.gnn.hybrid.attn_dropout = 0.1

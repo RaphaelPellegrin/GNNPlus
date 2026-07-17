@@ -24,8 +24,22 @@ from torch_geometric.nn import (
 from torch_geometric.utils import to_undirected
 
 AttnMaskType = Literal["full", "graph_restricted"]
-GateMode = Literal["elementwise", "headwise"]
+# ``none`` / ``off``: no learned sigmoid gates (heads contribute at full scale).
+GateMode = Literal["elementwise", "headwise", "none", "off"]
 NormType = Literal["layernorm", "rmsnorm", "none"]
+
+
+def _normalize_gate_mode(gate_mode: str) -> GateMode:
+    """Map config aliases to a canonical gate mode."""
+    mode = str(gate_mode).strip().lower()
+    if mode in ("none", "off", "disabled", "ungated", "identity"):
+        return "none"
+    if mode in ("elementwise", "headwise"):
+        return cast(GateMode, mode)
+    raise ValueError(
+        f"Unknown gate mode: {gate_mode!r} "
+        "(expected elementwise, headwise, or none)"
+    )
 
 
 def _build_gin_conv(in_dim: int, out_dim: int) -> GINConv:
@@ -355,7 +369,7 @@ class _ProjectedMPHead(nn.Module):
         self.kind = kind.upper()
         self.d_h = d_h
         self.d_model = d_model
-        self.gate_mode = gate_mode
+        self.gate_mode = _normalize_gate_mode(gate_mode)
         self._gnn_dropout = float(gnn_dropout)
         self.identity_proj = bool(identity_proj)
 
@@ -364,13 +378,20 @@ class _ProjectedMPHead(nn.Module):
                 f"identity_proj requires d_h == d_model (got d_h={d_h}, d_model={d_model})"
             )
 
-        gate_out = 1 if gate_mode == "headwise" else d_h
+        if self.gate_mode == "none":
+            gate_out = 0
+        else:
+            gate_out = 1 if self.gate_mode == "headwise" else d_h
         if self.identity_proj:
             self.hg_proj = None
-            self.gate_proj = nn.Linear(d_model, gate_out)
+            self.gate_proj = (
+                None if gate_out == 0 else nn.Linear(d_model, gate_out)
+            )
+            self.h_proj = nn.Identity() if d_h == d_model else nn.Linear(d_model, d_h)
         else:
             self.hg_proj = nn.Linear(d_model, d_h + gate_out)
             self.gate_proj = None
+            self.h_proj = None
 
         if self.kind == "GCN":
             self.conv = cast(nn.Module, GCNConv(d_h, d_h))
@@ -460,13 +481,19 @@ class _ProjectedMPHead(nn.Module):
     ) -> Tuple[Tensor, Tensor]:
         """Return ``(gated_mp_output, gate_value)``."""
         if self.identity_proj:
-            assert self.gate_proj is not None
-            h = x
-            g = self.gate_proj(x)
+            h = self.h_proj(x) if self.h_proj is not None else x
+            if self.gate_mode == "none":
+                g = None
+            else:
+                assert self.gate_proj is not None
+                g = self.gate_proj(x)
         else:
             assert self.hg_proj is not None
             hg = self.hg_proj(x)
-            if self.gate_mode == "headwise":
+            if self.gate_mode == "none":
+                h = hg
+                g = None
+            elif self.gate_mode == "headwise":
                 h, g = torch.split(hg, [self.d_h, 1], dim=-1)
             else:
                 h, g = torch.split(hg, [self.d_h, self.d_h], dim=-1)
@@ -487,6 +514,9 @@ class _ProjectedMPHead(nn.Module):
         else:
             raw = self.conv(h, edge_index)
 
+        if g is None:
+            gamma = torch.ones(raw.size(0), 1, device=raw.device, dtype=raw.dtype)
+            return raw, gamma
         gamma = torch.sigmoid(g)
         return raw * gamma, gamma
 
@@ -615,7 +645,7 @@ class GatedHybridGraphLayer(nn.Module):
         self.num_gnn_heads = num_gnn_heads
         self.d_h = d_h
         self.attn_mask_type: AttnMaskType = attn_mask_type
-        self.gate_mode: GateMode = gate_mode
+        self.gate_mode: GateMode = _normalize_gate_mode(gate_mode)
         self.attn_dropout = float(attn_dropout)
         self._mp_gnn_dropout = float(mp_gnn_dropout)
         self.block_bn = bool(block_bn)
@@ -637,7 +667,10 @@ class GatedHybridGraphLayer(nn.Module):
         self.k_linears = nn.ModuleList()
         self.v_linears = nn.ModuleList()
         for _ in range(num_attn_heads):
-            qg_out = d_h + (1 if gate_mode == "headwise" else d_h)
+            if self.gate_mode == "none":
+                qg_out = d_h
+            else:
+                qg_out = d_h + (1 if self.gate_mode == "headwise" else d_h)
             self.qg_linears.append(nn.Linear(d_model, qg_out))
             self.k_linears.append(nn.Linear(d_model, d_h))
             self.v_linears.append(nn.Linear(d_model, d_h))
@@ -654,7 +687,7 @@ class GatedHybridGraphLayer(nn.Module):
                     t,
                     d_model,
                     d_h,
-                    gate_mode,
+                    self.gate_mode,
                     gnn_dropout=self._mp_gnn_dropout,
                     identity_proj=use_identity,
                 )
@@ -760,7 +793,10 @@ class GatedHybridGraphLayer(nn.Module):
 
         for m in range(self.num_attn_heads):
             qg = self.qg_linears[m](src_attn)
-            if self.gate_mode == "headwise":
+            if self.gate_mode == "none":
+                q = qg
+                g = None
+            elif self.gate_mode == "headwise":
                 q, g = torch.split(qg, [self.d_h, 1], dim=-1)
             else:
                 q, g = torch.split(qg, [self.d_h, self.d_h], dim=-1)
@@ -776,8 +812,12 @@ class GatedHybridGraphLayer(nn.Module):
             weights = F.dropout(weights, p=self.attn_dropout, training=self.training)
 
             raw = weights @ v
-            gamma = torch.sigmoid(g)
-            attn_outputs.append(raw * gamma)
+            if g is None:
+                gamma = torch.ones(raw.size(0), 1, device=raw.device, dtype=raw.dtype)
+                attn_outputs.append(raw)
+            else:
+                gamma = torch.sigmoid(g)
+                attn_outputs.append(raw * gamma)
             attn_gate_vals.append(gamma)
 
         mp_outputs: List[Tensor] = []
