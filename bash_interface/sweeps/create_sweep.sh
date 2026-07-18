@@ -109,6 +109,12 @@ elif [[ "${_yaml_stem}" == peptides_struct_hybrid_tfeksgbl_sweep_* ]]; then
     TIME_LIMIT="240:00:00"
 elif [[ "${_yaml_stem}" == *_best_hybrid_sweep ]]; then
     DATASET_SLUG="${_yaml_stem%%_best_hybrid_sweep}"
+elif [[ "${_yaml_stem}" == enzymes_ogpkubk9_centered_sweep ]]; then
+    DATASET_SLUG="enzymes"
+    RUNS_PER_AGENT=3
+    ARRAY_SPEC="1-12%4"
+    JOB_PREFIX="enz_ogpk_sweep"
+    TIME_LIMIT="120:00:00"
 else
     DATASET_SLUG="${_yaml_stem%%_hybrid_*}"
 fi
