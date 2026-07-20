@@ -1,0 +1,100 @@
+# CLUSTER SiGMA + GRIT attention heads — based on ht9bntg2 (a1g1 GATEDGCN).
+#
+# Vanilla attn replaced by MultiHeadAttentionLayerGritSparse (attn_type=grit).
+# RRWP (ksteps=32, matching GRIT cluster paper) pads to full graph for GRIT;
+# MP heads keep sparse edges.
+#
+# Source hybrid: configs/gated_hybrid/cluster-hybrid-ht9bntg2-anchor.yaml
+# Launch: bash bash_interface/cluster/submit_sigma_grit_attn_pattern_cluster.sh
+out_dir: results
+metric_best: accuracy-SBM
+wandb:
+  use: False
+  project: GNNPlus
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - cluster
+    - anchor_ht9bntg2
+    - hybrid_a1g1
+    - gatedgcn
+    - rwse
+    - rrwp
+    - gate_headwise
+    - attn_type_grit
+    - grit_attn
+    - sigma_grit_attn
+dataset:
+  format: PyG-GNNBenchmarkDataset
+  name: CLUSTER
+  task: graph
+  task_type: classification
+  transductive: False
+  split_mode: standard
+  add_virtual_nodes: False
+  num_virtual_nodes: 0
+  node_encoder: True
+  node_encoder_name: LinearNode+RWSE
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: DummyEdge
+  edge_encoder_bn: False
+posenc_RWSE:
+  enable: True
+  kernel:
+    times_func: range(1,21)
+  model: Linear
+  raw_norm_type: BatchNorm
+posenc_RRWP:
+  enable: True
+  ksteps: 32
+  add_identity: True
+  add_node_attr: False
+train:
+  mode: custom
+  batch_size: 16
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: hybrid_gnn
+  loss_fun: weighted_cross_entropy
+  edge_decoding: dot
+gnn:
+  head: inductive_node
+  layers_mp: 16
+  layers_pre_mp: 0
+  layers_post_mp: 3
+  dim_inner: 56
+  act: relu
+  dropout: 0.2
+  agg: mean
+  ffn: False
+  residual: True
+  hybrid:
+    num_attn_heads: 1
+    num_gnn_heads: 1
+    d_h: 64
+    attn_mask: full
+    gate: headwise
+    norm: layernorm
+    gnn_types: "GATEDGCN"
+    attn_dropout: 0.1
+    mp_dropout: 0.2
+    block_bn: false
+    log_gate_stats: True
+    attn_type: grit
+    grit:
+      clamp: 5.0
+      edge_enhance: True
+      act: relu
+      use_bias: False
+      pad_to_full_graph: True
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 1.0e-5
+  base_lr: 0.001492
+  min_lr: 0.0
+  max_epoch: 100
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 5

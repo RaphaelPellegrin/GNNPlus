@@ -3,7 +3,15 @@
 Source draft: `SiGMA__LoG_2026_.pdf`  
 Entity/project: [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/weber-geoml-harvard-university/GNNPlus)
 
-**Table 5 ablations (SiGMA / SiGMA_ungated / Attn_only / MP_only):** see [`Paper_ablations.md`](Paper_ablations.md) — launch with `bash bash_interface/cluster/submit_paper_table5_ablations.sh`.
+**Table 5 ablations (SiGMA / SiGMA_ungated / Attn_only / MP_only):**
+- LRGB: ✅ submitted (`32232124`) — [`Paper_ablations.md`](Paper_ablations.md)
+- MNIST + CIFAR10: 🛑 **TO RUN** — [`Paper_ablations_mnist_cifar.md`](Paper_ablations_mnist_cifar.md) / [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md)  
+  `bash bash_interface/cluster/submit_paper_table5_mnist_cifar_ablations.sh`
+- Peptides-func **Homog_MP → MP_only** (a0g3 GCN×3): 🛑 **TO RUN** — [`Paper_peptides_func_homog_a1g2_mp_only.md`](Paper_peptides_func_homog_a1g2_mp_only.md)  
+  `bash bash_interface/cluster/submit_peptides_func_homog_a1g2_mp_only.sh`
+
+**SiGMA + GRIT attention** (PATTERN / CLUSTER, `attn_type=grit`): 🛑 **TO RUN** — [`Paper_sigma_grit_attn.md`](Paper_sigma_grit_attn.md) / [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md)  
+`bash bash_interface/cluster/submit_sigma_grit_attn_pattern_cluster.sh`
 
 Recomputed with:
 

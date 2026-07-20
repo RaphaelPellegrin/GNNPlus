@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, cast
+from typing import Dict, List, Optional, Tuple, cast
 
 import torch
 import torch.nn as nn
@@ -14,6 +14,7 @@ from torch_geometric.graphgym.register import register_network
 
 from GNNPlus.layer.gated_hybrid_layer import (
     AttnMaskType,
+    AttnType,
     GateMode,
     GatedHybridGraphLayer,
     NormType,
@@ -45,6 +46,11 @@ class HybridGNN(torch.nn.Module):
     Set ``model.type: hybrid_gnn`` and tune ``gnn.hybrid.*`` in the yaml.
     Uses the same encoders, heads, and ``train.mode: custom`` pipeline as
     ``custom_gnn`` (MNIST, COCO, OGB, etc.).
+
+    When ``posenc_RRWP.enable`` is True, absolute/relative RRWP encoders are
+    applied after the GraphGym :class:`FeatureEncoder`. Relative RRWP may pad
+    to a full graph for GRIT attention while storing sparse ``edge_index_mp`` /
+    ``edge_attr_mp`` for message-passing heads.
     """
 
     def __init__(self, dim_in: int, dim_out: int) -> None:
@@ -81,6 +87,42 @@ class HybridGNN(torch.nn.Module):
 
         hybrid_residual = bool(getattr(hcfg, 'residual', True))
         identity_proj = bool(getattr(hcfg, 'identity_proj', False))
+        attn_type = cast(
+            AttnType,
+            str(getattr(hcfg, 'attn_type', 'vanilla')).strip().lower(),
+        )
+        grit_cfg = getattr(hcfg, 'grit', None)
+        grit_clamp = float(getattr(grit_cfg, 'clamp', 5.0)) if grit_cfg is not None else 5.0
+        grit_edge_enhance = (
+            bool(getattr(grit_cfg, 'edge_enhance', True)) if grit_cfg is not None else True
+        )
+        grit_act = str(getattr(grit_cfg, 'act', cfg.gnn.act)) if grit_cfg is not None else str(cfg.gnn.act)
+        grit_use_bias = (
+            bool(getattr(grit_cfg, 'use_bias', False)) if grit_cfg is not None else False
+        )
+        pad_to_full = (
+            bool(getattr(grit_cfg, 'pad_to_full_graph', True)) if grit_cfg is not None else True
+        )
+
+        # Optional RRWP encoders (GRIT / grit attention). Applied after FeatureEncoder.
+        self.rrwp_abs_encoder: Optional[nn.Module] = None
+        self.rrwp_rel_encoder: Optional[nn.Module] = None
+        rrwp_cfg = getattr(cfg, 'posenc_RRWP', None)
+        if rrwp_cfg is not None and bool(getattr(rrwp_cfg, 'enable', False)):
+            ksteps = int(rrwp_cfg.ksteps)
+            dim_edge = int(getattr(cfg.gnn, 'dim_edge', 0)) or int(cfg.gnn.dim_inner)
+            self.rrwp_abs_encoder = register.node_encoder_dict['rrwp_linear'](
+                ksteps,
+                cfg.gnn.dim_inner,
+            )
+            self.rrwp_rel_encoder = register.edge_encoder_dict['rrwp_linear'](
+                ksteps,
+                dim_edge,
+                pad_to_full_graph=pad_to_full,
+                add_node_attr_as_self_loop=False,
+                fill_value=0.0,
+            )
+
         self.layers = nn.ModuleList([
             GatedHybridGraphLayer(
                 d_model=cfg.gnn.dim_inner,
@@ -97,6 +139,12 @@ class HybridGNN(torch.nn.Module):
                 block_dropout=mp_drop,
                 residual=hybrid_residual,
                 identity_proj=identity_proj,
+                attn_type=attn_type,
+                edge_dim=cfg.gnn.dim_inner,
+                grit_clamp=grit_clamp,
+                grit_edge_enhance=grit_edge_enhance,
+                grit_act=grit_act,
+                grit_use_bias=grit_use_bias,
             )
             for _ in range(cfg.gnn.layers_mp)
         ])
@@ -111,13 +159,51 @@ class HybridGNN(torch.nn.Module):
         gnn_head = register.head_dict[cfg.gnn.head]
         self.post_mp = gnn_head(dim_in=cfg.gnn.dim_inner, dim_out=dim_out)
 
-    def _encode_batch(self, batch: Batch) -> tuple[torch.Tensor, Batch, Any, Any]:
-        """Run encoders and return ``(x, batch, edge_index, edge_attr)``."""
+    def _encode_batch(
+        self, batch: Batch
+    ) -> Tuple[
+        torch.Tensor,
+        Batch,
+        torch.Tensor,
+        Optional[torch.Tensor],
+        torch.Tensor,
+        Optional[torch.Tensor],
+        torch.Tensor,
+        Optional[torch.Tensor],
+    ]:
+        """Run encoders and return dual edge sets for attn vs MP.
+
+        Returns:
+            ``(x, batch, edge_index_attn, edge_attr_attn,
+            edge_index_mp, edge_attr_mp, edge_index, edge_attr)``
+            where ``edge_index`` / ``edge_attr`` are the post-encoder defaults
+            (full-graph when RRWP padded).
+        """
         batch = self.encoder(batch)
+        if self.rrwp_abs_encoder is not None:
+            batch = self.rrwp_abs_encoder(batch)
+        if self.rrwp_rel_encoder is not None:
+            batch = self.rrwp_rel_encoder(batch)
         if hasattr(self, 'pre_mp'):
             batch = self.pre_mp(batch)
+
         edge_attr = getattr(batch, 'edge_attr', None)
-        return batch.x, batch, batch.edge_index, edge_attr
+        edge_index = batch.edge_index
+        edge_index_mp = getattr(batch, 'edge_index_mp', edge_index)
+        edge_attr_mp = getattr(batch, 'edge_attr_mp', edge_attr)
+        # After RRWP pad, batch.edge_* are the full-graph attention edges.
+        edge_index_attn = edge_index
+        edge_attr_attn = edge_attr
+        return (
+            batch.x,
+            batch,
+            edge_index_attn,
+            edge_attr_attn,
+            edge_index_mp,
+            edge_attr_mp,
+            edge_index,
+            edge_attr,
+        )
 
     def collect_gate_stats(self, batch: Batch) -> Dict[str, float]:
         """Per-layer headwise gate means from one forward (no prediction head).
@@ -125,14 +211,27 @@ class HybridGNN(torch.nn.Module):
         Keys match Heterogeneity_Profile: ``layer{i}/attn_{h}_gate_mean``,
         ``layer{i}/gnn_{h}_gate_mean``.
         """
-        x, batch, edge_index, edge_attr = self._encode_batch(batch)
+        (
+            x,
+            batch,
+            edge_index_attn,
+            edge_attr_attn,
+            edge_index_mp,
+            edge_attr_mp,
+            _edge_index,
+            _edge_attr,
+        ) = self._encode_batch(batch)
         all_stats: Dict[str, float] = {}
         for layer_idx, layer in enumerate(self.layers):
             layer_out = layer(
                 x,
-                edge_index,
+                edge_index_mp,
                 batch.batch,
-                edge_attr,
+                edge_attr_mp,
+                edge_index_attn=edge_index_attn,
+                edge_attr_attn=edge_attr_attn,
+                edge_index_mp=edge_index_mp,
+                edge_attr_mp=edge_attr_mp,
                 return_gate_stats=True,
             )
             assert isinstance(layer_out, tuple)
@@ -145,11 +244,29 @@ class HybridGNN(torch.nn.Module):
 
     def forward(self, batch: Batch) -> Batch:
         """Run encoder, hybrid blocks, optional FFN, and prediction head."""
-        x, batch, edge_index, edge_attr = self._encode_batch(batch)
+        (
+            x,
+            batch,
+            edge_index_attn,
+            edge_attr_attn,
+            edge_index_mp,
+            edge_attr_mp,
+            _edge_index,
+            _edge_attr,
+        ) = self._encode_batch(batch)
         for i, layer in enumerate(self.layers):
             x = cast(
                 torch.Tensor,
-                layer(x, edge_index, batch.batch, edge_attr),
+                layer(
+                    x,
+                    edge_index_mp,
+                    batch.batch,
+                    edge_attr_mp,
+                    edge_index_attn=edge_index_attn,
+                    edge_attr_attn=edge_attr_attn,
+                    edge_index_mp=edge_index_mp,
+                    edge_attr_mp=edge_attr_mp,
+                ),
             )
             if self.ffn_blocks is not None:
                 x = self.ffn_blocks[i](x)

@@ -141,6 +141,9 @@ def make_wandb_name(cfg):
         ha = cfg.gnn.hybrid.num_attn_heads
         hg = cfg.gnn.hybrid.num_gnn_heads
         model_name += f".hybrid_a{ha}g{hg}"
+        attn_type = str(getattr(cfg.gnn.hybrid, 'attn_type', 'vanilla')).strip().lower()
+        if attn_type and attn_type != 'vanilla':
+            model_name += f".attn_{attn_type}"
     elif cfg.model.type == 'GPSModel':
         model_name = f"GPS.{cfg.gt.layer_type}"
     model_name += f".{cfg.name_tag}" if cfg.name_tag else ""
@@ -150,6 +153,9 @@ def make_wandb_name(cfg):
 
     if _posenc_enabled(cfg, 'posenc_RWSE'):
         model_name += "+RWSE"
+
+    if _posenc_enabled(cfg, 'posenc_RRWP'):
+        model_name += "+RRWP"
 
     # Compose wandb run name.
     name = f"{dataset_name}.{model_name}.r{cfg.run_id}"

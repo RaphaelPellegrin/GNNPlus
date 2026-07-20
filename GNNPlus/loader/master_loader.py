@@ -190,6 +190,9 @@ def load_dataset_master(format, name, dataset_dir):
     for key, pecfg in cfg.items():
         if key.startswith('posenc_') and pecfg.enable:
             pe_name = key.split('_', 1)[1]
+            # RRWP uses AddFullRRWPTransform (below), not compute_posenc_stats.
+            if pe_name == 'RRWP':
+                continue
             pe_enabled_list.append(pe_name)
             if hasattr(pecfg, 'kernel'):
                 # Generate kernel times if functional snippet is set.
@@ -215,6 +218,24 @@ def load_dataset_master(format, name, dataset_dir):
         timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
                   + f'{elapsed:.2f}'[-3:]
         logging.info(f"Done! Took {timestr}")
+
+    if cfg.posenc_RRWP.enable:
+        from GNNPlus.transform.rrwp import AddFullRRWPTransform
+
+        ksteps = int(cfg.posenc_RRWP.ksteps)
+        add_identity = bool(cfg.posenc_RRWP.add_identity)
+        logging.info(
+            f"Precomputing RRWP (ksteps={ksteps}, add_identity={add_identity})..."
+        )
+        start = time.perf_counter()
+        pre_transform_in_memory(
+            dataset,
+            AddFullRRWPTransform(walk_length=ksteps, add_identity=add_identity),
+            show_progress=True,
+        )
+        elapsed = time.perf_counter() - start
+        timestr = time.strftime("%H:%M:%S", time.gmtime(elapsed)) + f"{elapsed:.2f}"[-3:]
+        logging.info(f"RRWP done! Took {timestr}")
 
     if parse_cfg_bool(cfg.dataset.add_virtual_nodes) and int(cfg.dataset.num_virtual_nodes) > 0:
         r = int(cfg.dataset.num_virtual_nodes)

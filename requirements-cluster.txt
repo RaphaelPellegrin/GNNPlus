@@ -8,3 +8,4 @@ networkx
 tensorboardX
 ogb
 wandb
+opt_einsum

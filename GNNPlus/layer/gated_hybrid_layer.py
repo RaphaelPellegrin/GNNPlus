@@ -24,6 +24,7 @@ from torch_geometric.nn import (
 from torch_geometric.utils import to_undirected
 
 AttnMaskType = Literal["full", "graph_restricted"]
+AttnType = Literal["vanilla", "grit"]
 # ``none`` / ``off``: no learned sigmoid gates (heads contribute at full scale).
 GateMode = Literal["elementwise", "headwise", "none", "off"]
 NormType = Literal["layernorm", "rmsnorm", "none"]
@@ -56,6 +57,7 @@ def _build_gin_conv(in_dim: int, out_dim: int) -> GINConv:
 
 from GNNPlus.layer.gcn_conv_layer_e import GCNConvLayer, GCNConvWithEdges
 from GNNPlus.layer.gatedgcn_layer import GatedGCNLayer
+from GNNPlus.layer.grit_attn_head import _GRITAttnHead
 from GNNPlus.layer.unitary_conv_layer import build_unitary_taylor_conv
 from torch_geometric.graphgym.config import cfg
 
@@ -619,6 +621,12 @@ class GatedHybridGraphLayer(nn.Module):
         block_dropout: float = 0.0,
         residual: bool = True,
         identity_proj: bool = False,
+        attn_type: AttnType = "vanilla",
+        edge_dim: Optional[int] = None,
+        grit_clamp: float = 5.0,
+        grit_edge_enhance: bool = True,
+        grit_act: str = "relu",
+        grit_use_bias: bool = False,
     ) -> None:
         super().__init__()
         if num_attn_heads < 0 or num_gnn_heads < 0:
@@ -627,6 +635,13 @@ class GatedHybridGraphLayer(nn.Module):
             raise ValueError("Need at least one head total")
         if d_h < 1:
             raise ValueError("d_h must be positive")
+
+        attn_type_norm = str(attn_type).strip().lower()
+        if attn_type_norm not in ("vanilla", "grit"):
+            raise ValueError(
+                f"Unknown attn_type: {attn_type!r} (expected vanilla or grit)"
+            )
+        self.attn_type: AttnType = cast(AttnType, attn_type_norm)
 
         use_identity = bool(identity_proj)
         if use_identity:
@@ -652,6 +667,7 @@ class GatedHybridGraphLayer(nn.Module):
         self._block_dropout = float(block_dropout)
         self.residual = bool(residual)
         self.identity_proj = use_identity
+        self.edge_dim = int(edge_dim) if edge_dim is not None else int(d_model)
 
         self.norm: nn.Module
         if self.block_bn or norm_type in ("none", "identity", ""):
@@ -666,14 +682,31 @@ class GatedHybridGraphLayer(nn.Module):
         self.qg_linears = nn.ModuleList()
         self.k_linears = nn.ModuleList()
         self.v_linears = nn.ModuleList()
-        for _ in range(num_attn_heads):
-            if self.gate_mode == "none":
-                qg_out = d_h
-            else:
-                qg_out = d_h + (1 if self.gate_mode == "headwise" else d_h)
-            self.qg_linears.append(nn.Linear(d_model, qg_out))
-            self.k_linears.append(nn.Linear(d_model, d_h))
-            self.v_linears.append(nn.Linear(d_model, d_h))
+        self.grit_attn_heads = nn.ModuleList()
+        if self.attn_type == "grit":
+            for _ in range(num_attn_heads):
+                self.grit_attn_heads.append(
+                    _GRITAttnHead(
+                        d_model=d_model,
+                        d_h=d_h,
+                        gate_mode=self.gate_mode,
+                        edge_dim=self.edge_dim,
+                        attn_dropout=self.attn_dropout,
+                        clamp=float(grit_clamp),
+                        edge_enhance=bool(grit_edge_enhance),
+                        act=str(grit_act),
+                        use_bias=bool(grit_use_bias),
+                    )
+                )
+        else:
+            for _ in range(num_attn_heads):
+                if self.gate_mode == "none":
+                    qg_out = d_h
+                else:
+                    qg_out = d_h + (1 if self.gate_mode == "headwise" else d_h)
+                self.qg_linears.append(nn.Linear(d_model, qg_out))
+                self.k_linears.append(nn.Linear(d_model, d_h))
+                self.v_linears.append(nn.Linear(d_model, d_h))
 
         types = gnn_types or parse_hybrid_gnn_types(None, num_gnn_heads)
         if len(types) != num_gnn_heads:
@@ -746,10 +779,19 @@ class GatedHybridGraphLayer(nn.Module):
         edge_attr: Optional[Tensor] = None,
         attn_source: Optional[Tensor] = None,
         mp_source: Optional[Tensor] = None,
+        edge_index_attn: Optional[Tensor] = None,
+        edge_attr_attn: Optional[Tensor] = None,
+        edge_index_mp: Optional[Tensor] = None,
+        edge_attr_mp: Optional[Tensor] = None,
         return_gate_stats: bool = False,
         return_attn_weights: bool = False,
     ) -> Union[Tensor, Tuple[Tensor, Dict[str, Any]]]:
-        """Apply the hybrid block."""
+        """Apply the hybrid block.
+
+        When RRWP pads to a full graph, pass padded edges via
+        ``edge_index_attn`` / ``edge_attr_attn`` and the original sparse
+        topology via ``edge_index_mp`` / ``edge_attr_mp``.
+        """
         out, aux = self._forward_core(
             x,
             edge_index,
@@ -757,6 +799,10 @@ class GatedHybridGraphLayer(nn.Module):
             edge_attr=edge_attr,
             attn_source=attn_source,
             mp_source=mp_source,
+            edge_index_attn=edge_index_attn,
+            edge_attr_attn=edge_attr_attn,
+            edge_index_mp=edge_index_mp,
+            edge_attr_mp=edge_attr_mp,
             return_gate_stats=return_gate_stats,
             return_attn_weights=return_attn_weights,
         )
@@ -772,6 +818,10 @@ class GatedHybridGraphLayer(nn.Module):
         edge_attr: Optional[Tensor],
         attn_source: Optional[Tensor],
         mp_source: Optional[Tensor],
+        edge_index_attn: Optional[Tensor],
+        edge_attr_attn: Optional[Tensor],
+        edge_index_mp: Optional[Tensor],
+        edge_attr_mp: Optional[Tensor],
         return_gate_stats: bool,
         return_attn_weights: bool,
     ) -> Tuple[Tensor, Dict[str, Any]]:
@@ -780,52 +830,67 @@ class GatedHybridGraphLayer(nn.Module):
         src_attn: Tensor = src if attn_source is None else attn_source
         src_mp: Tensor = src if mp_source is None else mp_source
 
-        if self.attn_mask_type == "graph_restricted":
-            allowed = _graph_adjacency_mask(edge_index, batch, n)
-        else:
-            allowed = _same_graph_mask(batch, n)
-
-        neg_inf = torch.finfo(x.dtype).min / 4
+        ei_attn = edge_index if edge_index_attn is None else edge_index_attn
+        ea_attn = edge_attr if edge_attr_attn is None else edge_attr_attn
+        ei_mp = edge_index if edge_index_mp is None else edge_index_mp
+        ea_mp = edge_attr if edge_attr_mp is None else edge_attr_mp
 
         attn_outputs: List[Tensor] = []
         attn_gate_vals: List[Tensor] = []
         attn_weights_list: List[Tensor] = []
 
-        for m in range(self.num_attn_heads):
-            qg = self.qg_linears[m](src_attn)
-            if self.gate_mode == "none":
-                q = qg
-                g = None
-            elif self.gate_mode == "headwise":
-                q, g = torch.split(qg, [self.d_h, 1], dim=-1)
+        if self.attn_type == "grit":
+            for grit_head in self.grit_attn_heads:
+                out_h, gamma = cast(
+                    Tuple[Tensor, Tensor],
+                    grit_head(src_attn, ei_attn, ea_attn),
+                )
+                attn_outputs.append(out_h)
+                attn_gate_vals.append(gamma)
+        else:
+            if self.attn_mask_type == "graph_restricted":
+                # Dense vanilla mask uses the MP (sparse) topology when available.
+                allowed = _graph_adjacency_mask(ei_mp, batch, n)
             else:
-                q, g = torch.split(qg, [self.d_h, self.d_h], dim=-1)
+                allowed = _same_graph_mask(batch, n)
 
-            k = self.k_linears[m](src_attn)
-            v = self.v_linears[m](src_attn)
+            neg_inf = torch.finfo(x.dtype).min / 4
 
-            scores = (q @ k.transpose(0, 1)) * self._scale
-            scores = scores.masked_fill(~allowed, neg_inf)
-            weights = F.softmax(scores, dim=-1)
-            if return_attn_weights:
-                attn_weights_list.append(weights.detach().clone())
-            weights = F.dropout(weights, p=self.attn_dropout, training=self.training)
+            for m in range(self.num_attn_heads):
+                qg = self.qg_linears[m](src_attn)
+                if self.gate_mode == "none":
+                    q = qg
+                    g = None
+                elif self.gate_mode == "headwise":
+                    q, g = torch.split(qg, [self.d_h, 1], dim=-1)
+                else:
+                    q, g = torch.split(qg, [self.d_h, self.d_h], dim=-1)
 
-            raw = weights @ v
-            if g is None:
-                gamma = torch.ones(raw.size(0), 1, device=raw.device, dtype=raw.dtype)
-                attn_outputs.append(raw)
-            else:
-                gamma = torch.sigmoid(g)
-                attn_outputs.append(raw * gamma)
-            attn_gate_vals.append(gamma)
+                k = self.k_linears[m](src_attn)
+                v = self.v_linears[m](src_attn)
+
+                scores = (q @ k.transpose(0, 1)) * self._scale
+                scores = scores.masked_fill(~allowed, neg_inf)
+                weights = F.softmax(scores, dim=-1)
+                if return_attn_weights:
+                    attn_weights_list.append(weights.detach().clone())
+                weights = F.dropout(weights, p=self.attn_dropout, training=self.training)
+
+                raw = weights @ v
+                if g is None:
+                    gamma = torch.ones(raw.size(0), 1, device=raw.device, dtype=raw.dtype)
+                    attn_outputs.append(raw)
+                else:
+                    gamma = torch.sigmoid(g)
+                    attn_outputs.append(raw * gamma)
+                attn_gate_vals.append(gamma)
 
         mp_outputs: List[Tensor] = []
         mp_gate_vals: List[Tensor] = []
 
         for mp_head in self.mp_heads:
             out_h, gamma = cast(
-                Tuple[Tensor, Tensor], mp_head(src_mp, edge_index, edge_attr)
+                Tuple[Tensor, Tensor], mp_head(src_mp, ei_mp, ea_mp)
             )
             mp_outputs.append(out_h)
             mp_gate_vals.append(gamma)

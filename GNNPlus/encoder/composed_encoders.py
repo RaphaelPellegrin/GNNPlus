@@ -14,6 +14,7 @@ from GNNPlus.encoder.type_dict_encoder import TypeDictNodeEncoder, TypeDictEdgeE
 from GNNPlus.encoder.linear_node_encoder import LinearNodeEncoder
 from GNNPlus.encoder.equivstable_laplace_pos_encoder import EquivStableLapPENodeEncoder
 from GNNPlus.encoder.graphormer_encoder import GraphormerEncoder
+import GNNPlus.encoder.rrwp_encoder  # noqa: F401 — register rrwp_linear encoders
 
 
 def concat_node_encoders(encoder_classes, pe_enc_names):
