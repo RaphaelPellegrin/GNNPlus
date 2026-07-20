@@ -1,0 +1,87 @@
+# MNIST hybrid anchor — frozen from paper_bestmodel_v1_mnist_lcvbyyss.
+#
+# Exemplar run: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/uh7nxm4e
+#   (seed0; group mean Acc 98.628 ± 0.105 over 5 seeds)
+# W&B group: paper_bestmodel_v1_mnist_lcvbyyss
+#
+# Architecture: a2g2 — 2×attn + 2×GATEDGCN, d_h=64, elementwise gate, LN,
+#   L6/H60, ep=200, lr=5e-4. (Original W&B types string listed GATEDGCN×4;
+#   only the first num_gnn_heads=2 are used.)
+out_dir: results
+metric_best: accuracy
+wandb:
+  use: False
+  project: GNNPlus
+  group: paper_bestmodel_v1_mnist_lcvbyyss
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - paper_repro
+    - bestmodel_v1
+    - mnist
+    - anchor_lcvbyyss
+    - hybrid_a2g2
+    - gate_elementwise
+    - gatedgcn
+dataset:
+  format: PyG-GNNBenchmarkDataset
+  name: MNIST
+  task: graph
+  task_type: classification
+  transductive: False
+  node_encoder: True
+  node_encoder_name: LinearNode
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: LinearEdge
+  edge_encoder_bn: False
+posenc_RWSE:
+  enable: False
+  kernel:
+    times_func: range(1,21)
+  model: Linear
+  dim_pe: 16
+  raw_norm_type: BatchNorm
+train:
+  mode: custom
+  batch_size: 16
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: hybrid_gnn
+  loss_fun: cross_entropy
+  graph_pooling: mean
+gnn:
+  head: graph
+  ffn: True
+  layers_pre_mp: 0
+  layers_mp: 6
+  layers_post_mp: 1
+  dim_inner: 60
+  act: relu
+  residual: True
+  dropout: 0.15
+  agg: mean
+  hybrid:
+    num_attn_heads: 2
+    num_gnn_heads: 2
+    d_h: 64
+    attn_mask: full
+    gate: elementwise
+    norm: layernorm
+    gnn_types: "GATEDGCN,GATEDGCN"
+    attn_dropout: 0.5
+    mp_dropout: 0.15
+    block_bn: false
+    residual: true
+    identity_proj: false
+    log_gate_stats: True
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 0.00001
+  base_lr: 0.0005
+  min_lr: 0.0
+  max_epoch: 200
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 5

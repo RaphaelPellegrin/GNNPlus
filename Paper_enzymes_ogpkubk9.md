@@ -29,6 +29,14 @@ Configs:
 
 ## 1. Seed grids (10 jobs)
 
+```text
+╔══════════════════════════════════════════════════════════════════╗
+║  🛑🛑🛑  TO RUN  ·  cluster was FULL — submit when free  🛑🛑🛑  ║
+║  🧬 ENZYMES ogpkubk9 · plateau×5 + cosine×5 = 10 jobs            ║
+║  📒 also listed in CLUSTER_LAUNCHES.md                           ║
+╚══════════════════════════════════════════════════════════════════╝
+```
+
 5 seeds × {plateau, cosine}:
 
 ```bash
@@ -37,12 +45,14 @@ export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
+# 🚀🚀🚀 SUBMIT THIS
 bash bash_interface/cluster/submit_enzymes_ogpkubk9_seed_grids.sh
+# 👉 paste JOBID below + into CLUSTER_LAUNCHES.md
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM array** | *(paste JOBID)* |
+| **SLURM array** | 🛑 *TO RUN — not submitted* |
 | **Tasks** | `1-10%5` |
 | **W&B** | `enzymes_ogpkubk9_a4g4_plateau_seeds` / `enzymes_ogpkubk9_a4g4_cosine_seeds` |
 
@@ -57,6 +67,13 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 
 ## 2. Centered sweep (lr × #gates × d_h)
 
+```text
+╔══════════════════════════════════════════════════════════════════╗
+║  🛑🛑🛑  TO RUN  ·  W&B sweep (create + agents)  🛑🛑🛑          ║
+║  🎯 lr · num_attn/MP heads · d_h  around ogpkubk9                ║
+╚══════════════════════════════════════════════════════════════════╝
+```
+
 Varies around ogpkubk9:
 
 - `optim.base_lr` ∈ log-uniform [2e-4, 5e-3]
@@ -70,13 +87,14 @@ YAML: `bash_interface/sweeps/enzymes_ogpkubk9_centered_sweep.yaml`
 source ~/.gnnplus_env
 export WANDB_PROJECT=GNNPlus
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
 
+# 🚀🚀🚀 CREATE SWEEP then paste printed sbatch agents
 bash bash_interface/sweeps/create_sweep.sh \
   bash_interface/sweeps/enzymes_ogpkubk9_centered_sweep.yaml
-# then run the printed sbatch agent line (or agents from create_sweep output)
 ```
 
 | Field | Value |
 |-------|-------|
-| **Sweep ID** | *(paste)* |
-| **Agent job** | *(paste)* |
+| **Sweep ID** | 🛑 *TO RUN — not created* |
+| **Agent job** | 🛑 *TO RUN — not submitted* |

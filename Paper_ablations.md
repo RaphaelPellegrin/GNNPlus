@@ -5,6 +5,8 @@ You submit on FASRC yourself. This file is the checklist.
 Entity/project: [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/weber-geoml-harvard-university/GNNPlus)  
 Best baselines: [`Paper_final_runs.md`](Paper_final_runs.md)
 
+**MNIST + CIFAR10** (same 4 variants): 🛑 **TO RUN** — see [`Paper_ablations_mnist_cifar.md`](Paper_ablations_mnist_cifar.md) / [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md).
+
 ---
 
 ## 1. Exact best baselines we freeze
@@ -61,16 +63,26 @@ Optional: override with `PAPER_T5_PARALLEL=N`; default is **18**.
 
 | Field | Value |
 |-------|-------|
-| **SLURM array** | *(paste JOBID after submit)* |
+| **SLURM array** | ✅ **32232124** (submitted 2026-07-17) |
 | **Job name** | `sigma_T5_abl` |
-| **Tasks** | `1-80%2` = 4×4×5 |
+| **Tasks** | `1-80%18` = 4×4×5 |
 | **Scripts** | `submit_paper_table5_ablations.sh` → `run_paper_table5_ablations.sh` |
-| **Logs** | `logs_gnnplus/sigma_T5_abl_<JOBID>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/sigma_T5_abl_32232124_<TASK>.log` |
 | **Needs** | `gate=none` support (this branch) |
+| **Master tracker** | [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md) |
 
 ---
 
 ## 4. Aggregate (5 seeds each)
+
+Preferred (Table 5 + Table 6 together):
+
+```bash
+python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
+python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5 --detail
+```
+
+Per-group fallback:
 
 ```bash
 PREFIX=paper_T5

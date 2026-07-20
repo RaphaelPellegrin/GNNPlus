@@ -61,24 +61,21 @@ Optional: `PAPER_T6_VOC_PARALLEL=N` (default **5**).
 
 | Field | Value |
 |-------|-------|
-| **SLURM array** | *(paste JOBID after submit)* |
+| **SLURM array** | ✅ **`32717593`** (submitted 2026-07-18, `%3`) |
 | **Job name** | `sigma_T6_voc` |
-| **Tasks** | `1-15%5` = 3×5 |
+| **Tasks** | `1-15%3` = 3×5 |
 | **Scripts** | `submit_paper_table6_voc_hetero.sh` → `run_paper_table6_voc_hetero.sh` |
-| **Logs** | `logs_gnnplus/sigma_T6_voc_<JOBID>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/sigma_T6_voc_32717593_<TASK>.log` |
 | **Needs** | `gate=none` support (same branch as Table 5) |
+| **Master tracker** | [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md) |
 
 ---
 
 ## 4. Aggregate
 
 ```bash
-PREFIX=paper_T6
-for v in SiGMA Hetero_MP Hetero_MP_ungated; do
-  echo "===== voc / ${v} ====="
-  python scripts/api_wanndb_query/aggregate_paper_repro.py \
-    --group ${PREFIX}_voc_${v} --metric best_test_perf --state finished
-done
+python scripts/api_wanndb_query/aggregate_paper_table56.py --table 6
+python scripts/api_wanndb_query/aggregate_paper_table56.py --table 6 --detail
 ```
 
 ### Fill-in (PascalVOC-SP F1 ↑)

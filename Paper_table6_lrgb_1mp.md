@@ -61,26 +61,22 @@ Optional: `PAPER_T6_1MP_PARALLEL=N` (default **10**).
 
 | Field | Value |
 |-------|-------|
-| **SLURM array** | *(paste JOBID after submit)* |
+| **SLURM array** | ✅ **`32717625`** (submitted 2026-07-18, `%7`) |
 | **Job name** | `sigma_T6_1mp` |
-| **Tasks** | `1-75%10` = 3×5×5 |
+| **Tasks** | `1-75%7` = 3×5×5 |
 | **Scripts** | `submit_paper_table6_lrgb_1mp_hetero.sh` → `run_paper_table6_lrgb_1mp_hetero.sh` |
-| **Logs** | `logs_gnnplus/sigma_T6_1mp_<JOBID>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/sigma_T6_1mp_32717625_<TASK>.log` |
 | **Needs** | `gate=none` support (same branch as Table 5) |
+| **Master tracker** | [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md) |
 
 ---
 
 ## 4. Aggregate
 
 ```bash
-PREFIX=paper_T6
-for ds in peptides_func peptides_struct coco; do
-  for v in SiGMA Homog_MP Hetero_MP Homog_MP_ungated Hetero_MP_ungated; do
-    echo "===== ${ds} / ${v} ====="
-    python scripts/api_wanndb_query/aggregate_paper_repro.py \
-      --group ${PREFIX}_${ds}_${v} --metric best_test_perf --state finished
-  done
-done
+# All Table 6 (VOC + 1-MP), or 1-MP pivot only via --table 6
+python scripts/api_wanndb_query/aggregate_paper_table56.py --table 6
+python scripts/api_wanndb_query/aggregate_paper_table56.py --table 6 --detail
 ```
 
 ### Fill-in
@@ -106,3 +102,5 @@ done
 | `configs/gated_hybrid/coco-hybrid-5b4z9l3u-a1g1-anchor.yaml` | COCO SiGMA |
 
 Related: VOC Table 6 → [`Paper_table6_voc.md`](Paper_table6_voc.md).
+
+**Follow-up (🛑 TO RUN):** Homog_MP beat paper SiGMA on peptides-func (0.7080). MP-only control a0g3 GCN×3 → [`Paper_peptides_func_homog_a1g2_mp_only.md`](Paper_peptides_func_homog_a1g2_mp_only.md).
