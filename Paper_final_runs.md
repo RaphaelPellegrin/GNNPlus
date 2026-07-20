@@ -9,9 +9,11 @@ Entity/project: [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/webe
   `bash bash_interface/cluster/submit_paper_table5_mnist_cifar_ablations.sh`
 - Peptides-func **Homog_MP → MP_only** (a0g3 GCN×3): 🛑 **TO RUN** — [`Paper_peptides_func_homog_a1g2_mp_only.md`](Paper_peptides_func_homog_a1g2_mp_only.md)  
   `bash bash_interface/cluster/submit_peptides_func_homog_a1g2_mp_only.sh`
+- Peptides **UniGCN a0g2 mixes** (UNIGCN+GINE / UNIGCN+GATEDGCN, no attn): 🛑 **TO RUN** — [`Paper_peptides_unigcn_a0g2_mp_mixes.md`](Paper_peptides_unigcn_a0g2_mp_mixes.md)  
+  `bash bash_interface/cluster/submit_peptides_unigcn_a0g2_mp_mixes.sh`
 
-**SiGMA + GRIT attention** (PATTERN / CLUSTER, `attn_type=grit`): 🛑 **TO RUN** — [`Paper_sigma_grit_attn.md`](Paper_sigma_grit_attn.md) / [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md)  
-`bash bash_interface/cluster/submit_sigma_grit_attn_pattern_cluster.sh`
+**SiGMA + GRIT attention** (PATTERN / CLUSTER, `attn_type=grit`): ✅ **`33458567`** — [`Paper_sigma_grit_attn.md`](Paper_sigma_grit_attn.md) / [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md)  
+(PATTERN finished ≈87.11%; CLUSTER still running as of last check.)
 
 Recomputed with:
 

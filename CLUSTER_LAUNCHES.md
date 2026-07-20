@@ -60,13 +60,35 @@ python scripts/api_wanndb_query/aggregate_paper_table56.py --table 6
 
 ---
 
+### 🧪 SiGMA + GRIT attention — PATTERN + CLUSTER (10 jobs)
+
+| | |
+|--|--|
+| **SLURM** | **`33458567`** |
+| **When** | 2026-07-20 |
+| **Tasks** | `1-10%5` |
+| **Docs** | [`Paper_sigma_grit_attn.md`](Paper_sigma_grit_attn.md) |
+| **W&B** | `paper_sigma_grit_attn_pattern` / `paper_sigma_grit_attn_cluster` |
+| **Tags** | `sigma_grit_attn`, `attn_type_grit`, `grit_attn` |
+| **Logs** | `logs_gnnplus/sigma_grit_attn_33458567_<TASK>.log` |
+
+```bash
+# 📊 aggregate
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_sigma_grit_attn_pattern --metric best_test_perf --state finished
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_sigma_grit_attn_cluster --metric best_test_perf --state finished
+```
+
+---
+
 ## 🛑🛑🛑 TO RUN — cluster was full — COPY/PASTE WHEN SLOTS FREE 🛑🛑🛑
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  SiGMA + GRIT attention (PATTERN + CLUSTER, 10 jobs)     ║
-║  🧪  vanilla attn → MultiHeadAttentionLayerGritSparse (attn_type=grit)  ║
-║  📄  Paper_sigma_grit_attn.md                                            ║
+║  🛑  TO RUN  ·  Peptides UniGCN a0g2 MP mixes (20 jobs)                 ║
+║  🧪  func+struct × {UNIGCN+GINE, UNIGCN+GATEDGCN} × 5 seeds · no attn   ║
+║  📄  Paper_peptides_unigcn_a0g2_mp_mixes.md                              ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -76,17 +98,16 @@ export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-# 🚀 10 jobs (2 ds × 5 seeds), ≤5 GPUs, 128GB / 120h
-bash bash_interface/cluster/submit_sigma_grit_attn_pattern_cluster.sh
-# 👉 paste JOBID into Paper_sigma_grit_attn.md + here
+# 🚀 20 jobs, ≤8 GPUs
+bash bash_interface/cluster/submit_peptides_unigcn_a0g2_mp_mixes.sh
+# 👉 paste JOBID into Paper_peptides_unigcn_a0g2_mp_mixes.md + here
 ```
 
 | Field | Value |
 |-------|-------|
 | **SLURM** | 🛑 *not submitted yet* |
-| **W&B** | `paper_sigma_grit_attn_pattern` / `paper_sigma_grit_attn_cluster` |
-| **Tags** | `sigma_grit_attn`, `attn_type_grit`, `grit_attn` |
-| **Aggregate** | `python scripts/api_wanndb_query/aggregate_paper_repro.py --group paper_sigma_grit_attn_pattern --metric best_test_perf --state finished` |
+| **W&B** | `paper_peptides_{peptides_func,peptides_struct}_a0g2_{UNIGCN_GINE,UNIGCN_GATEDGCN}` |
+| **HPs** | func=Homog a1g2 / o5cdk766 · struct=g3bsaq32 |
 
 ---
 
@@ -236,8 +257,9 @@ bash bash_interface/cluster/submit_heterogeneity_tu.sh
 |----------|--------|-------|
 | Table 5 LRGB | ✅ | `32232124` |
 | Table 5 MNIST+CIFAR | 🛑 TO RUN | — |
+| Peptides UniGCN a0g2 mixes | 🛑 TO RUN | — |
 | Peptides-func Homog→MP_only a0g3 | 🛑 TO RUN | — |
-| SiGMA + GRIT attn (PATTERN/CLUSTER) | 🛑 TO RUN | — |
+| SiGMA + GRIT attn (PATTERN/CLUSTER) | ✅ | `33458567` |
 | Table 6 VOC | ✅ | `32717593` |
 | Table 6 1-MP | ✅ | `32717625` |
 | ENZYMES ogpkubk9 seeds | 🛑 TO RUN | — |
