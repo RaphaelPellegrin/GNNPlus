@@ -1,0 +1,21 @@
+{
+    "folders": [
+        {
+            "path": ".",
+            "name": "GNNPlus"
+        },
+        {
+            "path": "../Heterogeneity_Profile",
+            "name": "Heterogeneity_Profile (sweeps)"
+        },
+        {
+            "path": "../GraphGym",
+            "name": "GraphGym"
+        },
+        {
+            "path": "../GRIT",
+            "name": "GRIT"
+        }
+    ],
+    "settings": {}
+}

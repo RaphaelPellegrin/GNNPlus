@@ -47,6 +47,9 @@ class CustomGNN(torch.nn.Module):
             return GatedGCNLayer
         elif model_type == 'gine':
             return GINEConvLayer
+        elif model_type == 'gin':
+            from GNNPlus.layer.gin_conv_layer import GINConvLayer
+            return GINConvLayer
         elif model_type == 'gcn':
             from GNNPlus.layer.gcn_conv_layer import GCNConvLayer
             return GCNConvLayer
