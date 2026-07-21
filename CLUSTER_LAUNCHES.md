@@ -40,16 +40,24 @@ python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
 
 **COCO full H200 twin** (keep mweber jobs; `gpu_h200`, ≤25 GPUs total, **72h** MaxTime, `_h200` W&B names):
 
-```bash
-bash bash_interface/cluster/submit_coco_h200_relaunch.sh
-# → Table5 COCO 61-80%12 + Table6 COCO 51-75%13  ·  paste both JOBIDs below
-# (Do NOT use 192h on gpu_h200 — sbatch rejects it.)
-```
+| JOBID | Tasks | What |
+|-------|-------|------|
+| ✅ **`34098505`** | T5 `61-80%12` | all COCO Table 5 variants × seeds |
+| ✅ **`34098527`** | T6 `51-75%13` | all COCO Table 6 variants × seeds |
+
+Submitted 2026-07-22. Logs: `logs_gnnplus/sigma_T5_abl_34098505_<TASK>.log`, `logs_gnnplus/sigma_T6_1mp_34098527_<TASK>.log`.
+
+**VOC Table 5 SiGMA + SiGMA_ungated H200 twin** (tasks `41-50`, keep `32232124`):
 
 | JOBID | Tasks | What |
 |-------|-------|------|
-| 🛑 **TO RUN** | T5 `61-80%12` | all COCO Table 5 variants × seeds |
-| 🛑 **TO RUN** | T6 `51-75%13` | all COCO Table 6 variants × seeds |
+| 🛑 **TO RUN** | T5 `41-50%5` | VOC SiGMA + ungated × 5 seeds · `gpu_h200` · 72h · `_h200` |
+
+```bash
+PAPER_T5_ARRAY=41-50 PAPER_T5_PARALLEL=5 PAPER_T5_PARTITION=gpu_h200 \
+  PAPER_T5_TIME=72:00:00 PAPER_T5_NAME_SUFFIX=_h200 \
+  bash bash_interface/cluster/submit_paper_table5_ablations.sh
+```
 
 ---
 
@@ -84,7 +92,7 @@ bash bash_interface/cluster/submit_coco_h200_relaunch.sh
 | | |
 |--|--|
 | **SLURM** | **`32717625`** (peptides ✅; COCO failed/empty) |
-| **COCO relaunch** | ✅ **`34070245`** · `51-75%3` · 192h (2026-07-21) · H200 twin via `submit_coco_h200_relaunch.sh` |
+| **COCO relaunch** | ✅ **`34070245`** · `51-75%3` · 192h (mweber) · H200 twin ✅ **`34098527`** |
 | **When** | 2026-07-18 / relaunch 2026-07-21 |
 | **Docs** | [`Paper_table6_lrgb_1mp.md`](Paper_table6_lrgb_1mp.md) |
 | **W&B** | `paper_T6_{peptides_func,peptides_struct,coco}_*` |
@@ -247,6 +255,8 @@ bash bash_interface/sweeps/create_sweep.sh \
 |----------|--------|-------|
 | Table 5 LRGB | ✅ | `32232124` |
 | Table 5 COCO gaps relaunch | ✅ Attn `34070241`; MP/ungated ✅ `34081524` (prior ❌ `34070242`/`43`) | `34081524` |
+| Table 5+6 COCO H200 twin | ✅ T5 `34098505` · T6 `34098527` | `34098505` / `34098527` |
+| Table 5 VOC SiGMA+ungated H200 | 🛑 TO RUN (`41-50%5`) | — |
 | ENZYMES ogpkubk9 seeds | ✅ | `34081517` (priors ❌ `34076119` / `34070247`) |
 | Table 5 MNIST+CIFAR | 🛑 TO RUN | — |
 | Peptides UniGCN a0g2 mixes | ✅ | `33651463` |
@@ -256,6 +266,6 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Table 6 VOC Homog_MP | ✅ | `33810534` |
 | Table 6 VOC Homog_MP_ungated relaunch | ✅ | `34070244` |
 | Table 6 1-MP peptides | ✅ | `32717625` |
-| Table 6 COCO relaunch | ✅ | `34070245` |
+| Table 6 COCO relaunch | ✅ mweber `34070245`; H200 twin `34098527` | `34070245` / `34098527` |
 | ENZYMES ogpkubk9 sweep | 🛑 TO RUN | — |
 | Heterogeneity TU relaunch | ✅ | `34073629` |

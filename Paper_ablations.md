@@ -88,8 +88,10 @@ bash bash_interface/cluster/submit_paper_table5_coco_attn_only_h200.sh
 | Field | Value |
 |-------|-------|
 | **H200 attempt** | `33813232` — failed (quota / timeout) |
-| **Relaunch SLURM** | ✅ **`34070241`** Attn `71-75` · ❌ **`34070242`** MP `78-80` + ❌ **`34070243`** ungated `67` (epoch0 `OSError 122` holylabs quota — relaunch with `GNNPLUS_OUT_DIR` on netscratch) |
-| **W&B groups** | `paper_T5_coco_{Attn_only,MP_only,SiGMA_ungated}` |
+| **Relaunch SLURM** | ✅ Attn **`34070241`** · MP/ungated ✅ **`34081524`** `67,78-80` (priors ❌ `34070242`/`43` Errno 122; use `GNNPLUS_OUT_DIR`) |
+| **COCO full H200 twin** | ✅ **`34098505`** · tasks `61-80%12` · `gpu_h200` · 72h · `_h200` names (keeps mweber) |
+| **VOC SiGMA+ungated H200** | 🛑 **TO RUN** · tasks `41-50%5` · `gpu_h200` · 72h · `_h200` (keeps `32232124`) |
+| **W&B groups** | `paper_T5_{coco,voc}_{SiGMA,SiGMA_ungated,...}` |
 
 ---
 
