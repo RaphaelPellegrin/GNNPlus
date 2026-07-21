@@ -27,6 +27,9 @@ Entity/project: [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/webe
 python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
 ```
 
+**COCO Attn_only H200 relaunch** (5 seeds, do not cancel old):  
+`bash bash_interface/cluster/submit_paper_table5_coco_attn_only_h200.sh` → paste JOBID in [`Paper_ablations.md`](Paper_ablations.md)
+
 ---
 
 ### 🧪 Table 6 — PascalVOC hetero MP (15 jobs)
@@ -134,6 +137,19 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 
 ---
 
+### 🧪 Heterogeneity TU profiles (9 jobs)
+
+| | |
+|--|--|
+| **SLURM** | **`33811552`** |
+| **When** | 2026-07-21 |
+| **Partition** | `gpu_h200` · `72:00:00` · `%5` |
+| **Docs** | [`Paper_heterogeneity.md`](Paper_heterogeneity.md) |
+| **W&B** | `building_hetero_profile_{mutag,enzymes,proteins}` |
+| **Logs** | `logs_gnnplus/hetero_tu_33811552_<TASK>.log` |
+
+---
+
 ## 🛑🛑🛑 TO RUN — cluster was full — COPY/PASTE WHEN SLOTS FREE 🛑🛑🛑
 
 ```text
@@ -193,42 +209,6 @@ bash bash_interface/sweeps/create_sweep.sh \
 
 ---
 
-```text
-╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  Heterogeneity profiles (TU) · ≤5 GPUs                    ║
-║  📈  MUTAG / ENZYMES / PROTEINS × {GCN, GIN, SiGMA} = 9 jobs            ║
-║  🔁  50/25/25 · 300 ep · ≥100 test appearances per graph                ║
-║  ☁️  W&B groups: building_hetero_profile_<dataset>                      ║
-║  📄  Paper_heterogeneity.md                                              ║
-╚══════════════════════════════════════════════════════════════════════════╝
-```
-
-```bash
-source ~/.gnnplus_env
-export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
-cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-git pull
-
-# 🚀 paper protocol (≤5 GPUs on H200; long!)
-HETERO_PARALLEL=5 HETERO_PARTITION=gpu_h200 \
-  bash bash_interface/cluster/submit_heterogeneity_tu.sh
-# if TimeLimit rejected: also set HETERO_TIME=72:00:00
-
-# 🧪 smoke first (recommended):
-# HETERO_REQUIRED_TEST_APPEARANCES=2 HETERO_MAX_TRIALS=20 \
-#   HETERO_PARTITION=gpu_h200 bash bash_interface/cluster/submit_heterogeneity_tu.sh
-```
-
-| Field | Value |
-|-------|-------|
-| **SLURM** | 🛑 *not submitted yet* |
-| **Partition** | `gpu_h200` (override via `HETERO_PARTITION`) |
-| **Parallel** | ≤5 GPUs |
-| **Local outs** | `results/heterogeneity/<dataset>_<MODEL>/` |
-| **W&B** | groups `building_hetero_profile_{mutag,enzymes,proteins}`; artifact = pickle + appearances CSV + profile PNGs |
-
----
-
 ## Quick checklist
 
 | Campaign | Status | JOBID |
@@ -243,4 +223,4 @@ HETERO_PARALLEL=5 HETERO_PARTITION=gpu_h200 \
 | Table 6 1-MP | ✅ | `32717625` |
 | ENZYMES ogpkubk9 seeds | ✅ | `33651466` |
 | ENZYMES ogpkubk9 sweep | 🛑 TO RUN | — |
-| Heterogeneity TU profiles | 🛑 TO RUN | — |
+| Heterogeneity TU profiles | ✅ | `33811552` (`gpu_h200`) |

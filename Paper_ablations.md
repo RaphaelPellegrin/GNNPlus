@@ -71,6 +71,27 @@ Optional: override with `PAPER_T5_PARALLEL=N`; default is **18**.
 | **Needs** | `gate=none` support (this branch) |
 | **Master tracker** | [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md) |
 
+### Relaunch — COCO Attn_only on `gpu_h200` (5 seeds, new job)
+
+Old runs (e.g. [`40o1sohg`](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/40o1sohg) = seed2) may not finish in time. **Do not cancel** `32232124_71..75` — submit a parallel H200 array. Same W&B group `paper_T5_coco_Attn_only`; new run names end in `_h200`.
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_paper_table5_coco_attn_only_h200.sh
+# 👉 paste JOBID here
+```
+
+| Field | Value |
+|-------|-------|
+| **Relaunch SLURM** | 🛑 *not submitted yet* |
+| **Scripts** | `submit_paper_table5_coco_attn_only_h200.sh` → `run_paper_table5_coco_attn_only_h200.sh` |
+| **Partition / time** | `gpu_h200` / `72:00:00` · `%5` |
+| **W&B group** | `paper_T5_coco_Attn_only` |
+
 ---
 
 ## 4. Aggregate (5 seeds each)
