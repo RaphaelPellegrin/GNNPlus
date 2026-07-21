@@ -148,6 +148,14 @@ if [ -n "${GNNPLUS_DATASET_DIR:-}" ]; then
     extra_args+=(dataset.dir "${GNNPLUS_DATASET_DIR}")
 fi
 
+# Prefer netscratch for GraphGym stats/ckpts — holylabs inode/byte quota kills jobs
+# with OSError 122 on results/*/stats.json (see COCO relaunch 34070242/43).
+if [ -n "${GNNPLUS_OUT_DIR:-}" ]; then
+    mkdir -p "${GNNPLUS_OUT_DIR}"
+    extra_args+=(out_dir "${GNNPLUS_OUT_DIR}")
+    log_message "out_dir override: ${GNNPLUS_OUT_DIR}"
+fi
+
 export WANDB_EXTRA_TAGS="${wandb_tags}"
 
 exec python main.py \

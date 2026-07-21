@@ -32,8 +32,9 @@ python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
 | JOBID | Tasks | What |
 |-------|-------|------|
 | **`34070241`** | `71-75%3` | COCO Attn_only × 5 |
-| **`34070242`** | `78-80%3` | COCO MP_only seeds 2–4 |
-| **`34070243`** | `67%1` | COCO SiGMA_ungated seed 1 |
+| **`34070242`** | `78-80%3` | COCO MP_only seeds 2–4 — ❌ all FAILED epoch0 `OSError 122` holylabs quota |
+| **`34070243`** | `67%1` | COCO SiGMA_ungated seed 1 — ❌ same `OSError 122` |
+| **Relaunch** | 🛑 `PAPER_T5_ARRAY=67,78-80%3` + `GNNPLUS_OUT_DIR` on netscratch | after freeing holylabs / redirecting `out_dir` |
 
 (Prior H200 Attn attempt `33813232` failed; superseded by `34070241`.)
 
@@ -138,10 +139,10 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 | **SLURM** | **`33651466`** (0 W&B — died under inode quota) |
 | **Failed** | ❌ **`34070247`** — all 10 tasks `FAILED` (~40s): `LinearEdge` + empty `times_func` on ENZYMES (0 edge feats) |
 | **Fix** | `edge_encoder: False` in ogpkubk9 configs (+ hetero sigma); clear error in `linear_edge_encoder.py` |
-| **Relaunch** | 🛑 **TO RUN** after `git pull` — `bash bash_interface/cluster/submit_enzymes_ogpkubk9_seed_grids.sh` |
+| **Relaunch** | ❌ **`34076119`** plateau: `ReduceLROnPlateau` `_last_lr` (ck2dwdc7); 🛑 relaunch after scheduler fix + `GNNPLUS_OUT_DIR` |
 | **Docs** | [`Paper_enzymes_ogpkubk9.md`](Paper_enzymes_ogpkubk9.md) |
 | **W&B** | `enzymes_ogpkubk9_a4g4_plateau_seeds` / `enzymes_ogpkubk9_a4g4_cosine_seeds` |
-| **Logs** | `logs_gnnplus/enz_ogpkubk9_<JOBID>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/enz_ogpkubk9_34076119_<TASK>.log` |
 
 ---
 
@@ -231,6 +232,6 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Table 6 VOC Homog_MP_ungated relaunch | ✅ | `34070244` |
 | Table 6 1-MP peptides | ✅ | `32717625` |
 | Table 6 COCO relaunch | ✅ | `34070245` |
-| ENZYMES ogpkubk9 seeds | 🛑 TO RUN (edge_encoder fix) | ❌ `34070247` |
+| ENZYMES ogpkubk9 seeds | 🛑 TO RUN (plateau `_last_lr` fix) | ❌ `34076119` / `34070247` |
 | ENZYMES ogpkubk9 sweep | 🛑 TO RUN | — |
 | Heterogeneity TU relaunch | ✅ | `34073629` |

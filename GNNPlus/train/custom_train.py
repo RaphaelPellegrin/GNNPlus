@@ -38,6 +38,21 @@ def _parse_wandb_tags() -> list[str]:
         tags.extend(part.strip() for part in extra.split(',') if part.strip())
     return tags
 
+def _scheduler_lr(scheduler: object, optimizer: torch.optim.Optimizer) -> float:
+    """Return the current LR for logging.
+
+    ``ReduceLROnPlateau`` may lack ``_last_lr`` before the first ``step()``;
+    fall back to the optimizer param-group LR in that case.
+    """
+    get_last_lr = getattr(scheduler, "get_last_lr", None)
+    if callable(get_last_lr):
+        try:
+            return float(get_last_lr()[0])
+        except AttributeError:
+            pass
+    return float(optimizer.param_groups[0]["lr"])
+
+
 def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation):
     model.train()
     optimizer.zero_grad()
@@ -72,7 +87,7 @@ def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation)
         logger.update_stats(true=_true,
                             pred=_pred,
                             loss=loss.detach().cpu().item(),
-                            lr=scheduler.get_last_lr()[0],
+                            lr=_scheduler_lr(scheduler, optimizer),
                             time_used=time.time() - time_start,
                             params=cfg.params,
                             dataset_name=cfg.dataset.name,

@@ -7,11 +7,17 @@
 # Prerequisites (login node):
 #   source ~/.gnnplus_env
 #   export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+#   # recommended: avoid holylabs quota on results/*/stats.json
+#   export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 #   cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 #   git pull
 #
 # Launch:
 #   bash bash_interface/cluster/submit_paper_table5_ablations.sh
+#
+# COCO gap relaunch (MP_only seeds 2–4 + SiGMA_ungated seed1):
+#   PAPER_T5_ARRAY=67,78-80%3 PAPER_T5_PARALLEL=3 PAPER_T5_TIME=192:00:00 \
+#     bash bash_interface/cluster/submit_paper_table5_ablations.sh
 #
 # Then paste ARRAY JOBID into Paper_ablations.md
 
@@ -42,7 +48,7 @@ sbatch_args=(
     --time="${TIME}"
     --gpus=1
     --output="logs_gnnplus/sigma_T5_abl_%A_%a.log"
-    --export=ALL,ENV_NAME=gnnplus,PAPER_T5_NUM_SEEDS="${NUM_SEEDS}",PAPER_T5_NUM_DATASETS="${NUM_DATASETS}",PAPER_T5_NUM_VARIANTS="${NUM_VARIANTS}",PAPER_T5_NUM_TASKS="${NUM_TASKS}",PAPER_T5_WANDB_PREFIX="${WANDB_PREFIX}",GNNPLUS_DATASET_DIR="${GNNPLUS_DATASET_DIR:-}"
+    --export=ALL,ENV_NAME=gnnplus,PAPER_T5_NUM_SEEDS="${NUM_SEEDS}",PAPER_T5_NUM_DATASETS="${NUM_DATASETS}",PAPER_T5_NUM_VARIANTS="${NUM_VARIANTS}",PAPER_T5_NUM_TASKS="${NUM_TASKS}",PAPER_T5_WANDB_PREFIX="${WANDB_PREFIX}",GNNPLUS_DATASET_DIR="${GNNPLUS_DATASET_DIR:-}",GNNPLUS_OUT_DIR="${GNNPLUS_OUT_DIR:-}"
 )
 
 if [ "${NICE}" != "0" ]; then

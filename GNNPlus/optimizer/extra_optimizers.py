@@ -63,28 +63,33 @@ def scheduler_reduce_on_plateau(optimizer: Optimizer, reduce_factor: float,
         min_lr=min_lr,
         verbose=True
     )
-    if not hasattr(scheduler, 'get_last_lr'):
-        # ReduceLROnPlateau doesn't have `get_last_lr` method as of current
-        # pytorch1.10; we add it here for consistency with other schedulers.
-        def get_last_lr(self):
-            """ Return last computed learning rate by current scheduler.
-            """
-            return self._last_lr
+    # ReduceLROnPlateau does not set ``_last_lr`` until after the first
+    # ``step()``. Newer PyTorch already defines ``get_last_lr`` on the base
+    # class, so the old ``hasattr(scheduler, "get_last_lr")`` patch never ran —
+    # logging LR on the first train batch then raises AttributeError
+    # (W&B ck2dwdc7 / ENZYMES plateau).
+    def get_last_lr(self: ReduceLROnPlateau) -> list[float]:
+        """Return last learning rates, initializing ``_last_lr`` if needed."""
+        if not hasattr(self, "_last_lr"):
+            self._last_lr = [
+                group["lr"] for group in self.optimizer.param_groups
+            ]
+        return list(self._last_lr)
 
-        scheduler.get_last_lr = get_last_lr.__get__(scheduler)
-        scheduler._last_lr = [group['lr']
-                              for group in scheduler.optimizer.param_groups]
+    scheduler._last_lr = [
+        group["lr"] for group in scheduler.optimizer.param_groups
+    ]
+    scheduler.get_last_lr = get_last_lr.__get__(scheduler)  # type: ignore[method-assign]
 
-    def modified_state_dict(ref):
-        """Returns the state of the scheduler as a :class:`dict`.
-        Additionally modified to ignore 'get_last_lr', 'state_dict'.
-        Including these entries in the state dict would cause issues when
-        loading a partially trained / pretrained model from a checkpoint.
-        """
-        return {key: value for key, value in ref.__dict__.items()
-                if key not in ['sparsifier', 'get_last_lr', 'state_dict']}
+    def modified_state_dict(ref: ReduceLROnPlateau) -> dict:
+        """Return scheduler state without bound methods that break checkpoints."""
+        return {
+            key: value
+            for key, value in ref.__dict__.items()
+            if key not in ["sparsifier", "get_last_lr", "state_dict"]
+        }
 
-    scheduler.state_dict = modified_state_dict.__get__(scheduler)
+    scheduler.state_dict = modified_state_dict.__get__(scheduler)  # type: ignore[method-assign]
 
     return scheduler
 

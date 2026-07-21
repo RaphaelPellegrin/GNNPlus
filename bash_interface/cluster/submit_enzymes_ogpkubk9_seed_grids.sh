@@ -34,7 +34,7 @@ sbatch_args=(
     --time="${TIME}"
     --gpus=1
     --output="logs_gnnplus/enz_ogpkubk9_%A_%a.log"
-    --export=ALL,ENV_NAME=gnnplus,ENZ_OGPK_NUM_SEEDS="${NUM_SEEDS}",ENZ_OGPK_NUM_VARIANTS="${NUM_VARIANTS}",ENZ_OGPK_NUM_TASKS="${NUM_TASKS}",GNNPLUS_DATASET_DIR="${GNNPLUS_DATASET_DIR:-}"
+    --export=ALL,ENV_NAME=gnnplus,ENZ_OGPK_NUM_SEEDS="${NUM_SEEDS}",ENZ_OGPK_NUM_VARIANTS="${NUM_VARIANTS}",ENZ_OGPK_NUM_TASKS="${NUM_TASKS}",GNNPLUS_DATASET_DIR="${GNNPLUS_DATASET_DIR:-}",GNNPLUS_OUT_DIR="${GNNPLUS_OUT_DIR:-}"
 )
 
 if [ "${NICE}" != "0" ]; then

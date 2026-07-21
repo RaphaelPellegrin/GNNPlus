@@ -71,6 +71,12 @@ extra_args=()
 if [ -n "${GNNPLUS_DATASET_DIR:-}" ]; then
     extra_args+=(dataset.dir "${GNNPLUS_DATASET_DIR}")
 fi
+# Avoid holylabs file-quota death on results/*/stats.json (Errno 122).
+if [ -n "${GNNPLUS_OUT_DIR:-}" ]; then
+    mkdir -p "${GNNPLUS_OUT_DIR}"
+    extra_args+=(out_dir "${GNNPLUS_OUT_DIR}")
+    log_message "out_dir override: ${GNNPLUS_OUT_DIR}"
+fi
 
 export WANDB_EXTRA_TAGS="${wandb_tags}"
 

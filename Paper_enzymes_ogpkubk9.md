@@ -31,9 +31,9 @@ Configs:
 
 ```text
 ╔══════════════════════════════════════════════════════════════════╗
-║  🛑  TO RELAUNCH  ·  edge_encoder fix  ·  after git pull         ║
-║  ❌ 34070247 all FAILED: LinearEdge eval('') on ENZYMES (0 edges)║
-║  ✅ fix: dataset.edge_encoder: False in ogpkubk9 yaml anchors    ║
+║  ✅  RELAUNCH  ·  SLURM 34076119  ·  2026-07-21  ·  %5           ║
+║  ❌ 34070247 all FAILED: LinearEdge on ENZYMES (0 edges)         ║
+║  ✅ fix: dataset.edge_encoder: False                             ║
 ║  🧬 ENZYMES ogpkubk9 · plateau×5 + cosine×5 = 10 jobs            ║
 ║  📒 also listed in CLUSTER_LAUNCHES.md                           ║
 ╚══════════════════════════════════════════════════════════════════╝
@@ -47,15 +47,16 @@ export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-bash bash_interface/cluster/submit_enzymes_ogpkubk9_seed_grids.sh
+# ✅ already submitted — do not re-run unless re-launching
+# bash bash_interface/cluster/submit_enzymes_ogpkubk9_seed_grids.sh
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM array** | 🛑 **TO RUN** (fix `edge_encoder`); prior `34070247` all FAILED; `33651466` inode quota |
-| **Tasks** | `1-10%3` (script default parallel) |
+| **SLURM array** | ❌ **`34076119`** plateau died: `ReduceLROnPlateau` missing `_last_lr` ([ck2dwdc7](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ck2dwdc7)); relaunch after scheduler fix + `GNNPLUS_OUT_DIR`. Priors: ❌ `34070247` edge_encoder; `33651466` inode quota |
+| **Tasks** | `1-10%5` |
 | **W&B** | `enzymes_ogpkubk9_a4g4_plateau_seeds` / `enzymes_ogpkubk9_a4g4_cosine_seeds` |
-| **Logs** | `logs_gnnplus/enz_ogpkubk9_<JOBID>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/enz_ogpkubk9_34076119_<TASK>.log` |
 
 ```bash
 python scripts/api_wanndb_query/aggregate_paper_repro.py \
