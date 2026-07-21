@@ -5,8 +5,8 @@
 #   Table 5 COCO  tasks 61-80  (4 variants × 5 seeds)
 #   Table 6 COCO  tasks 51-75  (5 variants × 5 seeds)
 #
-# Defaults: partition=gpu_h200, ≤25 GPUs per array, 192h, W&B name suffix=_h200,
-# GNNPLUS_OUT_DIR required recommendation (holylabs quota).
+# Defaults: partition=gpu_h200, ≤25 GPUs total (split T5/T6), 72h (H200 MaxTime),
+# W&B name suffix=_h200, GNNPLUS_OUT_DIR → netscratch (holylabs quota).
 #
 # Prerequisites (login node):
 #   source ~/.gnnplus_env
@@ -19,7 +19,7 @@
 #   bash bash_interface/cluster/submit_coco_h200_relaunch.sh
 #
 # Overrides:
-#   COCO_H200_PARALLEL=25 COCO_H200_PARTITION=gpu_h200 COCO_H200_TIME=192:00:00
+#   COCO_H200_PARALLEL=25 COCO_H200_PARTITION=gpu_h200 COCO_H200_TIME=72:00:00
 
 set -euo pipefail
 
@@ -32,7 +32,8 @@ PARTITION="${COCO_H200_PARTITION:-gpu_h200}"
 PARALLEL_TOTAL="${COCO_H200_PARALLEL:-25}"
 T5_PARALLEL="${COCO_H200_T5_PARALLEL:-$(( PARALLEL_TOTAL / 2 ))}"
 T6_PARALLEL="${COCO_H200_T6_PARALLEL:-$(( PARALLEL_TOTAL - T5_PARALLEL ))}"
-TIME="${COCO_H200_TIME:-192:00:00}"
+# gpu_h200 MaxTime is typically 3 days — 192h fails with "time limit is invalid".
+TIME="${COCO_H200_TIME:-72:00:00}"
 MEM="${COCO_H200_MEM:-128GB}"
 NICE="${COCO_H200_NICE:-10000}"
 NAME_SUFFIX="${COCO_H200_NAME_SUFFIX:-_h200}"

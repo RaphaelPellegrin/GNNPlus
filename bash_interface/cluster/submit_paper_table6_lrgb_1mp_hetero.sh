@@ -14,9 +14,9 @@
 #   bash bash_interface/cluster/submit_paper_table6_lrgb_1mp_hetero.sh
 #
 # COCO-only on gpu_h200 (keep mweber jobs; see submit_coco_h200_relaunch.sh):
-#   PAPER_T6_1MP_ARRAY=51-75 PAPER_T6_1MP_PARALLEL=25 \
+#   PAPER_T6_1MP_ARRAY=51-75 PAPER_T6_1MP_PARALLEL=13 \
 #     PAPER_T6_1MP_PARTITION=gpu_h200 PAPER_T6_1MP_NAME_SUFFIX=_h200 \
-#     PAPER_T6_1MP_TIME=192:00:00 \
+#     PAPER_T6_1MP_TIME=72:00:00 \
 #     bash bash_interface/cluster/submit_paper_table6_lrgb_1mp_hetero.sh
 #
 # Then paste ARRAY JOBID into Paper_table6_lrgb_1mp.md

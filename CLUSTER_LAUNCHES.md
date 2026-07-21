@@ -38,18 +38,18 @@ python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
 
 (Prior H200 Attn attempt `33813232` failed; superseded by `34070241`.)
 
-**COCO full H200 twin** (keep mweber jobs; `gpu_h200`, ≤25 GPUs/array, `_h200` W&B names):
+**COCO full H200 twin** (keep mweber jobs; `gpu_h200`, ≤25 GPUs total, **72h** MaxTime, `_h200` W&B names):
 
 ```bash
-# local: commit/push submit_coco_h200_relaunch.sh + partition overrides, then:
 bash bash_interface/cluster/submit_coco_h200_relaunch.sh
-# → Table5 COCO 61-80 + Table6 COCO 51-75  ·  paste both JOBIDs below
+# → Table5 COCO 61-80%12 + Table6 COCO 51-75%13  ·  paste both JOBIDs below
+# (Do NOT use 192h on gpu_h200 — sbatch rejects it.)
 ```
 
 | JOBID | Tasks | What |
 |-------|-------|------|
-| 🛑 **TO RUN** | T5 `61-80%25` | all COCO Table 5 variants × seeds |
-| 🛑 **TO RUN** | T6 `51-75%25` | all COCO Table 6 variants × seeds |
+| 🛑 **TO RUN** | T5 `61-80%12` | all COCO Table 5 variants × seeds |
+| 🛑 **TO RUN** | T6 `51-75%13` | all COCO Table 6 variants × seeds |
 
 ---
 

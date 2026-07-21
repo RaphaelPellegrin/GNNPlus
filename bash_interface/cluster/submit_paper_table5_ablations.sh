@@ -20,8 +20,8 @@
 #     bash bash_interface/cluster/submit_paper_table5_ablations.sh
 #
 # Full COCO on gpu_h200 (keep mweber jobs; see submit_coco_h200_relaunch.sh):
-#   PAPER_T5_ARRAY=61-80 PAPER_T5_PARALLEL=25 PAPER_T5_PARTITION=gpu_h200 \
-#     PAPER_T5_NAME_SUFFIX=_h200 PAPER_T5_TIME=192:00:00 \
+#   PAPER_T5_ARRAY=61-80 PAPER_T5_PARALLEL=12 PAPER_T5_PARTITION=gpu_h200 \
+#     PAPER_T5_NAME_SUFFIX=_h200 PAPER_T5_TIME=72:00:00 \
 #     bash bash_interface/cluster/submit_paper_table5_ablations.sh
 #
 # Then paste ARRAY JOBID into Paper_ablations.md
