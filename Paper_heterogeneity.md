@@ -43,9 +43,9 @@ Implementation:
 
 ```text
 ╔══════════════════════════════════════════════════════════════════╗
-║  🛑🛑🛑  TO RUN  ·  ≤5 GPUs  ·  W&B groups enabled  🛑🛑🛑          ║
+║  ✅  SUBMITTED  ·  SLURM 33811552  ·  gpu_h200  ·  2026-07-21    ║
 ║  📈 Heterogeneity profiles · MUTAG/ENZYMES/PROTEINS × GCN/GIN/SiGMA ║
-║  🔁 ≥100 test appearances · 9 long jobs                          ║
+║  🔁 ≥100 test appearances · 9 jobs · ≤5 GPUs · 72h               ║
 ║  📒 also listed in CLUSTER_LAUNCHES.md                           ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
@@ -60,13 +60,9 @@ git pull
 HETERO_REQUIRED_TEST_APPEARANCES=2 HETERO_MAX_TRIALS=20 \
   bash bash_interface/cluster/submit_heterogeneity_tu.sh
 
-# 🚀 full paper protocol (9 jobs, ≤5 GPUs) on H200
-HETERO_PARALLEL=5 HETERO_PARTITION=gpu_h200 \
+# 🚀 full paper protocol (submitted as 33811552)
+HETERO_TIME=72:00:00 HETERO_PARALLEL=5 HETERO_PARTITION=gpu_h200 \
   bash bash_interface/cluster/submit_heterogeneity_tu.sh
-# Note: gpu_h200 often caps at 72h — if sbatch rejects 192:00:00:
-#   HETERO_TIME=72:00:00 HETERO_PARALLEL=5 HETERO_PARTITION=gpu_h200 \
-#     bash bash_interface/cluster/submit_heterogeneity_tu.sh
-# 👉 paste JOBID below + into CLUSTER_LAUNCHES.md
 ```
 
 Local smoke:
@@ -81,9 +77,11 @@ python scripts/heterogeneity/run_heterogeneity_profiles.py \
 
 | Field | Value |
 |-------|-------|
-| **SLURM array** | 🛑 *TO RUN — not submitted* |
-| **Tasks** | `1-9` = 3 datasets × 3 models |
-| **Parallel** | ≤**5** GPUs (`HETERO_PARALLEL`, default 5) |
+| **SLURM array** | ✅ **`34073629`** (2026-07-21; `indices()` fix). Priors: `34070246` crash, `33811552` quota fake-finish. **Note:** SiGMA configs also needed `edge_encoder: False` (same `LinearEdge`/`times_func` bug as ENZYMES ogpkubk9) — `git pull` before sigma array tasks start, or relaunch failed sigma tasks. |
+| **Partition** | `mweber_gpu` · time `192:00:00` |
+| **Tasks** | `1-9%3` = 3 datasets × 3 models |
+| **Parallel** | ≤**3** GPUs |
+| **Logs** | `logs_gnnplus/hetero_tu_34073629_<TASK>.log` |
 | **Local outs** | `results/heterogeneity/<dataset>_<MODEL>/` (pickle + appearances CSV + PNGs) |
 | **W&B** | see below |
 | **Master tracker** | [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md) |

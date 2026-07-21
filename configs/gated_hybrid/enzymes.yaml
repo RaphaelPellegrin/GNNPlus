@@ -18,8 +18,8 @@ dataset:
   node_encoder: True
   node_encoder_name: LinearNode
   node_encoder_bn: False
-  edge_encoder: True
-  edge_encoder_name: LinearEdge
+  # ENZYMES has 0 edge features; LinearEdge needs RWSE times_func otherwise.
+  edge_encoder: False
   edge_encoder_bn: False
 train:
   mode: custom

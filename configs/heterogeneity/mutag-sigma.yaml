@@ -20,8 +20,8 @@ dataset:
   node_encoder: True
   node_encoder_name: LinearNode
   node_encoder_bn: False
-  edge_encoder: True
-  edge_encoder_name: LinearEdge
+  # Match GCN/GIN hetero configs (no LinearEdge / RWSE times_func).
+  edge_encoder: False
   edge_encoder_bn: False
 train:
   mode: custom

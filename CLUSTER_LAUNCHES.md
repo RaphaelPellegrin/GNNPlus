@@ -27,8 +27,15 @@ Entity/project: [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/webe
 python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
 ```
 
-**COCO Attn_only H200 relaunch** (5 seeds, do not cancel old):  
-`bash bash_interface/cluster/submit_paper_table5_coco_attn_only_h200.sh` → paste JOBID in [`Paper_ablations.md`](Paper_ablations.md)
+**COCO gap relaunch** (inode-quota recovery, 2026-07-21, `mweber_gpu` 192h):
+
+| JOBID | Tasks | What |
+|-------|-------|------|
+| **`34070241`** | `71-75%3` | COCO Attn_only × 5 |
+| **`34070242`** | `78-80%3` | COCO MP_only seeds 2–4 |
+| **`34070243`** | `67%1` | COCO SiGMA_ungated seed 1 |
+
+(Prior H200 Attn attempt `33813232` failed; superseded by `34070241`.)
 
 ---
 
@@ -49,12 +56,12 @@ python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
 
 | | |
 |--|--|
-| **SLURM** | **`33810534`** |
+| **SLURM** | **`33810534`** (Homog_MP ✅; ungated failed) |
+| **Relaunch ungated** | ✅ **`34070244`** · `6-10%3` · 192h (2026-07-21) |
 | **When** | 2026-07-21 |
-| **Tasks** | `1-10%5` |
 | **Docs** | [`Paper_table6_voc.md`](Paper_table6_voc.md) |
 | **W&B** | `paper_T6_voc_{Homog_MP,Homog_MP_ungated}` |
-| **Logs** | `logs_gnnplus/sigma_T6_voc_homog_33810534_<TASK>.log` |
+| **Logs** | `logs_gnnplus/sigma_T6_voc_homog_34070244_<TASK>.log` |
 
 ---
 
@@ -62,12 +69,12 @@ python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
 
 | | |
 |--|--|
-| **SLURM** | **`32717625`** |
-| **When** | 2026-07-18 |
-| **Tasks** | `1-75%7` (parallel 7) |
+| **SLURM** | **`32717625`** (peptides ✅; COCO failed/empty) |
+| **COCO relaunch** | ✅ **`34070245`** · `51-75%3` · 192h (2026-07-21) |
+| **When** | 2026-07-18 / relaunch 2026-07-21 |
 | **Docs** | [`Paper_table6_lrgb_1mp.md`](Paper_table6_lrgb_1mp.md) |
 | **W&B** | `paper_T6_{peptides_func,peptides_struct,coco}_*` |
-| **Logs** | `logs_gnnplus/sigma_T6_1mp_32717625_<TASK>.log` |
+| **Logs** | `logs_gnnplus/sigma_T6_1mp_34070245_<TASK>.log` |
 
 ```bash
 # 📊 aggregate Table 6 (VOC + 1-MP)
@@ -128,12 +135,13 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 
 | | |
 |--|--|
-| **SLURM** | **`33651466`** |
-| **When** | 2026-07-20 |
-| **Tasks** | `1-10%2` (plateau×5 + cosine×5) |
+| **SLURM** | **`33651466`** (0 W&B — died under inode quota) |
+| **Failed** | ❌ **`34070247`** — all 10 tasks `FAILED` (~40s): `LinearEdge` + empty `times_func` on ENZYMES (0 edge feats) |
+| **Fix** | `edge_encoder: False` in ogpkubk9 configs (+ hetero sigma); clear error in `linear_edge_encoder.py` |
+| **Relaunch** | 🛑 **TO RUN** after `git pull` — `bash bash_interface/cluster/submit_enzymes_ogpkubk9_seed_grids.sh` |
 | **Docs** | [`Paper_enzymes_ogpkubk9.md`](Paper_enzymes_ogpkubk9.md) |
 | **W&B** | `enzymes_ogpkubk9_a4g4_plateau_seeds` / `enzymes_ogpkubk9_a4g4_cosine_seeds` |
-| **Logs** | `logs_gnnplus/enz_ogpkubk9_33651466_<TASK>.log` |
+| **Logs** | `logs_gnnplus/enz_ogpkubk9_<JOBID>_<TASK>.log` |
 
 ---
 
@@ -141,12 +149,11 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 
 | | |
 |--|--|
-| **SLURM** | **`33811552`** |
-| **When** | 2026-07-21 |
-| **Partition** | `gpu_h200` · `72:00:00` · `%5` |
+| **SLURM** | **`33811552`** (`gpu_h200` — fake-finish under quota) |
+| **Relaunch** | ✅ **`34073629`** · `mweber_gpu` · `192:00:00` · `%3` (2026-07-21; fixes `indices()` crash on `34070246`) |
 | **Docs** | [`Paper_heterogeneity.md`](Paper_heterogeneity.md) |
 | **W&B** | `building_hetero_profile_{mutag,enzymes,proteins}` |
-| **Logs** | `logs_gnnplus/hetero_tu_33811552_<TASK>.log` |
+| **Logs** | `logs_gnnplus/hetero_tu_34073629_<TASK>.log` |
 
 ---
 
@@ -214,13 +221,16 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Campaign | Status | JOBID |
 |----------|--------|-------|
 | Table 5 LRGB | ✅ | `32232124` |
+| Table 5 COCO gaps relaunch | ✅ | `34070241` / `34070242` / `34070243` |
 | Table 5 MNIST+CIFAR | 🛑 TO RUN | — |
 | Peptides UniGCN a0g2 mixes | ✅ | `33651463` |
 | Peptides-func Homog→MP_only a0g3 | ✅ | `33651464` |
 | SiGMA + GRIT attn (PATTERN/CLUSTER) | ✅ | `33458567` |
 | Table 6 VOC (SiGMA / Hetero ± ungated) | ✅ | `32717593` |
-| Table 6 VOC Homog_MP ± ungated | ✅ | `33810534` |
-| Table 6 1-MP | ✅ | `32717625` |
-| ENZYMES ogpkubk9 seeds | ✅ | `33651466` |
+| Table 6 VOC Homog_MP | ✅ | `33810534` |
+| Table 6 VOC Homog_MP_ungated relaunch | ✅ | `34070244` |
+| Table 6 1-MP peptides | ✅ | `32717625` |
+| Table 6 COCO relaunch | ✅ | `34070245` |
+| ENZYMES ogpkubk9 seeds | 🛑 TO RUN (edge_encoder fix) | ❌ `34070247` |
 | ENZYMES ogpkubk9 sweep | 🛑 TO RUN | — |
-| Heterogeneity TU profiles | ✅ | `33811552` (`gpu_h200`) |
+| Heterogeneity TU relaunch | ✅ | `34073629` |
