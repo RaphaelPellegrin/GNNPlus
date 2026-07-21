@@ -7,22 +7,22 @@ Master tracker: [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md)
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑🛑🛑  TO RUN  ·  not submitted yet  🛑🛑🛑                          ║
-║  🧪  2 ds × 5 seeds = 10 jobs                                            ║
-║  🚀  bash bash_interface/cluster/submit_sigma_grit_attn_pattern_cluster.sh ║
+║  ✅  DONE  ·  SLURM 33458567  ·  seeds 0–4, no VN                        ║
+║  🛑  TO RUN  ·  seeds 5–9 ± VN=4  ·  20 jobs  ·  %5                      ║
+║  📄  logs_gnnplus/sigma_grit_attn_<JOBID>_<TASK>.log                     ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🛑 **TO RUN** |
-| **SLURM array** | 🛑 *not submitted yet* — paste JOBID here after launch |
+| **Status (seeds 0–4)** | ✅ **`33458567`** finished |
+| **Status (seeds 5–9 ± VN)** | 🛑 **TO RUN** — paste JOBID below |
 | **Job name** | `sigma_grit_attn` |
-| **Tasks** | `1-10%5` |
 | **Mem / time** | `128GB` / `120h` |
 | **Partition** | `mweber_gpu` |
-| **W&B groups** | `paper_sigma_grit_attn_pattern`, `paper_sigma_grit_attn_cluster` |
-| **W&B tags** | `sigma_grit_attn`, `attn_type_grit`, `grit_attn`, `<dataset>`, `seed<k>` |
+| **W&B groups (no VN)** | `paper_sigma_grit_attn_pattern`, `paper_sigma_grit_attn_cluster` |
+| **W&B groups (VN=4)** | `paper_sigma_grit_attn_pattern_vn4`, `paper_sigma_grit_attn_cluster_vn4` |
+| **W&B tags** | `sigma_grit_attn`, `attn_type_grit`, `grit_attn`, `novn` / `vn4`, `<dataset>`, `seed<k>` |
 
 ---
 
@@ -37,30 +37,56 @@ Vanilla baseline groups (for comparison): `paper_bestmodel_v1_pattern_ta9qtxb9`,
 
 ---
 
-## Launch
+## Virtual-node note (June failure)
+
+[`4yhs6ywq`](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/4yhs6ywq) failed with `assert true.shape[0] == pred.shape[0]` on CLUSTER+VN. Cause: early VN loss masking dropped rows from `pred_score` while the train loop still logged full-length `true`. Current fix:
+
+- pad per-node `y` with ignore label `-1` for VNs
+- `weighted_cross_entropy` uses `ignore_index=-1` and **keeps full-length** `pred_score`
+- logger drops ignore rows only when computing metrics
+
+**Pull this branch before launching the VN variant.**
+
+---
+
+## Launch (seeds 5–9, no-VN + VN=4 → 20 jobs)
 
 ```bash
 source ~/.gnnplus_env
 export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
+SIGMA_GRIT_ATTN_SEED_OFFSET=5 \
+SIGMA_GRIT_ATTN_NUM_VARIANTS=2 \
+SIGMA_GRIT_ATTN_NUM_VN=4 \
+SIGMA_GRIT_ATTN_PARALLEL=5 \
 bash bash_interface/cluster/submit_sigma_grit_attn_pattern_cluster.sh
 # 👉 paste JOBID here + CLUSTER_LAUNCHES.md
 ```
 
-CLI force on every run: `gnn.hybrid.attn_type grit` (also in yaml + W&B config/tags).
+Task layout: `1–5` pattern seeds 5–9 · `6–10` cluster seeds 5–9 · `11–15` pattern VN=4 · `16–20` cluster VN=4.
+
+CLI force on every run: `gnn.hybrid.attn_type grit`.
 
 ---
 
 ## Aggregate when finished
 
 ```bash
+# seeds 0–4 (33458567) + seeds 5–9 (new) share the no-VN groups
 python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_sigma_grit_attn_pattern --metric best_test_perf --state finished
 
 python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_sigma_grit_attn_cluster --metric best_test_perf --state finished
+
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_sigma_grit_attn_pattern_vn4 --metric best_test_perf --state finished
+
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group paper_sigma_grit_attn_cluster_vn4 --metric best_test_perf --state finished
 ```
 
 For PATTERN / CLUSTER, multiply API fraction by 100 to match paper `%`.

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import time
 
@@ -16,6 +18,19 @@ from torchmetrics.functional import auroc
 
 import GNNPlus.metrics_ogb as metrics_ogb
 from GNNPlus.metric_wrapper import MetricWrapper
+from GNNPlus.preprocessing.graph_augmentations import VIRTUAL_NODE_LABEL_IGNORE
+
+
+def _drop_virtual_node_targets(
+    true: torch.Tensor,
+    pred_score: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Exclude virtual-node ignore rows from classification metrics."""
+    flat = true.view(-1)
+    valid = flat != VIRTUAL_NODE_LABEL_IGNORE
+    if bool(valid.all()):
+        return true, pred_score
+    return flat[valid], pred_score[valid]
 
 
 def accuracy_SBM(targets, pred_int):
@@ -64,6 +79,7 @@ class CustomLogger(Logger):
     def classification_binary(self):
         true = torch.cat(self._true).squeeze(-1)
         pred_score = torch.cat(self._pred)
+        true, pred_score = _drop_virtual_node_targets(true, pred_score)
         pred_int = self._get_pred_int(pred_score)
 
         if true.shape[0] < 1e7:  # AUROC computation for very large datasets is too slow.
@@ -96,6 +112,7 @@ class CustomLogger(Logger):
 
     def classification_multi(self):
         true, pred_score = torch.cat(self._true), torch.cat(self._pred)
+        true, pred_score = _drop_virtual_node_targets(true, pred_score)
         pred_int = self._get_pred_int(pred_score)
         reformat = lambda x: round(float(x), cfg.round)
 

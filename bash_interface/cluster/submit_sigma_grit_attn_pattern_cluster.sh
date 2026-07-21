@@ -1,19 +1,20 @@
 #!/usr/bin/env bash
 # Launch SiGMA + GRIT attention (PATTERN + CLUSTER) on mweber_gpu.
 #
-# 2 datasets × 5 seeds = 10 jobs.
-# Max concurrent GPUs: SIGMA_GRIT_ATTN_PARALLEL (default 5).
+# Defaults: 1 variant (no VN) × 2 datasets × 5 seeds = 10 jobs.
+#
+# Resubmit seeds 5–9 + VN=4 (20 jobs):
+#   SIGMA_GRIT_ATTN_SEED_OFFSET=5 \
+#   SIGMA_GRIT_ATTN_NUM_VARIANTS=2 \
+#   SIGMA_GRIT_ATTN_NUM_VN=4 \
+#   bash bash_interface/cluster/submit_sigma_grit_attn_pattern_cluster.sh
 #
 # Prerequisites (login node):
 #   source ~/.gnnplus_env
 #   export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+#   export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 #   cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 #   git pull
-#
-# Launch:
-#   bash bash_interface/cluster/submit_sigma_grit_attn_pattern_cluster.sh
-#
-# Then paste ARRAY JOBID into Paper_sigma_grit_attn.md + CLUSTER_LAUNCHES.md
 
 set -euo pipefail
 
@@ -24,7 +25,10 @@ mkdir -p logs_gnnplus
 
 NUM_SEEDS="${SIGMA_GRIT_ATTN_NUM_SEEDS:-5}"
 NUM_DATASETS="${SIGMA_GRIT_ATTN_NUM_DATASETS:-2}"
-NUM_TASKS="${SIGMA_GRIT_ATTN_NUM_TASKS:-$((NUM_DATASETS * NUM_SEEDS))}"
+NUM_VARIANTS="${SIGMA_GRIT_ATTN_NUM_VARIANTS:-1}"
+SEED_OFFSET="${SIGMA_GRIT_ATTN_SEED_OFFSET:-0}"
+NUM_VN="${SIGMA_GRIT_ATTN_NUM_VN:-4}"
+NUM_TASKS="${SIGMA_GRIT_ATTN_NUM_TASKS:-$((NUM_VARIANTS * NUM_DATASETS * NUM_SEEDS))}"
 ARRAY_SPEC="${SIGMA_GRIT_ATTN_ARRAY:-1-${NUM_TASKS}}"
 PARALLEL="${SIGMA_GRIT_ATTN_PARALLEL:-5}"
 NICE="${SIGMA_GRIT_ATTN_NICE:-10000}"
@@ -40,7 +44,7 @@ sbatch_args=(
     --time="${TIME}"
     --gpus=1
     --output="logs_gnnplus/sigma_grit_attn_%A_%a.log"
-    --export=ALL,ENV_NAME=gnnplus,SIGMA_GRIT_ATTN_NUM_SEEDS="${NUM_SEEDS}",SIGMA_GRIT_ATTN_NUM_DATASETS="${NUM_DATASETS}",SIGMA_GRIT_ATTN_NUM_TASKS="${NUM_TASKS}",GNNPLUS_DATASET_DIR="${GNNPLUS_DATASET_DIR:-}"
+    --export=ALL,ENV_NAME=gnnplus,SIGMA_GRIT_ATTN_NUM_SEEDS="${NUM_SEEDS}",SIGMA_GRIT_ATTN_NUM_DATASETS="${NUM_DATASETS}",SIGMA_GRIT_ATTN_NUM_VARIANTS="${NUM_VARIANTS}",SIGMA_GRIT_ATTN_SEED_OFFSET="${SEED_OFFSET}",SIGMA_GRIT_ATTN_NUM_VN="${NUM_VN}",SIGMA_GRIT_ATTN_NUM_TASKS="${NUM_TASKS}",GNNPLUS_DATASET_DIR="${GNNPLUS_DATASET_DIR:-}",GNNPLUS_OUT_DIR="${GNNPLUS_OUT_DIR:-}"
 )
 
 if [ "${NICE}" != "0" ]; then
@@ -56,19 +60,17 @@ cat <<EOF
 
 === SiGMA + GRIT attention (PATTERN + CLUSTER) submitted ===
   ARRAY JOBID:   ${job_id}
-  Tasks:         ${ARRAY_SPEC}  (${NUM_DATASETS} ds × ${NUM_SEEDS} seeds)
+  Tasks:         ${ARRAY_SPEC}  (${NUM_VARIANTS} var × ${NUM_DATASETS} ds × ${NUM_SEEDS} seeds)
+  Seed offset:   ${SEED_OFFSET}  (seeds ${SEED_OFFSET}..$((SEED_OFFSET + NUM_SEEDS - 1)))
+  VN (variant1): ${NUM_VN}  (variants=${NUM_VARIANTS}; 1=no-VN only)
   Parallel:      ${PARALLEL} GPUs max
   Mem / time:    ${MEM} / ${TIME}
+  Out dir:       ${GNNPLUS_OUT_DIR:-<cfg default>}
   Logs:          logs_gnnplus/sigma_grit_attn_${job_id}_<TASK>.log
 
   W&B entity/project: weber-geoml-harvard-university/GNNPlus
-  W&B groups:         paper_sigma_grit_attn_pattern
-                      paper_sigma_grit_attn_cluster
-  W&B tags:           sigma_grit_attn, attn_type_grit, grit_attn, <ds>, seed<k>
-
-  Configs:
-    pattern  pattern-hybrid-ta9qtxb9-grit-attn-anchor.yaml  (a2g2 GCNE, RRWP k=21)
-    cluster  cluster-hybrid-ht9bntg2-grit-attn-anchor.yaml  (a1g1 GATEDGCN, RRWP k=32)
+  W&B groups:         paper_sigma_grit_attn_{pattern,cluster}
+                      paper_sigma_grit_attn_{pattern,cluster}_vn${NUM_VN}  (if variants>=2)
 
   CLI force: gnn.hybrid.attn_type grit
 
