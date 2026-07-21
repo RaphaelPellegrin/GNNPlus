@@ -38,6 +38,19 @@ python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
 
 (Prior H200 Attn attempt `33813232` failed; superseded by `34070241`.)
 
+**COCO full H200 twin** (keep mweber jobs; `gpu_h200`, ≤25 GPUs/array, `_h200` W&B names):
+
+```bash
+# local: commit/push submit_coco_h200_relaunch.sh + partition overrides, then:
+bash bash_interface/cluster/submit_coco_h200_relaunch.sh
+# → Table5 COCO 61-80 + Table6 COCO 51-75  ·  paste both JOBIDs below
+```
+
+| JOBID | Tasks | What |
+|-------|-------|------|
+| 🛑 **TO RUN** | T5 `61-80%25` | all COCO Table 5 variants × seeds |
+| 🛑 **TO RUN** | T6 `51-75%25` | all COCO Table 6 variants × seeds |
+
 ---
 
 ### 🧪 Table 6 — PascalVOC hetero MP (15 jobs)
@@ -71,7 +84,7 @@ python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
 | | |
 |--|--|
 | **SLURM** | **`32717625`** (peptides ✅; COCO failed/empty) |
-| **COCO relaunch** | ✅ **`34070245`** · `51-75%3` · 192h (2026-07-21) |
+| **COCO relaunch** | ✅ **`34070245`** · `51-75%3` · 192h (2026-07-21) · H200 twin via `submit_coco_h200_relaunch.sh` |
 | **When** | 2026-07-18 / relaunch 2026-07-21 |
 | **Docs** | [`Paper_table6_lrgb_1mp.md`](Paper_table6_lrgb_1mp.md) |
 | **W&B** | `paper_T6_{peptides_func,peptides_struct,coco}_*` |
@@ -88,12 +101,12 @@ python scripts/api_wanndb_query/aggregate_paper_table56.py --table 6
 
 | | seeds 0–4 (no VN) | seeds 5–9 ± VN=4 |
 |--|--|--|
-| **SLURM** | ✅ **`33458567`** | 🛑 **TO RUN** |
-| **When** | 2026-07-20 | — |
+| **SLURM** | ✅ **`33458567`** | ✅ **`34096507`** |
+| **When** | 2026-07-20 | 2026-07-22 |
 | **Tasks** | `1-10%5` | `1-20%5` |
 | **Docs** | [`Paper_sigma_grit_attn.md`](Paper_sigma_grit_attn.md) | same |
 | **W&B** | `paper_sigma_grit_attn_{pattern,cluster}` | + `_vn4` groups |
-| **Logs** | `logs_gnnplus/sigma_grit_attn_33458567_<TASK>.log` | `logs_gnnplus/sigma_grit_attn_<JOBID>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/sigma_grit_attn_33458567_<TASK>.log` | `logs_gnnplus/sigma_grit_attn_34096507_<TASK>.log` |
 
 ```bash
 # launch reseed + VN (after git pull — needs VN logger/loss fix)
@@ -238,7 +251,7 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Table 5 MNIST+CIFAR | 🛑 TO RUN | — |
 | Peptides UniGCN a0g2 mixes | ✅ | `33651463` |
 | Peptides-func Homog→MP_only a0g3 | ✅ | `33651464` |
-| SiGMA + GRIT attn (PATTERN/CLUSTER) | ✅ seeds0–4 `33458567`; 🛑 reseed+VN | — |
+| SiGMA + GRIT attn (PATTERN/CLUSTER) | ✅ seeds0–4 `33458567`; ✅ reseed+VN `34096507` | `34096507` |
 | Table 6 VOC (SiGMA / Hetero ± ungated) | ✅ | `32717593` |
 | Table 6 VOC Homog_MP | ✅ | `33810534` |
 | Table 6 VOC Homog_MP_ungated relaunch | ✅ | `34070244` |

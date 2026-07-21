@@ -19,6 +19,11 @@
 #   PAPER_T5_ARRAY=67,78-80%3 PAPER_T5_PARALLEL=3 PAPER_T5_TIME=192:00:00 \
 #     bash bash_interface/cluster/submit_paper_table5_ablations.sh
 #
+# Full COCO on gpu_h200 (keep mweber jobs; see submit_coco_h200_relaunch.sh):
+#   PAPER_T5_ARRAY=61-80 PAPER_T5_PARALLEL=25 PAPER_T5_PARTITION=gpu_h200 \
+#     PAPER_T5_NAME_SUFFIX=_h200 PAPER_T5_TIME=192:00:00 \
+#     bash bash_interface/cluster/submit_paper_table5_ablations.sh
+#
 # Then paste ARRAY JOBID into Paper_ablations.md
 
 set -euo pipefail
@@ -34,21 +39,23 @@ NUM_VARIANTS="${PAPER_T5_NUM_VARIANTS:-4}"
 NUM_TASKS="${PAPER_T5_NUM_TASKS:-$((NUM_DATASETS * NUM_VARIANTS * NUM_SEEDS))}"
 ARRAY_SPEC="${PAPER_T5_ARRAY:-1-${NUM_TASKS}}"
 PARALLEL="${PAPER_T5_PARALLEL:-18}"
+PARTITION="${PAPER_T5_PARTITION:-mweber_gpu}"
 NICE="${PAPER_T5_NICE:-10000}"
 MEM="${PAPER_T5_MEM:-128GB}"
 TIME="${PAPER_T5_TIME:-120:00:00}"
 WANDB_PREFIX="${PAPER_T5_WANDB_PREFIX:-paper_T5}"
+NAME_SUFFIX="${PAPER_T5_NAME_SUFFIX:-}"
 
 sbatch_args=(
     --parsable
     --job-name=sigma_T5_abl
     --array="${ARRAY_SPEC}%${PARALLEL}"
-    --partition=mweber_gpu
+    --partition="${PARTITION}"
     --mem="${MEM}"
     --time="${TIME}"
     --gpus=1
     --output="logs_gnnplus/sigma_T5_abl_%A_%a.log"
-    --export=ALL,ENV_NAME=gnnplus,PAPER_T5_NUM_SEEDS="${NUM_SEEDS}",PAPER_T5_NUM_DATASETS="${NUM_DATASETS}",PAPER_T5_NUM_VARIANTS="${NUM_VARIANTS}",PAPER_T5_NUM_TASKS="${NUM_TASKS}",PAPER_T5_WANDB_PREFIX="${WANDB_PREFIX}",GNNPLUS_DATASET_DIR="${GNNPLUS_DATASET_DIR:-}",GNNPLUS_OUT_DIR="${GNNPLUS_OUT_DIR:-}"
+    --export=ALL,ENV_NAME=gnnplus,PAPER_T5_NUM_SEEDS="${NUM_SEEDS}",PAPER_T5_NUM_DATASETS="${NUM_DATASETS}",PAPER_T5_NUM_VARIANTS="${NUM_VARIANTS}",PAPER_T5_NUM_TASKS="${NUM_TASKS}",PAPER_T5_WANDB_PREFIX="${WANDB_PREFIX}",PAPER_T5_NAME_SUFFIX="${NAME_SUFFIX}",GNNPLUS_DATASET_DIR="${GNNPLUS_DATASET_DIR:-}",GNNPLUS_OUT_DIR="${GNNPLUS_OUT_DIR:-}"
 )
 
 if [ "${NICE}" != "0" ]; then
@@ -64,9 +71,12 @@ cat <<EOF
 
 === SiGMA Table 5 ablations submitted ===
   ARRAY JOBID:   ${job_id}
+  Partition:     ${PARTITION}
   Tasks:         ${ARRAY_SPEC}  (${NUM_DATASETS} ds × ${NUM_VARIANTS} variants × ${NUM_SEEDS} seeds)
   Parallel:      ${PARALLEL} GPUs max
   Mem / time:    ${MEM} / ${TIME}
+  Name suffix:   ${NAME_SUFFIX:-<none>}
+  Out dir:       ${GNNPLUS_OUT_DIR:-<cfg default>}
   Logs:          logs_gnnplus/sigma_T5_abl_${job_id}_<TASK>.log
 
   W&B entity/project: weber-geoml-harvard-university/GNNPlus

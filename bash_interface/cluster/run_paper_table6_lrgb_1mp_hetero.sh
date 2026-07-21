@@ -143,14 +143,24 @@ fi
 job_tag="${SLURM_ARRAY_JOB_ID:-${SLURM_JOB_ID:-local}}"
 wandb_group_prefix="${PAPER_T6_1MP_WANDB_PREFIX:-paper_T6}"
 wandb_group="${wandb_group_prefix}_${ds_tag}_${variant}"
-wandb_name="${wandb_group_prefix}_${ds_tag}_${variant}_seed${seed}_job${job_tag}_${task_id}"
+name_suffix="${PAPER_T6_1MP_NAME_SUFFIX:-}"
+wandb_name="${wandb_group_prefix}_${ds_tag}_${variant}_seed${seed}_job${job_tag}_${task_id}${name_suffix}"
 wandb_tags="paper_table6,${variant},${ds_tag},seed${seed},source_${source_run}"
+if [ -n "${name_suffix}" ]; then
+    tag_suffix="${name_suffix#_}"
+    wandb_tags="${wandb_tags},relaunch_${tag_suffix}"
+fi
 
 log_message "Table6 1MP task ${task_id}/${num_tasks}: ds=${ds_tag} variant=${variant} seed=${seed} source=${source_run}"
 log_message "W&B group=${wandb_group} name=${wandb_name} types_homog=${homog_types} types_hetero=${hetero_types}"
 
 if [ -n "${GNNPLUS_DATASET_DIR:-}" ]; then
     extra_args+=(dataset.dir "${GNNPLUS_DATASET_DIR}")
+fi
+if [ -n "${GNNPLUS_OUT_DIR:-}" ]; then
+    mkdir -p "${GNNPLUS_OUT_DIR}"
+    extra_args+=(out_dir "${GNNPLUS_OUT_DIR}")
+    log_message "out_dir override: ${GNNPLUS_OUT_DIR}"
 fi
 
 export WANDB_EXTRA_TAGS="${wandb_tags}"

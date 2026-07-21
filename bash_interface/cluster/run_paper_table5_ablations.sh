@@ -136,10 +136,16 @@ job_tag="${SLURM_ARRAY_JOB_ID:-${SLURM_JOB_ID:-local}}"
 # Distinct W&B groups per (dataset, variant) — filterable in the UI.
 wandb_group_prefix="${PAPER_T5_WANDB_PREFIX:-paper_T5}"
 wandb_group="${wandb_group_prefix}_${ds_tag}_${variant}"
-wandb_name="${wandb_group_prefix}_${ds_tag}_${variant}_seed${seed}_job${job_tag}_${task_id}"
+name_suffix="${PAPER_T5_NAME_SUFFIX:-}"
+wandb_name="${wandb_group_prefix}_${ds_tag}_${variant}_seed${seed}_job${job_tag}_${task_id}${name_suffix}"
 
 # Tags make variant filtering easy even across groups.
 wandb_tags="paper_table5,${variant},${ds_tag},seed${seed},source_${source_run}"
+if [ -n "${name_suffix}" ]; then
+    # Strip leading underscore for the tag (e.g. _h200 → relaunch_h200).
+    tag_suffix="${name_suffix#_}"
+    wandb_tags="${wandb_tags},relaunch_${tag_suffix}"
+fi
 
 log_message "Table5 task ${task_id}/${num_tasks}: ds=${ds_tag} variant=${variant} seed=${seed} source=${source_run} cfg=${cfg}"
 log_message "W&B group=${wandb_group} name=${wandb_name}"
