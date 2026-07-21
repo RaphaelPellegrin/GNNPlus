@@ -43,7 +43,7 @@ Implementation:
 
 ```text
 ╔══════════════════════════════════════════════════════════════════╗
-║  🛑🛑🛑  TO RUN  ·  cluster was FULL — submit when free  🛑🛑🛑  ║
+║  🛑🛑🛑  TO RUN  ·  ≤5 GPUs  ·  W&B groups enabled  🛑🛑🛑          ║
 ║  📈 Heterogeneity profiles · MUTAG/ENZYMES/PROTEINS × GCN/GIN/SiGMA ║
 ║  🔁 ≥100 test appearances · 9 long jobs                          ║
 ║  📒 also listed in CLUSTER_LAUNCHES.md                           ║
@@ -60,8 +60,12 @@ git pull
 HETERO_REQUIRED_TEST_APPEARANCES=2 HETERO_MAX_TRIALS=20 \
   bash bash_interface/cluster/submit_heterogeneity_tu.sh
 
-# 🚀🚀🚀 full paper protocol (9 jobs, ≤9 GPUs) — after smoke OK
-bash bash_interface/cluster/submit_heterogeneity_tu.sh
+# 🚀 full paper protocol (9 jobs, ≤5 GPUs) on H200
+HETERO_PARALLEL=5 HETERO_PARTITION=gpu_h200 \
+  bash bash_interface/cluster/submit_heterogeneity_tu.sh
+# Note: gpu_h200 often caps at 72h — if sbatch rejects 192:00:00:
+#   HETERO_TIME=72:00:00 HETERO_PARALLEL=5 HETERO_PARTITION=gpu_h200 \
+#     bash bash_interface/cluster/submit_heterogeneity_tu.sh
 # 👉 paste JOBID below + into CLUSTER_LAUNCHES.md
 ```
 
@@ -71,6 +75,7 @@ Local smoke:
 python scripts/heterogeneity/run_heterogeneity_profiles.py \
   --cfg configs/heterogeneity/mutag-gcn.yaml \
   --required_test_appearances 2 --max_trials 20 \
+  --no-wandb \
   optim.max_epoch 5
 ```
 
@@ -78,8 +83,34 @@ python scripts/heterogeneity/run_heterogeneity_profiles.py \
 |-------|-------|
 | **SLURM array** | 🛑 *TO RUN — not submitted* |
 | **Tasks** | `1-9` = 3 datasets × 3 models |
-| **Outputs** | `results/heterogeneity/<dataset>_<MODEL>/` (pickle + PNGs) |
+| **Parallel** | ≤**5** GPUs (`HETERO_PARALLEL`, default 5) |
+| **Local outs** | `results/heterogeneity/<dataset>_<MODEL>/` (pickle + appearances CSV + PNGs) |
+| **W&B** | see below |
 | **Master tracker** | [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md) |
+
+---
+
+## W&B logging
+
+Each (dataset, model) job is one W&B run.
+
+| | |
+|--|--|
+| **Entity / project** | `weber-geoml-harvard-university` / `GNNPlus` |
+| **Group** | `building_hetero_profile_<dataset>` (e.g. `building_hetero_profile_mutag`) |
+| **Run name** | `<dataset>_<model>` (e.g. `mutag_gcn`) |
+| **During run** | `hetero/min_appearances`, mean/max, trial val/test |
+| **At job end** | profile PNGs + artifact |
+
+**When is the hetero profile built?** At the **end of each job** (once every graph has ≥N test appearances). You do **not** need all 9 jobs finished to get a profile — each of the 9 produces its own pickle/CSV/PNGs and uploads them.
+
+**Artifacts** (`type=heterogeneity_profile`, name `hetero_profile_<ds>_<model>`):
+
+1. `*_graph_dict.pickle` — full per-graph 0/1 history + `test_appearances`
+2. `*_test_appearances.csv` — `graph_idx, n_test_appearances, n_correct, avg_accuracy`
+3. Profile PNGs (`*_by_index.png`, `*_by_accuracy.png`)
+
+Disable W&B: `HETERO_WANDB=0 bash …/submit_heterogeneity_tu.sh`
 
 ---
 

@@ -42,6 +42,19 @@ python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
 
 ---
 
+### 🧪 Table 6 — PascalVOC Homog_MP ± ungated (10 jobs)
+
+| | |
+|--|--|
+| **SLURM** | **`33810534`** |
+| **When** | 2026-07-21 |
+| **Tasks** | `1-10%5` |
+| **Docs** | [`Paper_table6_voc.md`](Paper_table6_voc.md) |
+| **W&B** | `paper_T6_voc_{Homog_MP,Homog_MP_ungated}` |
+| **Logs** | `logs_gnnplus/sigma_T6_voc_homog_33810534_<TASK>.log` |
+
+---
+
 ### 🧪 Table 6 — 1-MP LRGB (75 jobs)
 
 | | |
@@ -182,32 +195,6 @@ bash bash_interface/sweeps/create_sweep.sh \
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  Table 6 VOC Homog_MP ± ungated (10 jobs)                 ║
-║  📈  Homog_MP (= SiGMA arch) + Homog_MP_ungated × 5 seeds               ║
-║  ☁️  W&B: paper_T6_voc_{Homog_MP,Homog_MP_ungated}                      ║
-║  📄  Paper_table6_voc.md                                                 ║
-╚══════════════════════════════════════════════════════════════════════════╝
-```
-
-```bash
-source ~/.gnnplus_env
-export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
-cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-git pull
-
-bash bash_interface/cluster/submit_paper_table6_voc_homog.sh
-```
-
-| Field | Value |
-|-------|-------|
-| **SLURM** | 🛑 *not submitted yet* |
-| **Tasks** | `1-10%5` |
-| **Anchor** | `voc-hybrid-j7ukyzdm-a2g2-anchor.yaml` |
-
----
-
-```text
-╔══════════════════════════════════════════════════════════════════════════╗
 ║  🛑  TO RUN  ·  Heterogeneity profiles (TU) · ≤5 GPUs                    ║
 ║  📈  MUTAG / ENZYMES / PROTEINS × {GCN, GIN, SiGMA} = 9 jobs            ║
 ║  🔁  50/25/25 · 300 ep · ≥100 test appearances per graph                ║
@@ -222,17 +209,20 @@ export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-# 🚀 paper protocol (≤5 GPUs; long!)
-HETERO_PARALLEL=5 bash bash_interface/cluster/submit_heterogeneity_tu.sh
+# 🚀 paper protocol (≤5 GPUs on H200; long!)
+HETERO_PARALLEL=5 HETERO_PARTITION=gpu_h200 \
+  bash bash_interface/cluster/submit_heterogeneity_tu.sh
+# if TimeLimit rejected: also set HETERO_TIME=72:00:00
 
 # 🧪 smoke first (recommended):
 # HETERO_REQUIRED_TEST_APPEARANCES=2 HETERO_MAX_TRIALS=20 \
-#   bash bash_interface/cluster/submit_heterogeneity_tu.sh
+#   HETERO_PARTITION=gpu_h200 bash bash_interface/cluster/submit_heterogeneity_tu.sh
 ```
 
 | Field | Value |
 |-------|-------|
 | **SLURM** | 🛑 *not submitted yet* |
+| **Partition** | `gpu_h200` (override via `HETERO_PARTITION`) |
 | **Parallel** | ≤5 GPUs |
 | **Local outs** | `results/heterogeneity/<dataset>_<MODEL>/` |
 | **W&B** | groups `building_hetero_profile_{mutag,enzymes,proteins}`; artifact = pickle + appearances CSV + profile PNGs |
@@ -245,11 +235,11 @@ HETERO_PARALLEL=5 bash bash_interface/cluster/submit_heterogeneity_tu.sh
 |----------|--------|-------|
 | Table 5 LRGB | ✅ | `32232124` |
 | Table 5 MNIST+CIFAR | 🛑 TO RUN | — |
-| Table 6 VOC Homog_MP ± ungated | 🛑 TO RUN | — |
 | Peptides UniGCN a0g2 mixes | ✅ | `33651463` |
 | Peptides-func Homog→MP_only a0g3 | ✅ | `33651464` |
 | SiGMA + GRIT attn (PATTERN/CLUSTER) | ✅ | `33458567` |
 | Table 6 VOC (SiGMA / Hetero ± ungated) | ✅ | `32717593` |
+| Table 6 VOC Homog_MP ± ungated | ✅ | `33810534` |
 | Table 6 1-MP | ✅ | `32717625` |
 | ENZYMES ogpkubk9 seeds | ✅ | `33651466` |
 | ENZYMES ogpkubk9 sweep | 🛑 TO RUN | — |

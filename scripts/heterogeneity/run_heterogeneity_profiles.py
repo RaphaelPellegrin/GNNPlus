@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import csv
 import logging
 import pickle
 import sys
@@ -56,6 +57,173 @@ from torch_geometric.loader import DataLoader
 import GNNPlus  # noqa: F401  — register custom modules
 from GNNPlus.experiments.track_avg_accuracy import load_and_plot_average_per_graph
 from GNNPlus.optimizer.extra_optimizers import ExtendedSchedulerConfig
+
+
+def _write_appearances_csv(
+    path: Path,
+    graph_dict: Dict[int, List[int]],
+    test_appearances: Dict[int, int],
+) -> Path:
+    """Write per-graph test-set appearance counts and mean accuracy to CSV.
+
+    Columns: ``graph_idx``, ``n_test_appearances``, ``n_correct``, ``avg_accuracy``.
+
+    Args:
+        path: Destination CSV path.
+        graph_dict: Per-graph list of 0/1 correctness over test appearances.
+        test_appearances: Per-graph count of times the graph was in the test set.
+
+    Returns:
+        The written path.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w", newline="") as f:
+        writer = csv.DictWriter(
+            f,
+            fieldnames=[
+                "graph_idx",
+                "n_test_appearances",
+                "n_correct",
+                "avg_accuracy",
+            ],
+        )
+        writer.writeheader()
+        for gidx in sorted(graph_dict.keys()):
+            vals = graph_dict[gidx]
+            n_app = int(test_appearances.get(gidx, len(vals)))
+            n_correct = int(sum(vals))
+            avg = float(np.mean(vals)) if vals else float("nan")
+            writer.writerow(
+                {
+                    "graph_idx": int(gidx),
+                    "n_test_appearances": n_app,
+                    "n_correct": n_correct,
+                    "avg_accuracy": avg,
+                }
+            )
+    return path
+
+
+def _init_wandb(
+    *,
+    dataset_name: str,
+    model_tag: str,
+    required_appearances: int,
+    max_trials: int,
+    seed0: int,
+) -> Any:
+    """Initialize a W&B run for one (dataset, model) heterogeneity job.
+
+    Group naming: ``building_hetero_profile_<dataset>`` so GCN/GIN/SiGMA for
+    the same dataset share a group. Run name is the model tag.
+
+    Args:
+        dataset_name: Dataset name (e.g. MUTAG).
+        model_tag: Short model label (GCN / GIN / SiGMA).
+        required_appearances: Target test appearances per graph.
+        max_trials: Trial cap.
+        seed0: Base seed.
+
+    Returns:
+        The ``wandb.Run`` object, or ``None`` if W&B is disabled.
+    """
+    if not bool(getattr(cfg.wandb, "use", False)):
+        return None
+    try:
+        import wandb
+    except ImportError as exc:
+        raise ImportError("WandB is not installed but cfg.wandb.use=True") from exc
+
+    ds = str(dataset_name).lower()
+    group = str(getattr(cfg.wandb, "group", "") or "").strip()
+    if not group:
+        group = f"building_hetero_profile_{ds}"
+    name = str(getattr(cfg.wandb, "name", "") or "").strip()
+    if not name:
+        name = f"{ds}_{model_tag}"
+
+    run = wandb.init(
+        entity=cfg.wandb.entity,
+        project=cfg.wandb.project,
+        group=group,
+        name=name,
+        job_type="heterogeneity_profile",
+        tags=["heterogeneity", ds, model_tag.lower()],
+        config={
+            "dataset": dataset_name,
+            "model_tag": model_tag,
+            "model_type": cfg.model.type,
+            "layer_type": getattr(cfg.gnn, "layer_type", None),
+            "num_layers": int(cfg.gnn.layers_mp),
+            "required_test_appearances": required_appearances,
+            "max_trials": max_trials,
+            "seed0": seed0,
+            "split": list(cfg.dataset.split),
+            "max_epoch": int(cfg.optim.max_epoch),
+        },
+        reinit=True,
+    )
+    logging.info(
+        "W&B run: entity=%s project=%s group=%s name=%s",
+        cfg.wandb.entity,
+        cfg.wandb.project,
+        group,
+        name,
+    )
+    return run
+
+
+def _log_wandb_artifacts(
+    run: Any,
+    *,
+    pickle_path: Path,
+    appearances_csv: Path,
+    plot_paths: Sequence[str],
+    dataset_name: str,
+    model_tag: str,
+) -> None:
+    """Upload pickle, appearances CSV, and profile PNGs to the W&B run.
+
+    Args:
+        run: Active ``wandb.Run``.
+        pickle_path: Saved ``graph_dict`` pickle.
+        appearances_csv: Per-graph appearance / accuracy CSV.
+        plot_paths: Heterogeneity profile PNG paths.
+        dataset_name: Dataset name for artifact naming.
+        model_tag: Model tag for artifact naming.
+    """
+    import wandb
+
+    ds = str(dataset_name).lower()
+    art_name = f"hetero_profile_{ds}_{model_tag.lower()}"
+    artifact = wandb.Artifact(
+        name=art_name,
+        type="heterogeneity_profile",
+        metadata={
+            "dataset": dataset_name,
+            "model_tag": model_tag,
+            "pickle": pickle_path.name,
+            "appearances_csv": appearances_csv.name,
+        },
+    )
+    artifact.add_file(str(pickle_path), name=pickle_path.name)
+    artifact.add_file(str(appearances_csv), name=appearances_csv.name)
+    image_log: Dict[str, Any] = {}
+    for p in plot_paths:
+        if not p:
+            continue
+        pp = Path(p)
+        if not pp.is_file():
+            continue
+        artifact.add_file(str(pp), name=pp.name)
+        key = "hetero/profile_by_index" if "by_index" in pp.name else "hetero/profile_by_accuracy"
+        image_log[key] = wandb.Image(str(pp))
+    run.log_artifact(artifact)
+    if image_log:
+        run.log(image_log)
+    # Also attach files on the run summary panel for quick download.
+    run.save(str(appearances_csv), base_path=str(appearances_csv.parent))
+    run.save(str(pickle_path), base_path=str(pickle_path.parent))
 
 
 def _optimizer_config() -> OptimizerConfig:
@@ -216,6 +384,11 @@ def run_profile(
 ) -> Path:
     """Run the multi-trial heterogeneity protocol for the loaded ``cfg``.
 
+    The heterogeneity **profile** (per-graph mean accuracy + PNGs) is built
+    **at the end** of this job, once every graph has ≥ ``required_test_appearances``
+    (or ``max_trials`` is hit). Progress (appearance coverage) is streamed to
+    W&B during the run when enabled.
+
     Args:
         required_test_appearances: Stop when every graph has this many test hits.
         max_trials: Hard cap on trials (safety).
@@ -228,6 +401,16 @@ def run_profile(
     output_dir.mkdir(parents=True, exist_ok=True)
     set_printing()
     auto_select_device()
+
+    tag = _model_tag()
+    ds_name = str(cfg.dataset.name)
+    wandb_run = _init_wandb(
+        dataset_name=ds_name,
+        model_tag=tag,
+        required_appearances=required_test_appearances,
+        max_trials=max_trials,
+        seed0=seed0,
+    )
 
     # Probe dataset size with seed0.
     cfg.seed = seed0
@@ -243,103 +426,156 @@ def run_profile(
     test_appearances: Dict[int, int] = {i: 0 for i in range(n_graphs)}
 
     trial = 0
-    while True:
-        trial += 1
-        min_app = min(test_appearances.values())
-        if min_app >= required_test_appearances:
+    try:
+        while True:
+            trial += 1
+            min_app = min(test_appearances.values())
+            if min_app >= required_test_appearances:
+                logging.info(
+                    "All graphs have ≥%d test appearances; stopping before trial %d",
+                    required_test_appearances,
+                    trial,
+                )
+                break
+            if trial > max_trials:
+                logging.warning(
+                    "Hit max_trials=%d with min appearances=%d/%d",
+                    max_trials,
+                    min_app,
+                    required_test_appearances,
+                )
+                break
+
+            trial_seed = seed0 + trial - 1
+            cfg.seed = trial_seed
+            cfg.run_id = trial_seed
+            seed_everything(cfg.seed)
             logging.info(
-                "All graphs have ≥%d test appearances; stopping before trial %d",
-                required_test_appearances,
+                "=== Trial %d  seed=%d  min_test_appearances=%d/%d ===",
                 trial,
-            )
-            break
-        if trial > max_trials:
-            logging.warning(
-                "Hit max_trials=%d with min appearances=%d/%d",
-                max_trials,
+                trial_seed,
                 min_app,
                 required_test_appearances,
             )
-            break
 
-        trial_seed = seed0 + trial - 1
-        cfg.seed = trial_seed
-        cfg.run_id = trial_seed
-        seed_everything(cfg.seed)
-        logging.info(
-            "=== Trial %d  seed=%d  min_test_appearances=%d/%d ===",
-            trial,
-            trial_seed,
-            min_app,
-            required_test_appearances,
-        )
+            loaders = create_loader()
+            model = create_model()
+            cfg.params = params_count(model)
+            optimizer = create_optimizer(model.parameters(), _optimizer_config())
+            scheduler = create_scheduler(optimizer, _scheduler_config())
 
-        loaders = create_loader()
-        model = create_model()
-        cfg.params = params_count(model)
-        optimizer = create_optimizer(model.parameters(), _optimizer_config())
-        scheduler = create_scheduler(optimizer, _scheduler_config())
-
-        model, best_val, test_at_best = _train_one_trial(
-            model, loaders, optimizer, scheduler
-        )
-        logging.info(
-            "Trial %d done: best_val=%.4f test@best=%.4f",
-            trial,
-            best_val,
-            test_at_best,
-        )
-
-        test_subset = loaders[2].dataset
-        if not hasattr(test_subset, "indices"):
-            raise RuntimeError(
-                "Expected a Subset test loader with .indices for global graph IDs"
+            model, best_val, test_at_best = _train_one_trial(
+                model, loaders, optimizer, scheduler
             )
-        test_indices = [int(i) for i in test_subset.indices]
-        # Evaluate on the same underlying dataset object as the Subset.
-        base = test_subset.dataset
-        correctness = _per_graph_correctness(model, base, test_indices)
-        for gidx, ok in correctness.items():
-            test_appearances[gidx] += 1
-            graph_dict[gidx].append(ok)
+            logging.info(
+                "Trial %d done: best_val=%.4f test@best=%.4f",
+                trial,
+                best_val,
+                test_at_best,
+            )
 
-        logging.info(
-            "After trial %d: min=%d max=%d mean_app=%.2f",
-            trial,
-            min(test_appearances.values()),
-            max(test_appearances.values()),
-            float(np.mean(list(test_appearances.values()))),
+            test_subset = loaders[2].dataset
+            if not hasattr(test_subset, "indices"):
+                raise RuntimeError(
+                    "Expected a Subset test loader with .indices for global graph IDs"
+                )
+            test_indices = [int(i) for i in test_subset.indices]
+            # Evaluate on the same underlying dataset object as the Subset.
+            base = test_subset.dataset
+            correctness = _per_graph_correctness(model, base, test_indices)
+            for gidx, ok in correctness.items():
+                test_appearances[gidx] += 1
+                graph_dict[gidx].append(ok)
+
+            app_vals = list(test_appearances.values())
+            min_a = int(min(app_vals))
+            max_a = int(max(app_vals))
+            mean_a = float(np.mean(app_vals))
+            frac_done = float(
+                np.mean([1.0 if v >= required_test_appearances else 0.0 for v in app_vals])
+            )
+            logging.info(
+                "After trial %d: min=%d max=%d mean_app=%.2f frac≥N=%.3f",
+                trial,
+                min_a,
+                max_a,
+                mean_a,
+                frac_done,
+            )
+            if wandb_run is not None:
+                wandb_run.log(
+                    {
+                        "hetero/trial": trial,
+                        "hetero/best_val": best_val,
+                        "hetero/test_at_best_val": test_at_best,
+                        "hetero/min_appearances": min_a,
+                        "hetero/max_appearances": max_a,
+                        "hetero/mean_appearances": mean_a,
+                        "hetero/frac_graphs_at_target": frac_done,
+                    },
+                    step=trial,
+                )
+
+        ds = ds_name.lower()
+        layers = int(cfg.gnn.layers_mp)
+        n_trials_run = (
+            trial - 1
+            if min(test_appearances.values()) >= required_test_appearances
+            else trial
+        )
+        pickle_path = output_dir / f"{ds}_{tag}_L{layers}_graph_dict.pickle"
+        payload = {
+            "graph_dict": graph_dict,
+            "test_appearances": test_appearances,
+            "required_test_appearances": required_test_appearances,
+            "dataset": cfg.dataset.name,
+            "model_tag": tag,
+            "model_type": cfg.model.type,
+            "layer_type": getattr(cfg.gnn, "layer_type", None),
+            "num_layers": layers,
+            "n_trials_run": n_trials_run,
+            "seed0": seed0,
+        }
+        with open(pickle_path, "wb") as f:
+            pickle.dump(payload, f)
+        logging.info("Saved %s", pickle_path)
+
+        appearances_csv = output_dir / f"{ds}_{tag}_L{layers}_test_appearances.csv"
+        _write_appearances_csv(appearances_csv, graph_dict, test_appearances)
+        logging.info("Saved %s", appearances_csv)
+
+        # Profile plots are built once at the end (need full per-graph history).
+        plot_by_index, plot_by_acc = load_and_plot_average_per_graph(
+            str(pickle_path),
+            dataset_name=ds,
+            layer_type=tag,
+            encoding=None,
+            num_layers=layers,
+            task_type="classification",
+            output_dir=str(output_dir),
         )
 
-    tag = _model_tag()
-    ds = str(cfg.dataset.name).lower()
-    layers = int(cfg.gnn.layers_mp)
-    pickle_path = output_dir / f"{ds}_{tag}_L{layers}_graph_dict.pickle"
-    payload = {
-        "graph_dict": graph_dict,
-        "test_appearances": test_appearances,
-        "required_test_appearances": required_test_appearances,
-        "dataset": cfg.dataset.name,
-        "model_tag": tag,
-        "model_type": cfg.model.type,
-        "layer_type": getattr(cfg.gnn, "layer_type", None),
-        "num_layers": layers,
-        "n_trials_run": trial - 1 if min(test_appearances.values()) >= required_test_appearances else trial,
-        "seed0": seed0,
-    }
-    with open(pickle_path, "wb") as f:
-        pickle.dump(payload, f)
-    logging.info("Saved %s", pickle_path)
+        if wandb_run is not None:
+            avg_accs = [
+                float(np.mean(v)) for v in graph_dict.values() if len(v) > 0
+            ]
+            wandb_run.summary["n_trials_run"] = n_trials_run
+            wandb_run.summary["min_appearances"] = int(min(test_appearances.values()))
+            wandb_run.summary["mean_graph_avg_accuracy"] = (
+                float(np.mean(avg_accs)) if avg_accs else float("nan")
+            )
+            _log_wandb_artifacts(
+                wandb_run,
+                pickle_path=pickle_path,
+                appearances_csv=appearances_csv,
+                plot_paths=[plot_by_index, plot_by_acc],
+                dataset_name=ds_name,
+                model_tag=tag,
+            )
+    finally:
+        if wandb_run is not None:
+            wandb_run.finish()
 
-    load_and_plot_average_per_graph(
-        str(pickle_path),
-        dataset_name=ds,
-        layer_type=tag,
-        encoding=None,
-        num_layers=layers,
-        task_type="classification",
-        output_dir=str(output_dir),
-    )
     return pickle_path
 
 
@@ -370,6 +606,17 @@ def main() -> None:
         default="",
         help="Where to write pickle/plots (default: <out_dir>/<dataset>_<model>)",
     )
+    parser.add_argument(
+        "--wandb",
+        action="store_true",
+        default=None,
+        help="Force-enable W&B (default: use cfg.wandb.use from YAML / overrides)",
+    )
+    parser.add_argument(
+        "--no-wandb",
+        action="store_true",
+        help="Force-disable W&B",
+    )
     # Remaining GraphGym overrides: key value pairs after --
     parser.add_argument(
         "opts",
@@ -395,8 +642,11 @@ def main() -> None:
     cfg.dataset.split_mode = "random"
     if not getattr(cfg.dataset, "split", None):
         cfg.dataset.split = [0.5, 0.25, 0.25]
-    cfg.wandb.use = False
     cfg.train.enable_ckpt = False
+    if args.no_wandb:
+        cfg.wandb.use = False
+    elif args.wandb:
+        cfg.wandb.use = True
 
     torch.set_num_threads(cfg.num_threads)
     logging.basicConfig(

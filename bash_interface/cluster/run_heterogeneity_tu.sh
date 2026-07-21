@@ -65,9 +65,19 @@ log_message "cfg=${cfg}"
 
 export PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
 
+wandb_flag=(--wandb)
+if [ "${HETERO_WANDB:-1}" = "0" ]; then
+    wandb_flag=(--no-wandb)
+fi
+
+# Group: building_hetero_profile_<dataset>  (GCN/GIN/SiGMA share a group)
+# Run name: <dataset>_<MODEL>
 exec python scripts/heterogeneity/run_heterogeneity_profiles.py \
     --cfg "${cfg}" \
     --required_test_appearances "${required}" \
     --max_trials "${max_trials}" \
     --seed "${seed0}" \
+    "${wandb_flag[@]}" \
+    wandb.group "building_hetero_profile_${ds}" \
+    wandb.name "${ds}_${model}" \
     "${extra[@]}"

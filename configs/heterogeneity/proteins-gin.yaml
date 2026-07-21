@@ -3,9 +3,12 @@ out_dir: results/heterogeneity
 metric_best: accuracy
 metric_agg: argmax
 wandb:
-  use: False
+  use: True
   project: GNNPlus
   entity: weber-geoml-harvard-university
+  # group auto-set to building_hetero_profile_<dataset> by the runner if empty
+  group: ''
+  name: ''
 dataset:
   format: PyG-TUDataset
   name: PROTEINS
