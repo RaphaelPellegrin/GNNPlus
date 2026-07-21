@@ -375,6 +375,38 @@ def _model_tag() -> str:
     return layer.upper()
 
 
+def _subset_global_indices(subset: Any) -> List[int]:
+    """Return global dataset indices from a train/val/test subset.
+
+    GraphGym / PyG versions differ: ``indices`` may be a list/tensor attribute
+    or a zero-arg method. Some wrappers expose ``_indices`` instead.
+
+    Args:
+        subset: Object with ``indices`` / ``_indices`` (e.g. ``torch.utils.data.Subset``).
+
+    Returns:
+        List of integer global indices into the underlying dataset.
+
+    Raises:
+        RuntimeError: If no usable index list can be recovered.
+    """
+    raw: Any = None
+    if hasattr(subset, "indices"):
+        raw = subset.indices
+        if callable(raw):
+            raw = raw()
+    elif hasattr(subset, "_indices"):
+        raw = subset._indices
+        if callable(raw):
+            raw = raw()
+    if raw is None:
+        raise RuntimeError(
+            "Expected a Subset-like object with .indices or ._indices "
+            f"(got {type(subset)!r})"
+        )
+    return [int(i) for i in raw]
+
+
 def run_profile(
     *,
     required_test_appearances: int,
@@ -475,13 +507,13 @@ def run_profile(
             )
 
             test_subset = loaders[2].dataset
-            if not hasattr(test_subset, "indices"):
-                raise RuntimeError(
-                    "Expected a Subset test loader with .indices for global graph IDs"
-                )
-            test_indices = [int(i) for i in test_subset.indices]
+            test_indices = _subset_global_indices(test_subset)
             # Evaluate on the same underlying dataset object as the Subset.
-            base = test_subset.dataset
+            base = (
+                test_subset.dataset
+                if hasattr(test_subset, "dataset")
+                else test_subset
+            )
             correctness = _per_graph_correctness(model, base, test_indices)
             for gidx, ok in correctness.items():
                 test_appearances[gidx] += 1
