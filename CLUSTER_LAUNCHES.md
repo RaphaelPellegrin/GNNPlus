@@ -82,61 +82,46 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 
 ---
 
-## 🛑🛑🛑 TO RUN — cluster was full — COPY/PASTE WHEN SLOTS FREE 🛑🛑🛑
+### 🧪 Peptides UniGCN a0g2 MP mixes (20 jobs)
 
-```text
-╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  Peptides UniGCN a0g2 MP mixes (20 jobs)                 ║
-║  🧪  func+struct × {UNIGCN+GINE, UNIGCN+GATEDGCN} × 5 seeds · no attn   ║
-║  📄  Paper_peptides_unigcn_a0g2_mp_mixes.md                              ║
-╚══════════════════════════════════════════════════════════════════════════╝
-```
-
-```bash
-source ~/.gnnplus_env
-export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
-cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-git pull
-
-# 🚀 20 jobs, ≤8 GPUs
-bash bash_interface/cluster/submit_peptides_unigcn_a0g2_mp_mixes.sh
-# 👉 paste JOBID into Paper_peptides_unigcn_a0g2_mp_mixes.md + here
-```
-
-| Field | Value |
-|-------|-------|
-| **SLURM** | 🛑 *not submitted yet* |
+| | |
+|--|--|
+| **SLURM** | **`33651463`** |
+| **When** | 2026-07-20 |
+| **Tasks** | `1-20%4` |
+| **Docs** | [`Paper_peptides_unigcn_a0g2_mp_mixes.md`](Paper_peptides_unigcn_a0g2_mp_mixes.md) |
 | **W&B** | `paper_peptides_{peptides_func,peptides_struct}_a0g2_{UNIGCN_GINE,UNIGCN_GATEDGCN}` |
-| **HPs** | func=Homog a1g2 / o5cdk766 · struct=g3bsaq32 |
+| **Logs** | `logs_gnnplus/pep_unigcn_a0g2_33651463_<TASK>.log` |
 
 ---
 
-```text
-╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  Peptides-func Homog_MP → MP_only (5 jobs)               ║
-║  🧪  NEW best a1g2 GCN×2 → a0g3 GCN×3 gated (drop attn → GCN)           ║
-║  📄  Paper_peptides_func_homog_a1g2_mp_only.md                           ║
-╚══════════════════════════════════════════════════════════════════════════╝
-```
+### 🧪 Peptides-func Homog → MP_only a0g3 (5 jobs)
 
-```bash
-source ~/.gnnplus_env
-export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
-cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-git pull
-
-# 🚀 5 jobs, ≤5 GPUs
-bash bash_interface/cluster/submit_peptides_func_homog_a1g2_mp_only.sh
-# 👉 paste JOBID into Paper_peptides_func_homog_a1g2_mp_only.md + here
-```
-
-| Field | Value |
-|-------|-------|
-| **SLURM** | 🛑 *not submitted yet* |
+| | |
+|--|--|
+| **SLURM** | **`33651464`** |
+| **When** | 2026-07-20 |
+| **Tasks** | `1-5%2` |
+| **Docs** | [`Paper_peptides_func_homog_a1g2_mp_only.md`](Paper_peptides_func_homog_a1g2_mp_only.md) |
 | **W&B** | `paper_T5_peptides_func_HomogMP_MPonly` |
-| **Aggregate** | `python scripts/api_wanndb_query/aggregate_paper_repro.py --group paper_T5_peptides_func_HomogMP_MPonly --metric best_test_perf --state finished` |
+| **Logs** | `logs_gnnplus/sigma_func_a0g3_33651464_<TASK>.log` |
 
 ---
+
+### 🧪 ENZYMES ogpkubk9 seed grids (10 jobs)
+
+| | |
+|--|--|
+| **SLURM** | **`33651466`** |
+| **When** | 2026-07-20 |
+| **Tasks** | `1-10%2` (plateau×5 + cosine×5) |
+| **Docs** | [`Paper_enzymes_ogpkubk9.md`](Paper_enzymes_ogpkubk9.md) |
+| **W&B** | `enzymes_ogpkubk9_a4g4_plateau_seeds` / `enzymes_ogpkubk9_a4g4_cosine_seeds` |
+| **Logs** | `logs_gnnplus/enz_ogpkubk9_33651466_<TASK>.log` |
+
+---
+
+## 🛑🛑🛑 TO RUN — cluster was full — COPY/PASTE WHEN SLOTS FREE 🛑🛑🛑
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
@@ -170,32 +155,6 @@ bash bash_interface/cluster/submit_paper_table5_mnist_cifar_ablations.sh
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  ENZYMES ogpkubk9 seed grids (10 jobs)                   ║
-║  🧬  plateau×5 + cosine×5  ·  source MOE_6/ogpkubk9                     ║
-║  📄  Paper_enzymes_ogpkubk9.md                                           ║
-╚══════════════════════════════════════════════════════════════════════════╝
-```
-
-```bash
-source ~/.gnnplus_env
-export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
-cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-git pull
-
-# 🚀 10 jobs, ≤5 GPUs
-bash bash_interface/cluster/submit_enzymes_ogpkubk9_seed_grids.sh
-# 👉 paste JOBID into Paper_enzymes_ogpkubk9.md + here
-```
-
-| Field | Value |
-|-------|-------|
-| **SLURM** | 🛑 *not submitted yet* |
-| **W&B** | `enzymes_ogpkubk9_a4g4_plateau_seeds` / `enzymes_ogpkubk9_a4g4_cosine_seeds` |
-
----
-
-```text
-╔══════════════════════════════════════════════════════════════════════════╗
 ║  🛑  TO RUN  ·  ENZYMES ogpkubk9 centered W&B sweep                     ║
 ║  🎯  vary lr · #attn/MP heads (gates) · hybrid d_h                      ║
 ║  📄  Paper_enzymes_ogpkubk9.md                                           ║
@@ -223,9 +182,36 @@ bash bash_interface/sweeps/create_sweep.sh \
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  Heterogeneity profiles (TU)                             ║
+║  🛑  TO RUN  ·  Table 6 VOC Homog_MP ± ungated (10 jobs)                 ║
+║  📈  Homog_MP (= SiGMA arch) + Homog_MP_ungated × 5 seeds               ║
+║  ☁️  W&B: paper_T6_voc_{Homog_MP,Homog_MP_ungated}                      ║
+║  📄  Paper_table6_voc.md                                                 ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_paper_table6_voc_homog.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *not submitted yet* |
+| **Tasks** | `1-10%5` |
+| **Anchor** | `voc-hybrid-j7ukyzdm-a2g2-anchor.yaml` |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑  TO RUN  ·  Heterogeneity profiles (TU) · ≤5 GPUs                    ║
 ║  📈  MUTAG / ENZYMES / PROTEINS × {GCN, GIN, SiGMA} = 9 jobs            ║
 ║  🔁  50/25/25 · 300 ep · ≥100 test appearances per graph                ║
+║  ☁️  W&B groups: building_hetero_profile_<dataset>                      ║
 ║  📄  Paper_heterogeneity.md                                              ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
@@ -236,8 +222,8 @@ export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-# 🚀 paper protocol (long!)
-bash bash_interface/cluster/submit_heterogeneity_tu.sh
+# 🚀 paper protocol (≤5 GPUs; long!)
+HETERO_PARALLEL=5 bash bash_interface/cluster/submit_heterogeneity_tu.sh
 
 # 🧪 smoke first (recommended):
 # HETERO_REQUIRED_TEST_APPEARANCES=2 HETERO_MAX_TRIALS=20 \
@@ -247,7 +233,9 @@ bash bash_interface/cluster/submit_heterogeneity_tu.sh
 | Field | Value |
 |-------|-------|
 | **SLURM** | 🛑 *not submitted yet* |
-| **Outputs** | `results/heterogeneity/<dataset>_<MODEL>/` |
+| **Parallel** | ≤5 GPUs |
+| **Local outs** | `results/heterogeneity/<dataset>_<MODEL>/` |
+| **W&B** | groups `building_hetero_profile_{mutag,enzymes,proteins}`; artifact = pickle + appearances CSV + profile PNGs |
 
 ---
 
@@ -257,11 +245,12 @@ bash bash_interface/cluster/submit_heterogeneity_tu.sh
 |----------|--------|-------|
 | Table 5 LRGB | ✅ | `32232124` |
 | Table 5 MNIST+CIFAR | 🛑 TO RUN | — |
-| Peptides UniGCN a0g2 mixes | 🛑 TO RUN | — |
-| Peptides-func Homog→MP_only a0g3 | 🛑 TO RUN | — |
+| Table 6 VOC Homog_MP ± ungated | 🛑 TO RUN | — |
+| Peptides UniGCN a0g2 mixes | ✅ | `33651463` |
+| Peptides-func Homog→MP_only a0g3 | ✅ | `33651464` |
 | SiGMA + GRIT attn (PATTERN/CLUSTER) | ✅ | `33458567` |
-| Table 6 VOC | ✅ | `32717593` |
+| Table 6 VOC (SiGMA / Hetero ± ungated) | ✅ | `32717593` |
 | Table 6 1-MP | ✅ | `32717625` |
-| ENZYMES ogpkubk9 seeds | 🛑 TO RUN | — |
+| ENZYMES ogpkubk9 seeds | ✅ | `33651466` |
 | ENZYMES ogpkubk9 sweep | 🛑 TO RUN | — |
 | Heterogeneity TU profiles | 🛑 TO RUN | — |

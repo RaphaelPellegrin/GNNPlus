@@ -68,6 +68,8 @@ TABLE5_VARIANTS: tuple[str, ...] = (
 
 TABLE6_VOC_VARIANTS: tuple[str, ...] = (
     "SiGMA",
+    "Homog_MP",
+    "Homog_MP_ungated",
     "Hetero_MP",
     "Hetero_MP_ungated",
 )

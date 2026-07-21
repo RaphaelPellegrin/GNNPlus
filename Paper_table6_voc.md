@@ -20,7 +20,9 @@ Best VOC baseline: [`Paper_final_runs.md`](Paper_final_runs.md) / Table 5 [`Pape
 
 ---
 
-## 2. Three variants × 5 seeds = 15 jobs
+## 2. Variants
+
+### Already done (hetero campaign) — 3 × 5 = 15 jobs · SLURM `32717593`
 
 | Variant (W&B) | Meaning | Override vs anchor |
 |---------------|---------|--------------------|
@@ -28,36 +30,44 @@ Best VOC baseline: [`Paper_final_runs.md`](Paper_final_runs.md) / Table 5 [`Pape
 | **`Hetero_MP`** | Heterogeneous MP, still gated | `gnn.hybrid.gnn_types GATEDGCN,GCN` |
 | **`Hetero_MP_ungated`** | Heterogeneous MP, no gates | `gnn.hybrid.gnn_types GATEDGCN,GCN` + `gnn.hybrid.gate none` |
 
+### 🛑 TO RUN — Homog_MP fresh seeds — 2 × 5 = 10 jobs
+
+Same architecture as SiGMA, but logged under `Homog_MP` / `Homog_MP_ungated` so the VOC column matches the 1-MP row names.
+
+| Variant (W&B) | Meaning | Override vs anchor |
+|---------------|---------|--------------------|
+| **`Homog_MP`** | Homogeneous MP, gated (= SiGMA arch) | none |
+| **`Homog_MP_ungated`** | Homogeneous MP, no gates | `gnn.hybrid.gate none` |
+
 Maps to paper Table 6 rows (VOC column):
 
-| Paper row | This campaign |
-|-----------|----------------|
-| Homogeneous MP heads | ≈ **`SiGMA`** (best model already homogeneous) |
+| Paper row | W&B group |
+|-----------|-----------|
+| Homogeneous MP heads (gated) | **`Homog_MP`** (also had `SiGMA`) |
+| Homogeneous MP heads, no gates | **`Homog_MP_ungated`** |
+| Heterogeneous MP heads (gated) | **`Hetero_MP`** |
 | Heterogeneous MP heads, no gates | **`Hetero_MP_ungated`** |
-| SiGMA | **`SiGMA`** (and optionally compare to gated hetero via **`Hetero_MP`**) |
+| SiGMA | **`SiGMA`** |
 
 ### W&B
 
 - **Group:** `paper_T6_voc_<Variant>`
-  - `paper_T6_voc_SiGMA`
-  - `paper_T6_voc_Hetero_MP`
-  - `paper_T6_voc_Hetero_MP_ungated`
+  - `paper_T6_voc_SiGMA` ✅
+  - `paper_T6_voc_Homog_MP` 🛑
+  - `paper_T6_voc_Homog_MP_ungated` 🛑
+  - `paper_T6_voc_Hetero_MP` ✅
+  - `paper_T6_voc_Hetero_MP_ungated` ✅
 - **Tags:** `paper_table6`, `<Variant>`, `voc`, `seed<k>`, `source_vyt7hjj5`
 
 ---
 
 ## 3. Launch on cluster
 
-```bash
-source ~/.gnnplus_env
-export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
-cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-git pull
+### Hetero (already submitted)
 
+```bash
 bash bash_interface/cluster/submit_paper_table6_voc_hetero.sh
 ```
-
-Optional: `PAPER_T6_VOC_PARALLEL=N` (default **5**).
 
 | Field | Value |
 |-------|-------|
@@ -66,7 +76,26 @@ Optional: `PAPER_T6_VOC_PARALLEL=N` (default **5**).
 | **Tasks** | `1-15%3` = 3×5 |
 | **Scripts** | `submit_paper_table6_voc_hetero.sh` → `run_paper_table6_voc_hetero.sh` |
 | **Logs** | `logs_gnnplus/sigma_T6_voc_32717593_<TASK>.log` |
-| **Needs** | `gate=none` support (same branch as Table 5) |
+
+### Homog_MP ± ungated (🛑 TO RUN)
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_paper_table6_voc_homog.sh
+# optional: PAPER_T6_VOC_HOMOG_PARALLEL=5 (default)
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM array** | 🛑 *TO RUN — not submitted* |
+| **Job name** | `sigma_T6_voc_homog` |
+| **Tasks** | `1-10%5` = 2×5 |
+| **Scripts** | `submit_paper_table6_voc_homog.sh` → `run_paper_table6_voc_homog.sh` |
+| **Logs** | `logs_gnnplus/sigma_T6_voc_homog_<JOBID>_<TASK>.log` |
 | **Master tracker** | [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md) |
 
 ---
@@ -82,9 +111,11 @@ python scripts/api_wanndb_query/aggregate_paper_table56.py --table 6 --detail
 
 | Model | VOC-SP F1 ↑ | n | W&B group |
 |-------|-------------|---|-----------|
-| SiGMA (homog. gated) | | 5 | `paper_T6_voc_SiGMA` |
-| Hetero_MP (GATEDGCN,GCN + gate) | | 5 | `paper_T6_voc_Hetero_MP` |
-| Hetero_MP_ungated | | 5 | `paper_T6_voc_Hetero_MP_ungated` |
+| SiGMA | 0.4669±0.0083 | 5 | `paper_T6_voc_SiGMA` |
+| Homog_MP | 🛑 | 5 | `paper_T6_voc_Homog_MP` |
+| Homog_MP_ungated | 🛑 | 5 | `paper_T6_voc_Homog_MP_ungated` |
+| Hetero_MP | 0.4484±0.0064 | 5 | `paper_T6_voc_Hetero_MP` |
+| Hetero_MP_ungated | 0.4518±0.0055 | 5 | `paper_T6_voc_Hetero_MP_ungated` |
 
 ---
 
@@ -92,7 +123,9 @@ python scripts/api_wanndb_query/aggregate_paper_table56.py --table 6 --detail
 
 | Path | Role |
 |------|------|
-| `bash_interface/cluster/submit_paper_table6_voc_hetero.sh` | **launch this** |
-| `bash_interface/cluster/run_paper_table6_voc_hetero.sh` | SLURM array worker |
-| `configs/gated_hybrid/voc-hybrid-j7ukyzdm-a2g2-anchor.yaml` | VOC SiGMA anchor |
+| `bash_interface/cluster/submit_paper_table6_voc_hetero.sh` | hetero campaign (done) |
+| `bash_interface/cluster/run_paper_table6_voc_hetero.sh` | hetero worker |
+| `bash_interface/cluster/submit_paper_table6_voc_homog.sh` | **launch Homog_MP ± ungated** |
+| `bash_interface/cluster/run_paper_table6_voc_homog.sh` | Homog worker |
+| `configs/gated_hybrid/voc-hybrid-j7ukyzdm-a2g2-anchor.yaml` | VOC SiGMA / Homog anchor |
 | `GNNPlus/layer/gated_hybrid_layer.py` | `gate=none` for ungated variant |
