@@ -281,6 +281,54 @@ def _split_accuracy(model: torch.nn.Module, loader: DataLoader) -> float:
     return float(correct) / float(max(total, 1))
 
 
+def _unwrap_to_pyg_dataset(dataset: Any) -> Any:
+    """Unwrap ``torch.utils.data.Subset`` wrappers to the underlying dataset."""
+    from torch.utils.data import Subset
+
+    cur: Any = dataset
+    while isinstance(cur, Subset):
+        cur = cur.dataset
+    return cur
+
+
+def _full_num_graphs(dataset: Any) -> int:
+    """Return total stored graphs, ignoring an active GraphGym split filter.
+
+    PyG ``Dataset.__len__`` is ``len(indices())``, so a train-filtered
+    dataset reports ~50% of graphs. Use ``Dataset.len()`` when available.
+    """
+    base = _unwrap_to_pyg_dataset(dataset)
+    len_fn = getattr(base, "len", None)
+    if callable(len_fn):
+        try:
+            return int(len_fn())
+        except NotImplementedError:
+            pass
+    return int(len(base))
+
+
+def _get_graph_by_global_index(dataset: Any, global_idx: int) -> Data:
+    """Fetch one graph by **global** storage index (not split-local).
+
+    ``dataset[i]`` maps through ``indices()``, so global ids from a test split
+    raise ``IndexError`` on a filtered dataset. Prefer ``Dataset.get``.
+    """
+    base = _unwrap_to_pyg_dataset(dataset)
+    get_fn = getattr(base, "get", None)
+    if callable(get_fn):
+        data = get_fn(int(global_idx))
+        transform = getattr(base, "transform", None)
+        if transform is not None:
+            data = transform(data)
+        if not isinstance(data, Data):
+            raise TypeError(f"Expected PyG Data from get(), got {type(data)}")
+        return data
+    data = base[int(global_idx)]
+    if not isinstance(data, Data):
+        raise TypeError(f"Expected PyG Data, got {type(data)}")
+    return data
+
+
 @torch.no_grad()
 def _per_graph_correctness(
     model: torch.nn.Module,
@@ -292,9 +340,7 @@ def _per_graph_correctness(
     device = torch.device(cfg.accelerator)
     out: Dict[int, int] = {}
     for idx in test_indices:
-        data = dataset[int(idx)]
-        if not isinstance(data, Data):
-            raise TypeError(f"Expected PyG Data, got {type(data)}")
+        data = _get_graph_by_global_index(dataset, int(idx))
         batch = DataLoader([data], batch_size=1)
         graph = next(iter(batch)).to(device)
         graph.split = "test"
@@ -448,11 +494,17 @@ def run_profile(
     cfg.seed = seed0
     seed_everything(cfg.seed)
     loaders0 = create_loader()
-    # Full dataset lives under the Subset's .dataset
+    # GraphGym often keeps one PyG Dataset with ``_indices`` set per split, so
+    # ``len(train_loader.dataset)`` is ~50% of graphs — use ``Dataset.len()``.
     train_subset = loaders0[0].dataset
-    full_dataset = train_subset.dataset if hasattr(train_subset, "dataset") else train_subset
-    n_graphs = len(full_dataset)
-    logging.info("Dataset %s: %d graphs", cfg.dataset.name, n_graphs)
+    full_dataset = _unwrap_to_pyg_dataset(train_subset)
+    n_graphs = _full_num_graphs(full_dataset)
+    logging.info(
+        "Dataset %s: %d graphs (split-local len(train)=%d)",
+        cfg.dataset.name,
+        n_graphs,
+        len(train_subset),
+    )
 
     graph_dict: Dict[int, List[int]] = {i: [] for i in range(n_graphs)}
     test_appearances: Dict[int, int] = {i: 0 for i in range(n_graphs)}
@@ -508,13 +560,10 @@ def run_profile(
 
             test_subset = loaders[2].dataset
             test_indices = _subset_global_indices(test_subset)
-            # Evaluate on the same underlying dataset object as the Subset.
-            base = (
-                test_subset.dataset
-                if hasattr(test_subset, "dataset")
-                else test_subset
+            # Global indices + Dataset.get (not dataset[i], which is split-local).
+            correctness = _per_graph_correctness(
+                model, _unwrap_to_pyg_dataset(test_subset), test_indices
             )
-            correctness = _per_graph_correctness(model, base, test_indices)
             for gidx, ok in correctness.items():
                 test_appearances[gidx] += 1
                 graph_dict[gidx].append(ok)

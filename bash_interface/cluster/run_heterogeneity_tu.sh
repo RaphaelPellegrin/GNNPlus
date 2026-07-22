@@ -60,6 +60,13 @@ if [ -n "${GNNPLUS_DATASET_DIR:-}" ]; then
     extra+=(dataset.dir "${GNNPLUS_DATASET_DIR}")
 fi
 
+out_dir_args=()
+if [ -n "${GNNPLUS_OUT_DIR:-}" ]; then
+    mkdir -p "${GNNPLUS_OUT_DIR}/heterogeneity"
+    out_dir_args+=(--output_dir "${GNNPLUS_OUT_DIR}/heterogeneity/${ds}_${model}")
+    log_message "output_dir: ${GNNPLUS_OUT_DIR}/heterogeneity/${ds}_${model}"
+fi
+
 log_message "Heterogeneity task ${task_id}/${num_tasks}: ds=${ds} model=${model} required=${required}"
 log_message "cfg=${cfg}"
 
@@ -77,6 +84,7 @@ exec python scripts/heterogeneity/run_heterogeneity_profiles.py \
     --required_test_appearances "${required}" \
     --max_trials "${max_trials}" \
     --seed "${seed0}" \
+    "${out_dir_args[@]}" \
     "${wandb_flag[@]}" \
     wandb.group "building_hetero_profile_${ds}" \
     wandb.name "${ds}_${model}" \

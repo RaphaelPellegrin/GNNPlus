@@ -51,13 +51,9 @@ Submitted 2026-07-22. Logs: `logs_gnnplus/sigma_T5_abl_34098505_<TASK>.log`, `lo
 
 | JOBID | Tasks | What |
 |-------|-------|------|
-| 🛑 **TO RUN** | T5 `41-50%5` | VOC SiGMA + ungated × 5 seeds · `gpu_h200` · 72h · `_h200` |
+| ✅ **`34099247`** | T5 `41-50%5` | VOC SiGMA + ungated × 5 seeds · `gpu_h200` · 72h · `_h200` |
 
-```bash
-PAPER_T5_ARRAY=41-50 PAPER_T5_PARALLEL=5 PAPER_T5_PARTITION=gpu_h200 \
-  PAPER_T5_TIME=72:00:00 PAPER_T5_NAME_SUFFIX=_h200 \
-  bash bash_interface/cluster/submit_paper_table5_ablations.sh
-```
+Submitted 2026-07-22. Logs: `logs_gnnplus/sigma_T5_abl_34099247_<TASK>.log`.
 
 ---
 
@@ -79,7 +75,8 @@ PAPER_T5_ARRAY=41-50 PAPER_T5_PARALLEL=5 PAPER_T5_PARTITION=gpu_h200 \
 | | |
 |--|--|
 | **SLURM** | **`33810534`** (Homog_MP ✅; ungated failed) |
-| **Relaunch ungated** | ✅ **`34070244`** · `6-10%3` · 192h — task **7** ❌ Errno 122; resubmit `ARRAY=7` + `GNNPLUS_OUT_DIR` |
+| **Relaunch ungated** | ✅ **`34070244`** · `6-10%3` · 192h — task **7** ❌ Errno 122 |
+| **Seed1 retry** | ✅ **`34409933`** · `ARRAY=7` (2026-07-22) — **must** use `GNNPLUS_OUT_DIR` or Errno 122 again |
 | **When** | 2026-07-21 |
 | **Docs** | [`Paper_table6_voc.md`](Paper_table6_voc.md) |
 | **W&B** | `paper_T6_voc_{Homog_MP,Homog_MP_ungated}` |
@@ -182,11 +179,12 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 | | |
 |--|--|
 | **SLURM** | **`33811552`** (`gpu_h200` — fake-finish under quota) |
-| **Failed** | ❌ **`34073629`** — GCN/GIN `IndexError` after trial 1; SiGMA `LinearEdge` |
-| **Relaunch** | 🛑 **TO RUN** after `Dataset.get` fix + `GNNPLUS_OUT_DIR` |
+| **Failed** | ❌ **`34073629`** — GCN/GIN `IndexError` after trial 1 (`dataset[idx]` on split-local view) |
+| **Relaunch** | ⚠️ **`34409940`** submitted **before** `Dataset.get` fix was pushed — **scancel + relaunch** after push |
 | **Docs** | [`Paper_heterogeneity.md`](Paper_heterogeneity.md) |
 | **W&B** | `building_hetero_profile_{mutag,enzymes,proteins}` |
-| **Logs** | `logs_gnnplus/hetero_tu_34073629_<TASK>.log` |
+| **Logs** | `logs_gnnplus/hetero_tu_34409940_<TASK>.log` (prior fail: `…_34073629_…`) |
+| **Sanity** | Log must show `Dataset MUTAG: 188 graphs` (not 94) then survive past trial 1 |
 
 ---
 
@@ -256,7 +254,7 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Table 5 LRGB | ✅ | `32232124` |
 | Table 5 COCO gaps relaunch | ✅ Attn `34070241`; MP/ungated ✅ `34081524` (prior ❌ `34070242`/`43`) | `34081524` |
 | Table 5+6 COCO H200 twin | ✅ T5 `34098505` · T6 `34098527` | `34098505` / `34098527` |
-| Table 5 VOC SiGMA+ungated H200 | 🛑 TO RUN (`41-50%5`) | — |
+| Table 5 VOC SiGMA+ungated H200 | ✅ `34099247` (`41-50%5`) | `34099247` |
 | ENZYMES ogpkubk9 seeds | ✅ | `34081517` (priors ❌ `34076119` / `34070247`) |
 | Table 5 MNIST+CIFAR | 🛑 TO RUN | — |
 | Peptides UniGCN a0g2 mixes | ✅ | `33651463` |
@@ -264,8 +262,8 @@ bash bash_interface/sweeps/create_sweep.sh \
 | SiGMA + GRIT attn (PATTERN/CLUSTER) | ✅ seeds0–4 `33458567`; ✅ reseed+VN `34096507` | `34096507` |
 | Table 6 VOC (SiGMA / Hetero ± ungated) | ✅ | `32717593` |
 | Table 6 VOC Homog_MP | ✅ | `33810534` |
-| Table 6 VOC Homog_MP_ungated relaunch | ✅ | `34070244` |
+| Table 6 VOC Homog_MP_ungated relaunch | ✅ `34070244` (4/5); seed1 retry ✅ `34409933` | `34409933` |
+| Heterogeneity TU relaunch | ✅ submitted `34409940` (prior ❌ `34073629`) | `34409940` |
 | Table 6 1-MP peptides | ✅ | `32717625` |
 | Table 6 COCO relaunch | ✅ mweber `34070245`; H200 twin `34098527` | `34070245` / `34098527` |
 | ENZYMES ogpkubk9 sweep | 🛑 TO RUN | — |
-| Heterogeneity TU relaunch | ✅ | `34073629` |

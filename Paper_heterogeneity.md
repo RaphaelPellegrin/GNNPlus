@@ -77,7 +77,7 @@ python scripts/heterogeneity/run_heterogeneity_profiles.py \
 
 | Field | Value |
 |-------|-------|
-| **SLURM array** | ✅ **`34073629`** (2026-07-21; `indices()` fix). Priors: `34070246` crash, `33811552` quota fake-finish. **Note:** SiGMA configs also needed `edge_encoder: False` (same `LinearEdge`/`times_func` bug as ENZYMES ogpkubk9) — `git pull` before sigma array tasks start, or relaunch failed sigma tasks. |
+| **SLURM array** | ❌ **`34073629`** IndexError. ⚠️ **`34409940`** launched before fix landed on remote — **scancel**, `git pull` fix, relaunch. Sanity: `Dataset MUTAG: 188 graphs` (not 94). |
 | **Partition** | `mweber_gpu` · time `192:00:00` |
 | **Tasks** | `1-9%3` = 3 datasets × 3 models |
 | **Parallel** | ≤**3** GPUs |
