@@ -135,11 +135,28 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 
 | | |
 |--|--|
-| **SLURM** | 🛑 **TO RUN** |
+| **SLURM** | ✅ **`34416930`** (submitted 2026-07-22) |
 | **Tasks** | `1-50%5` |
 | **Docs** | [`Paper_sigma_grit_attn.md`](Paper_sigma_grit_attn.md) |
 | **W&B** | `paper_sigma_grit_cluster_<novn\|vnK>_lr<tag>` |
-| **Launch** | `bash bash_interface/cluster/submit_sigma_grit_cluster_vn_lr_grid.sh` |
+| **Logs** | `logs_gnnplus/sigma_grit_vn_lr_34416930_<TASK>.log` |
+
+---
+
+### 🧪 Peptides-func SiGMA (o5cdk766) VN×LR grid
+
+| | |
+|--|--|
+| **SLURM** | 🛑 *paste JOBID after submit* |
+| **Tasks** | `1-50%5` · `mweber_gpu` · 192h |
+| **Docs** | [`Paper_peptides_func_vn.md`](Paper_peptides_func_vn.md) |
+| **W&B** | `paper_sigma_peptides_func_<novn\|vnK>_lr<tag>_<pyr\|nopyr>` |
+| **Anchor** | `peptides-func-hybrid-o5cdk766-a1g1-anchor.yaml` (a1g1 GCN, lr≈2.083e-4, ep=900) |
+
+```bash
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+bash bash_interface/cluster/submit_peptides_func_o5cdk766_vn_lr_grid.sh
+```
 
 ---
 
@@ -200,6 +217,27 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 ---
 
 ## 🛑🛑🛑 TO RUN — cluster was full — COPY/PASTE WHEN SLOTS FREE 🛑🛑🛑
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑  TO RUN  ·  Peptides-func o5cdk766 VN×LR grid (50 jobs)             ║
+║  🧪  best SiGMA + VN∈{0,1,2,4,8} × LR + pyramid                        ║
+║  📄  Paper_peptides_func_vn.md                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_peptides_func_o5cdk766_vn_lr_grid.sh
+# 👉 paste JOBID into Paper_peptides_func_vn.md + CLUSTER_LAUNCHES.md
+```
+
+---
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
@@ -271,7 +309,8 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Peptides UniGCN a0g2 mixes | ✅ | `33651463` |
 | Peptides-func Homog→MP_only a0g3 | ✅ | `33651464` |
 | SiGMA + GRIT attn (PATTERN/CLUSTER) | ✅ seeds0–4 `33458567`; ✅ reseed+VN `34096507` | `34096507` |
-| SiGMA+GRIT CLUSTER VN×LR grid | 🛑 TO RUN (50 jobs) | — |
+| SiGMA+GRIT CLUSTER VN×LR grid | ✅ `34416930` (50 jobs) | `34416930` |
+| Peptides-func o5cdk766 VN×LR | 🛑 TO RUN (50 jobs) | — |
 | Table 6 VOC (SiGMA / Hetero ± ungated) | ✅ | `32717593` |
 | Table 6 VOC Homog_MP | ✅ | `33810534` |
 | Table 6 VOC Homog_MP_ungated relaunch | ✅ `34070244` (4/5); seed1 retry ✅ `34409933` | `34409933` |
