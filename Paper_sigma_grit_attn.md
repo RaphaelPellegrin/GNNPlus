@@ -8,21 +8,24 @@ Master tracker: [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md)
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║  ✅  DONE  ·  SLURM 33458567  ·  seeds 0–4, no VN                        ║
-║  🛑  TO RUN  ·  seeds 5–9 ± VN=4  ·  20 jobs  ·  %5                      ║
-║  📄  logs_gnnplus/sigma_grit_attn_<JOBID>_<TASK>.log                     ║
+║  ✅  SUBMITTED  ·  SLURM 34096507  ·  seeds 5–9 ± VN=4  ·  20 jobs  · %5 ║
+║  📄  logs_gnnplus/sigma_grit_attn_34096507_<TASK>.log                    ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
 | Field | Value |
 |-------|-------|
 | **Status (seeds 0–4)** | ✅ **`33458567`** finished |
-| **Status (seeds 5–9 ± VN)** | 🛑 **TO RUN** — paste JOBID below |
+| **Status (seeds 5–9 ± VN)** | ✅ **`34096507`** submitted (2026-07-22) |
 | **Job name** | `sigma_grit_attn` |
+| **Tasks** | `1-20%5` |
 | **Mem / time** | `128GB` / `120h` |
 | **Partition** | `mweber_gpu` |
+| **Out dir** | `/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results` |
 | **W&B groups (no VN)** | `paper_sigma_grit_attn_pattern`, `paper_sigma_grit_attn_cluster` |
 | **W&B groups (VN=4)** | `paper_sigma_grit_attn_pattern_vn4`, `paper_sigma_grit_attn_cluster_vn4` |
 | **W&B tags** | `sigma_grit_attn`, `attn_type_grit`, `grit_attn`, `novn` / `vn4`, `<dataset>`, `seed<k>` |
+| **Logs** | `logs_gnnplus/sigma_grit_attn_34096507_<TASK>.log` |
 
 ---
 
@@ -90,3 +93,27 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 ```
 
 For PATTERN / CLUSTER, multiply API fraction by 100 to match paper `%`.
+
+---
+
+## CLUSTER VN × LR grid (follow-up)
+
+10 configs × 5 seeds on `mweber_gpu` (≤5 GPUs). Varies `num_virtual_nodes` ∈ {0,1,2,4,8} and `optim.base_lr` around the ht9bntg2 baseline `1.492e-3`.
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_sigma_grit_cluster_vn_lr_grid.sh
+# 👉 paste JOBID
+```
+
+| Field | Value |
+|-------|-------|
+| **Status** | 🛑 **TO RUN** |
+| **Tasks** | `1-50%5` |
+| **W&B** | `paper_sigma_grit_cluster_<novn\|vnK>_lr<tag>` |
+| **Scripts** | `submit_sigma_grit_cluster_vn_lr_grid.sh` → `run_sigma_grit_cluster_vn_lr_grid.sh` |

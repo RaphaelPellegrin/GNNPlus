@@ -131,6 +131,16 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
   --group paper_sigma_grit_attn_cluster_vn4 --metric best_test_perf --state finished
 ```
 
+**CLUSTER VN×LR grid** (10 configs × 5 seeds = 50 · `mweber_gpu` ≤5 GPUs):
+
+| | |
+|--|--|
+| **SLURM** | 🛑 **TO RUN** |
+| **Tasks** | `1-50%5` |
+| **Docs** | [`Paper_sigma_grit_attn.md`](Paper_sigma_grit_attn.md) |
+| **W&B** | `paper_sigma_grit_cluster_<novn\|vnK>_lr<tag>` |
+| **Launch** | `bash bash_interface/cluster/submit_sigma_grit_cluster_vn_lr_grid.sh` |
+
 ---
 
 ### 🧪 Peptides UniGCN a0g2 MP mixes (20 jobs)
@@ -180,11 +190,12 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 |--|--|
 | **SLURM** | **`33811552`** (`gpu_h200` — fake-finish under quota) |
 | **Failed** | ❌ **`34073629`** — GCN/GIN `IndexError` after trial 1 (`dataset[idx]` on split-local view) |
-| **Relaunch** | ⚠️ **`34409940`** submitted **before** `Dataset.get` fix was pushed — **scancel + relaunch** after push |
+| **Relaunch** | ✅ **`34410913`** · `gpu_h200` · `%3` · 72h (2026-07-22) — sanity OK: `188 graphs`, past trial 1 |
 | **Docs** | [`Paper_heterogeneity.md`](Paper_heterogeneity.md) |
 | **W&B** | `building_hetero_profile_{mutag,enzymes,proteins}` |
-| **Logs** | `logs_gnnplus/hetero_tu_34409940_<TASK>.log` (prior fail: `…_34073629_…`) |
-| **Sanity** | Log must show `Dataset MUTAG: 188 graphs` (not 94) then survive past trial 1 |
+| **Logs** | `logs_gnnplus/hetero_tu_34410913_<TASK>.log` |
+| **Outs** | `$GNNPLUS_OUT_DIR/heterogeneity/<ds>_<model>/` |
+| **Priors** | ❌ `34409940` / `34073629` / `34070246` (94 graphs → IndexError) |
 
 ---
 
@@ -260,10 +271,11 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Peptides UniGCN a0g2 mixes | ✅ | `33651463` |
 | Peptides-func Homog→MP_only a0g3 | ✅ | `33651464` |
 | SiGMA + GRIT attn (PATTERN/CLUSTER) | ✅ seeds0–4 `33458567`; ✅ reseed+VN `34096507` | `34096507` |
+| SiGMA+GRIT CLUSTER VN×LR grid | 🛑 TO RUN (50 jobs) | — |
 | Table 6 VOC (SiGMA / Hetero ± ungated) | ✅ | `32717593` |
 | Table 6 VOC Homog_MP | ✅ | `33810534` |
 | Table 6 VOC Homog_MP_ungated relaunch | ✅ `34070244` (4/5); seed1 retry ✅ `34409933` | `34409933` |
-| Heterogeneity TU relaunch | ✅ submitted `34409940` (prior ❌ `34073629`) | `34409940` |
+| Heterogeneity TU relaunch | ✅ `34410913` (priors ❌ `34409940` / `34073629`) | `34410913` |
 | Table 6 1-MP peptides | ✅ | `32717625` |
 | Table 6 COCO relaunch | ✅ mweber `34070245`; H200 twin `34098527` | `34070245` / `34098527` |
 | ENZYMES ogpkubk9 sweep | 🛑 TO RUN | — |
