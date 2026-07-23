@@ -147,11 +147,12 @@ python scripts/api_wanndb_query/aggregate_paper_repro.py \
 
 | | |
 |--|--|
-| **SLURM** | 🛑 *paste JOBID after submit* |
+| **SLURM** | ✅ **`34427481`** (submitted 2026-07-23) |
 | **Tasks** | `1-50%5` · `mweber_gpu` · 192h |
 | **Docs** | [`Paper_peptides_func_vn.md`](Paper_peptides_func_vn.md) |
 | **W&B** | `paper_sigma_peptides_func_<novn\|vnK>_lr<tag>_<pyr\|nopyr>` |
 | **Anchor** | `peptides-func-hybrid-o5cdk766-a1g1-anchor.yaml` (a1g1 GCN, lr≈2.083e-4, ep=900) |
+| **Logs** | `logs_gnnplus/pep_func_vn_lr_34427481_<TASK>.log` |
 
 ```bash
 export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
@@ -207,7 +208,7 @@ bash bash_interface/cluster/submit_peptides_func_o5cdk766_vn_lr_grid.sh
 |--|--|
 | **SLURM** | **`33811552`** (`gpu_h200` — fake-finish under quota) |
 | **Failed** | ❌ **`34073629`** — GCN/GIN `IndexError` after trial 1 (`dataset[idx]` on split-local view) |
-| **Relaunch** | ✅ **`34410913`** · `gpu_h200` · `%3` · 72h (2026-07-22) — sanity OK: `188 graphs`, past trial 1 |
+| **Relaunch** | ✅ **`34410913`** · `gpu_h200` · `%3` · 72h (2026-07-22) — ❌ **binary acc bug** (MUTAG/PROTEINS junk; ENZYMES OK). Fix in `run_heterogeneity_profiles.py` — **re-run MUTAG+PROTEINS** after pull |
 | **Docs** | [`Paper_heterogeneity.md`](Paper_heterogeneity.md) |
 | **W&B** | `building_hetero_profile_{mutag,enzymes,proteins}` |
 | **Logs** | `logs_gnnplus/hetero_tu_34410913_<TASK>.log` |
@@ -217,27 +218,6 @@ bash bash_interface/cluster/submit_peptides_func_o5cdk766_vn_lr_grid.sh
 ---
 
 ## 🛑🛑🛑 TO RUN — cluster was full — COPY/PASTE WHEN SLOTS FREE 🛑🛑🛑
-
-```text
-╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  Peptides-func o5cdk766 VN×LR grid (50 jobs)             ║
-║  🧪  best SiGMA + VN∈{0,1,2,4,8} × LR + pyramid                        ║
-║  📄  Paper_peptides_func_vn.md                                           ║
-╚══════════════════════════════════════════════════════════════════════════╝
-```
-
-```bash
-source ~/.gnnplus_env
-export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
-export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
-cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-git pull
-
-bash bash_interface/cluster/submit_peptides_func_o5cdk766_vn_lr_grid.sh
-# 👉 paste JOBID into Paper_peptides_func_vn.md + CLUSTER_LAUNCHES.md
-```
-
----
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
@@ -310,7 +290,7 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Peptides-func Homog→MP_only a0g3 | ✅ | `33651464` |
 | SiGMA + GRIT attn (PATTERN/CLUSTER) | ✅ seeds0–4 `33458567`; ✅ reseed+VN `34096507` | `34096507` |
 | SiGMA+GRIT CLUSTER VN×LR grid | ✅ `34416930` (50 jobs) | `34416930` |
-| Peptides-func o5cdk766 VN×LR | 🛑 TO RUN (50 jobs) | — |
+| Peptides-func o5cdk766 VN×LR | ✅ `34427481` (50 jobs) | `34427481` |
 | Table 6 VOC (SiGMA / Hetero ± ungated) | ✅ | `32717593` |
 | Table 6 VOC Homog_MP | ✅ | `33810534` |
 | Table 6 VOC Homog_MP_ungated relaunch | ✅ `34070244` (4/5); seed1 retry ✅ `34409933` | `34409933` |

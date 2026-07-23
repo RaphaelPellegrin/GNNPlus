@@ -252,8 +252,27 @@ def _scheduler_config() -> ExtendedSchedulerConfig:
     )
 
 
+def _squeeze_label_tensors(
+    pred: torch.Tensor, true: torch.Tensor
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Match GraphGym ``compute_loss`` squeezing of trailing size-1 dims."""
+    if pred.ndim > 1:
+        pred = pred.squeeze(-1)
+    if true.ndim > 1:
+        true = true.squeeze(-1)
+    return pred, true
+
+
 def _accuracy_from_pred(pred: torch.Tensor, true: torch.Tensor) -> torch.Tensor:
-    """Return per-graph correctness (0/1) for a classification batch."""
+    """Return per-graph correctness (0/1) from **raw logits** (not probabilities).
+
+    GraphGym ``create_model`` forces binary classification to ``dim_out=1`` and
+    ``compute_loss`` then returns ``sigmoid(pred)``. Thresholding those
+    probabilities with ``> 0`` is always true, so accuracy collapses to the
+    positive-class prior (identical across models for the same split). Always
+    pass **logits** here: multiclass ``argmax``, binary ``logit > 0``.
+    """
+    pred, true = _squeeze_label_tensors(pred, true)
     if pred.ndim > 1 and pred.size(-1) > 1:
         pred_cls = pred.argmax(dim=-1)
     else:
@@ -273,9 +292,9 @@ def _split_accuracy(model: torch.nn.Module, loader: DataLoader) -> float:
         batch = batch.to(device)
         batch.split = "val"
         pred, true = model(batch)
-        # ``compute_loss`` returns (loss, pred_score); pred_score is logits.
-        _, pred_score = compute_loss(pred, true)
-        batch_correct = _accuracy_from_pred(pred_score, true)
+        # Use raw logits — do **not** pass through ``compute_loss`` (binary
+        # path returns sigmoid probabilities, which break ``logit > 0``).
+        batch_correct = _accuracy_from_pred(pred, true)
         correct += int(batch_correct.sum().item())
         total += int(batch_correct.numel())
     return float(correct) / float(max(total, 1))
@@ -345,8 +364,7 @@ def _per_graph_correctness(
         graph = next(iter(batch)).to(device)
         graph.split = "test"
         pred, true = model(graph)
-        _, pred_score = compute_loss(pred, true)
-        ok = int(_accuracy_from_pred(pred_score, true).item())
+        ok = int(_accuracy_from_pred(pred, true).item())
         out[int(idx)] = ok
     return out
 

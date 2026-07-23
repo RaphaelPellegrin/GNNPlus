@@ -28,6 +28,13 @@ Matches paper §3 / Heterogeneity_Profile:
 4. Repeat until every graph has been in the test set **≥ 100** times  
 5. Plot average accuracy per graph → heterogeneity profile  
 
+**Bug fix (2026-07-23):** Binary datasets (MUTAG, PROTEINS) use GraphGym
+`dim_out=1` + BCE. The runner was scoring accuracy on **sigmoid probabilities**
+with threshold `> 0` (always class 1), so val/test metrics collapsed to the
+class prior and GCN/GIN/SiGMA looked identical. **ENZYMES (6-way) was fine.**
+Fixed: score **raw logits**. Re-run MUTAG + PROTEINS after pulling the fix;
+cancel leftover `34410913` task 9 if still running.
+
 Implementation:
 
 | Piece | Path |
@@ -43,10 +50,10 @@ Implementation:
 
 ```text
 ╔══════════════════════════════════════════════════════════════════╗
-║  ✅  SUBMITTED  ·  SLURM 33811552  ·  gpu_h200  ·  2026-07-21    ║
+║  ✅  RUNNING  ·  SLURM 34410913  ·  gpu_h200  ·  2026-07-22      ║
 ║  📈 Heterogeneity profiles · MUTAG/ENZYMES/PROTEINS × GCN/GIN/SiGMA ║
-║  🔁 ≥100 test appearances · 9 jobs · ≤5 GPUs · 72h               ║
-║  📒 also listed in CLUSTER_LAUNCHES.md                           ║
+║  🔁 ≥100 test appearances · 9 jobs · ≤3 GPUs · 72h               ║
+║  ✅ sanity: 188 graphs + past trial 1                            ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
@@ -77,7 +84,7 @@ python scripts/heterogeneity/run_heterogeneity_profiles.py \
 
 | Field | Value |
 |-------|-------|
-| **SLURM array** | ❌ **`34073629`** IndexError. ⚠️ **`34409940`** launched before fix landed on remote — **scancel**, `git pull` fix, relaunch. Sanity: `Dataset MUTAG: 188 graphs` (not 94). |
+| **SLURM array** | ✅ **`34410913`** (`gpu_h200`, 2026-07-22) — sanity OK: `Dataset MUTAG: 188 graphs`, trials progressing. Priors ❌ `34409940` / `34073629`. |
 | **Partition** | `mweber_gpu` · time `192:00:00` |
 | **Tasks** | `1-9%3` = 3 datasets × 3 models |
 | **Parallel** | ≤**3** GPUs |
