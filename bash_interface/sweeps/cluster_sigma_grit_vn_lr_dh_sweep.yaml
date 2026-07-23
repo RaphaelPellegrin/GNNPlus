@@ -1,0 +1,71 @@
+# CLUSTER push-to-80% sweep — SiGMA + GRIT attn (ht9bntg2 lineage).
+#
+# Goal: best/val_accuracy-SBM → test Acc > 80% (×100).
+# Current best finished cells ~79.45% (vn8 @ lr=1.492e-3, grit a1g1).
+#
+# Anchor: configs/gated_hybrid/cluster-hybrid-ht9bntg2-grit-attn-anchor.yaml
+#   a1g1 GATEDGCN, headwise, grit attn, RRWP k=32, ep=100, seed=3.
+#
+# Swept (5 knobs):
+#   optim.base_lr          log-uniform around 1.492e-3
+#   num_virtual_nodes      0,1,2,4,8,12  (wrapper sets add_virtual_nodes)
+#   hybrid_d_h             48, 64, 80, 96
+#   hybrid_mp_dropout      0.1, 0.2, 0.3
+#   optim.weight_decay     0, 1e-5, 1e-4
+#
+# Fixed: attn_type=grit, a1g1, GATEDGCN, headwise, max_epoch=100.
+#
+# Prior runs (best-per-cell from VN×LR grid + grit paper + vanilla):
+#   attach via PRIOR_RUNS when creating the sweep (see Paper_cluster_80_sweep.md).
+#
+# Create + launch (cluster login):
+#   bash bash_interface/sweeps/create_sweep.sh \
+#     bash_interface/sweeps/cluster_sigma_grit_vn_lr_dh_sweep.yaml
+#   # then paste the printed sbatch agent block (or use PRIOR_RUNS=… create)
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: maximize
+  name: best/val_accuracy-SBM
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_sigma_grit-cluster-push80
+
+early_terminate:
+  type: hyperband
+  min_iter: 25
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/cluster-hybrid-ht9bntg2-grit-attn-anchor.yaml
+  - --molecular=false
+  - --seed=3
+  - ${args}
+
+parameters:
+  hybrid_gnn_types:
+    value: GATEDGCN
+  hybrid_num_attn_heads:
+    value: 1
+  hybrid_num_gnn_heads:
+    value: 1
+  # grit is already in the anchor yaml; keep fixed so Bayes stays on the
+  # architecture that holds the current CLUSTER SOTA in this repo.
+  optim.base_lr:
+    distribution: log_uniform_values
+    min: 0.0004
+    max: 0.004
+  num_virtual_nodes:
+    values: [0, 1, 2, 4, 8, 12]
+  hybrid_d_h:
+    values: [48, 64, 80, 96]
+  hybrid_mp_dropout:
+    values: [0.1, 0.2, 0.3]
+  optim.weight_decay:
+    values: [0.0, 0.00001, 0.0001]

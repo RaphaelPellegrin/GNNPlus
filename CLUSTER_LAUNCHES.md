@@ -49,12 +49,12 @@ Submitted 2026-07-22. Logs: `logs_gnnplus/sigma_T5_abl_34098505_<TASK>.log`, `lo
 
 **COCO ep=150 insurance twin** (keep 300-ep jobs; same T5/T6 recipes; distinct W&B groups):
 
-| | |
-|--|--|
-| **Submit** | `bash bash_interface/cluster/submit_coco_ep150_relaunch.sh` |
-| **Tasks** | T5 `61-80` + T6 `51-75` · `optim.max_epoch=150` |
-| **W&B** | `paper_T5_ep150_coco_*` / `paper_T6_ep150_coco_*` |
-| **SLURM** | 🛑 *paste both JOBIDs after submit* |
+| JOBID | Tasks | What |
+|-------|-------|------|
+| ✅ **`34682558`** | T5 `61-80%5` | COCO Table 5 × seeds · `mweber_gpu` · ep=150 · `_ep150` |
+| ✅ **`34682560`** | T6 `51-75%5` | COCO Table 6 × seeds · `mweber_gpu` · ep=150 · `_ep150` |
+
+Submitted 2026-07-23. W&B: `paper_T5_ep150_coco_*` / `paper_T6_ep150_coco_*`. Logs: `logs_gnnplus/sigma_T5_abl_34682558_<TASK>.log`, `logs_gnnplus/sigma_T6_1mp_34682560_<TASK>.log`.
 
 ```bash
 export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
@@ -235,6 +235,31 @@ bash bash_interface/cluster/submit_peptides_func_o5cdk766_vn_lr_grid.sh
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑  TO RUN  ·  CLUSTER push-to-80% SiGMA+GRIT Bayes sweep               ║
+║  🎯  lr · VN · d_h · mp_dropout · weight_decay (+ prior_runs)            ║
+║  📄  Paper_cluster_80_sweep.md                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export WANDB_PROJECT=GNNPlus
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+PRIOR_RUNS="tu8cr0fp 63inaz23 hx3v1ybs er5vpx7j 80ngb67n 3j7zj86o hmy6di2u q6bi1pqc q6b3ofpj opqkgsxi nhuyof1w f6k8rjip" \
+  bash bash_interface/sweeps/create_sweep.sh \
+    bash_interface/sweeps/cluster_sigma_grit_vn_lr_dh_sweep.yaml
+# 👉 then paste the printed sbatch agent block
+# 👉 paste SWEEP_ID + agent JOBID into Paper_cluster_80_sweep.md + here
+```
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
 ║  🛑  TO RUN  ·  Table 5 MNIST + CIFAR10 ablations (40 jobs)             ║
 ║  🧪  SiGMA / ungated / Attn_only / MP_only × 5 seeds                     ║
 ║  📄  Paper_ablations_mnist_cifar.md                                      ║
@@ -297,6 +322,8 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Table 5 LRGB | ✅ | `32232124` |
 | Table 5 COCO gaps relaunch | ✅ Attn `34070241`; MP/ungated ✅ `34081524` (prior ❌ `34070242`/`43`) | `34081524` |
 | Table 5+6 COCO H200 twin | ✅ T5 `34098505` · T6 `34098527` | `34098505` / `34098527` |
+| Table 5+6 COCO ep150 twin | ✅ T5 `34682558` · T6 `34682560` | `34682558` / `34682560` |
+| CLUSTER push-to-80% sweep | 🛑 TO RUN | — |
 | Table 5 VOC SiGMA+ungated H200 | ✅ `34099247` (`41-50%5`) | `34099247` |
 | ENZYMES ogpkubk9 seeds | ✅ | `34081517` (priors ❌ `34076119` / `34070247`) |
 | Table 5 MNIST+CIFAR | 🛑 TO RUN | — |
