@@ -163,6 +163,12 @@ if [ -n "${GNNPLUS_OUT_DIR:-}" ]; then
     log_message "out_dir override: ${GNNPLUS_OUT_DIR}"
 fi
 
+# Optional epoch cap (e.g. PAPER_T6_1MP_MAX_EPOCH=150).
+if [ -n "${PAPER_T6_1MP_MAX_EPOCH:-}" ]; then
+    extra_args+=(optim.max_epoch "${PAPER_T6_1MP_MAX_EPOCH}")
+    log_message "max_epoch override: ${PAPER_T6_1MP_MAX_EPOCH}"
+fi
+
 export WANDB_EXTRA_TAGS="${wandb_tags}"
 
 exec python main.py \

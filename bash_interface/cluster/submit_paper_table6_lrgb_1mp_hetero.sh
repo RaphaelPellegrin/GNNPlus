@@ -50,7 +50,7 @@ sbatch_args=(
     --time="${TIME}"
     --gpus=1
     --output="logs_gnnplus/sigma_T6_1mp_%A_%a.log"
-    --export=ALL,ENV_NAME=gnnplus,PAPER_T6_1MP_NUM_SEEDS="${NUM_SEEDS}",PAPER_T6_1MP_NUM_VARIANTS="${NUM_VARIANTS}",PAPER_T6_1MP_NUM_DATASETS="${NUM_DATASETS}",PAPER_T6_1MP_NUM_TASKS="${NUM_TASKS}",PAPER_T6_1MP_WANDB_PREFIX="${WANDB_PREFIX}",PAPER_T6_1MP_NAME_SUFFIX="${NAME_SUFFIX}",GNNPLUS_DATASET_DIR="${GNNPLUS_DATASET_DIR:-}",GNNPLUS_OUT_DIR="${GNNPLUS_OUT_DIR:-}"
+    --export=ALL,ENV_NAME=gnnplus,PAPER_T6_1MP_NUM_SEEDS="${NUM_SEEDS}",PAPER_T6_1MP_NUM_VARIANTS="${NUM_VARIANTS}",PAPER_T6_1MP_NUM_DATASETS="${NUM_DATASETS}",PAPER_T6_1MP_NUM_TASKS="${NUM_TASKS}",PAPER_T6_1MP_WANDB_PREFIX="${WANDB_PREFIX}",PAPER_T6_1MP_NAME_SUFFIX="${NAME_SUFFIX}",PAPER_T6_1MP_MAX_EPOCH="${PAPER_T6_1MP_MAX_EPOCH:-}",GNNPLUS_DATASET_DIR="${GNNPLUS_DATASET_DIR:-}",GNNPLUS_OUT_DIR="${GNNPLUS_OUT_DIR:-}"
 )
 
 if [ "${NICE}" != "0" ]; then
@@ -71,6 +71,7 @@ cat <<EOF
   Parallel:      ${PARALLEL} GPUs max
   Mem / time:    ${MEM} / ${TIME}
   Name suffix:   ${NAME_SUFFIX:-<none>}
+  Max epoch:     ${PAPER_T6_1MP_MAX_EPOCH:-<cfg default>}
   Out dir:       ${GNNPLUS_OUT_DIR:-<cfg default>}
   Logs:          logs_gnnplus/sigma_T6_1mp_${job_id}_<TASK>.log
 

@@ -47,6 +47,20 @@ python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
 
 Submitted 2026-07-22. Logs: `logs_gnnplus/sigma_T5_abl_34098505_<TASK>.log`, `logs_gnnplus/sigma_T6_1mp_34098527_<TASK>.log`.
 
+**COCO ep=150 insurance twin** (keep 300-ep jobs; same T5/T6 recipes; distinct W&B groups):
+
+| | |
+|--|--|
+| **Submit** | `bash bash_interface/cluster/submit_coco_ep150_relaunch.sh` |
+| **Tasks** | T5 `61-80` + T6 `51-75` · `optim.max_epoch=150` |
+| **W&B** | `paper_T5_ep150_coco_*` / `paper_T6_ep150_coco_*` |
+| **SLURM** | 🛑 *paste both JOBIDs after submit* |
+
+```bash
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+bash bash_interface/cluster/submit_coco_ep150_relaunch.sh
+```
+
 **VOC Table 5 SiGMA + SiGMA_ungated H200 twin** (tasks `41-50`, keep `32232124`):
 
 | JOBID | Tasks | What |
