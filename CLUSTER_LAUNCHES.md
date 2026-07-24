@@ -235,6 +235,34 @@ bash bash_interface/cluster/submit_peptides_func_o5cdk766_vn_lr_grid.sh
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑  TO RUN  ·  COCO Table 6 Attn_only a3 + MP_only a0g3 (10 jobs)      ║
+║  🧪  3 attn heads / 3×GATEDGCN · 5 seeds each · distinct W&B groups     ║
+║  📄  Paper_ablations.md                                                  ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_paper_table5_coco_attn_mp_a3.sh
+# 👉 paste JOBID into Paper_ablations.md + here
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *not submitted yet* |
+| **Tasks** | `1-10%5` (1–5 Attn a3g0; 6–10 MP a0g3) |
+| **W&B** | `paper_T5_coco_Attn_only_a3` · `paper_T5_coco_MP_only_a0g3` |
+| **Epochs** | **150** (suffix `_ep150`) |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
 ║  🛑  TO RUN  ·  CLUSTER push-to-80% SiGMA+GRIT Bayes sweep               ║
 ║  🎯  lr · VN · d_h · mp_dropout · weight_decay (+ prior_runs)            ║
 ║  📄  Paper_cluster_80_sweep.md                                           ║
@@ -252,8 +280,20 @@ git pull
 PRIOR_RUNS="tu8cr0fp 63inaz23 hx3v1ybs er5vpx7j 80ngb67n 3j7zj86o hmy6di2u q6bi1pqc q6b3ofpj opqkgsxi nhuyof1w f6k8rjip" \
   bash bash_interface/sweeps/create_sweep.sh \
     bash_interface/sweeps/cluster_sigma_grit_vn_lr_dh_sweep.yaml
-# 👉 then paste the printed sbatch agent block
-# 👉 paste SWEEP_ID + agent JOBID into Paper_cluster_80_sweep.md + here
+# ✅ Sweep h02m95qg created 2026-07-23 — agents still need sbatch (below)
+```
+
+| Field | Value |
+|-------|-------|
+| **Sweep** | ✅ [`h02m95qg`](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/sweeps/h02m95qg) |
+| **Agent job** | 🛑 *paste after sbatch* |
+
+```bash
+# launch agents (≤4 GPUs)
+SWEEP_ID=weber-geoml-harvard-university/GNNPlus/h02m95qg SWEEP_DATASET=cluster RUNS_PER_AGENT=3 \
+sbatch --job-name=cluster_push80_cluster --array=1-16%4 --mem=128GB --time=120:00:00 \
+  --export=ALL,SWEEP_ID=weber-geoml-harvard-university/GNNPlus/h02m95qg,SWEEP_DATASET=cluster,RUNS_PER_AGENT=3,WANDB_PROJECT=GNNPlus,ENV_NAME=gnnplus,GNNPLUS_DATASET_DIR=${GNNPLUS_DATASET_DIR:-},GNNPLUS_OUT_DIR=${GNNPLUS_OUT_DIR:-} \
+  bash_interface/sweeps/run_wandb_sweep_agent.sh
 ```
 
 ---
@@ -285,6 +325,37 @@ bash bash_interface/cluster/submit_paper_table5_mnist_cifar_ablations.sh
 | **SLURM** | 🛑 *not submitted yet* |
 | **W&B** | `paper_T5_{mnist,cifar10}_{SiGMA,SiGMA_ungated,Attn_only,MP_only}` |
 | **Aggregate** | `python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5mc` |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑  TO RUN  ·  TU all-layer activation plots (MUTAG/ENZYMES/PROTEINS)  ║
+║  📈  y=mean node ‖h‖₂ @ every layer · x=graph index · mid+last+best     ║
+║  📄  Paper_last_layer_activations.md                                     ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+# 🚀 activation figure (seed 0, 3 jobs)
+bash bash_interface/cluster/submit_last_layer_activations_tu.sh
+# 👉 paste JOBID into Paper_last_layer_activations.md + here
+
+# optional appendix Acc mean±std (seeds 0–4, 15 jobs):
+# ACT_ARRAY=1-15 ACT_PARALLEL=5 bash bash_interface/cluster/submit_last_layer_activations_tu.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *not submitted yet* |
+| **W&B** | `layer_act_{mutag,enzymes,proteins}` |
+| **Outs** | `$GNNPLUS_OUT_DIR/activations/<ds>_<tag>_seed<S>/{mid,last,best}/` |
 
 ---
 
@@ -323,6 +394,7 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Table 5 COCO gaps relaunch | ✅ Attn `34070241`; MP/ungated ✅ `34081524` (prior ❌ `34070242`/`43`) | `34081524` |
 | Table 5+6 COCO H200 twin | ✅ T5 `34098505` · T6 `34098527` | `34098505` / `34098527` |
 | Table 5+6 COCO ep150 twin | ✅ T5 `34682558` · T6 `34682560` | `34682558` / `34682560` |
+| COCO Table6 Attn a3 + MP a0g3 | 🛑 TO RUN | — |
 | CLUSTER push-to-80% sweep | 🛑 TO RUN | — |
 | Table 5 VOC SiGMA+ungated H200 | ✅ `34099247` (`41-50%5`) | `34099247` |
 | ENZYMES ogpkubk9 seeds | ✅ | `34081517` (priors ❌ `34076119` / `34070247`) |
@@ -336,6 +408,7 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Table 6 VOC Homog_MP | ✅ | `33810534` |
 | Table 6 VOC Homog_MP_ungated relaunch | ✅ `34070244` (4/5); seed1 retry ✅ `34409933` | `34409933` |
 | Heterogeneity TU relaunch | ✅ `34410913` (priors ❌ `34409940` / `34073629`) | `34410913` |
+| TU last-layer activations | 🛑 TO RUN | — |
 | Table 6 1-MP peptides | ✅ | `32717625` |
 | Table 6 COCO relaunch | ✅ mweber `34070245`; H200 twin `34098527` | `34070245` / `34098527` |
 | ENZYMES ogpkubk9 sweep | 🛑 TO RUN | — |

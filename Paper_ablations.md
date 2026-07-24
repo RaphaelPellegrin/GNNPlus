@@ -90,8 +90,39 @@ bash bash_interface/cluster/submit_paper_table5_coco_attn_only_h200.sh
 | **H200 attempt** | `33813232` — failed (quota / timeout) |
 | **Relaunch SLURM** | ✅ Attn **`34070241`** · MP/ungated ✅ **`34081524`** `67,78-80` (priors ❌ `34070242`/`43` Errno 122; use `GNNPLUS_OUT_DIR`) |
 | **COCO full H200 twin** | ✅ **`34098505`** · tasks `61-80%12` · `gpu_h200` · 72h · `_h200` names (keeps mweber) |
-| **VOC SiGMA+ungated H200** | 🛑 **TO RUN** · tasks `41-50%5` · `gpu_h200` · 72h · `_h200` (keeps `32232124`) |
+| **VOC SiGMA+ungated H200** | ✅ **`34099247`** · tasks `41-50%5` · `gpu_h200` · 72h · `_h200` (keeps `32232124`) |
 | **W&B groups** | `paper_T5_{coco,voc}_{SiGMA,SiGMA_ungated,...}` |
+
+### Relaunch — COCO Attn_only **a3g0** + MP_only **a0g3** (paper Table 6)
+
+Old COCO Attn/MP used **total_heads=2** (a1g1 → a2g0 / a0g2). For the paper Table 6 COCO cells we instead run **3 heads**:
+
+| Variant | Heads | W&B group |
+|---------|-------|-----------|
+| Attn_only | a3g0 (3 attention) | `paper_T5_coco_Attn_only_a3` |
+| MP_only | a0g3 GATEDGCN×3 | `paper_T5_coco_MP_only_a0g3` |
+
+Does **not** cancel existing a2 Attn/MP jobs; new groups are distinct.
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_paper_table5_coco_attn_mp_a3.sh
+# 👉 paste JOBID here
+# optional H200: PAPER_T5_COCO_A3_PARTITION=gpu_h200 PAPER_T5_COCO_A3_PARALLEL=10 \
+#   PAPER_T5_COCO_A3_TIME=72:00:00 bash bash_interface/cluster/submit_paper_table5_coco_attn_mp_a3.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *not submitted yet* |
+| **Tasks** | `1-10%5` (1–5 Attn a3; 6–10 MP a0g3) · **ep=150** |
+| **Anchor** | `coco-hybrid-5b4z9l3u-a1g1-anchor.yaml` |
+| **Aggregate** | `aggregate_paper_repro.py --group paper_T5_coco_Attn_only_a3` / `_MP_only_a0g3` |
 
 ---
 
