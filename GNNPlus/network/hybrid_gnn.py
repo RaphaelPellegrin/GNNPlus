@@ -273,3 +273,54 @@ class HybridGNN(torch.nn.Module):
             batch.x = x
 
         return self.post_mp(batch)
+
+    def forward_all_layer_features(
+        self, batch: Batch
+    ) -> Tuple[List[torch.Tensor], Batch]:
+        """Return node features after every hybrid block (before the head).
+
+        Each entry is ``x`` after layer ``i`` (and its FFN, if any). Updates
+        ``batch.x`` to the final layer features.
+
+        Returns:
+            ``(layer_features, batch)`` where ``layer_features[i]`` has shape
+            ``[N, F]`` for layer ``i``.
+        """
+        (
+            x,
+            batch,
+            edge_index_attn,
+            edge_attr_attn,
+            edge_index_mp,
+            edge_attr_mp,
+            _edge_index,
+            _edge_attr,
+        ) = self._encode_batch(batch)
+        layer_features: List[torch.Tensor] = []
+        for i, layer in enumerate(self.layers):
+            x = cast(
+                torch.Tensor,
+                layer(
+                    x,
+                    edge_index_mp,
+                    batch.batch,
+                    edge_attr_mp,
+                    edge_index_attn=edge_index_attn,
+                    edge_attr_attn=edge_attr_attn,
+                    edge_index_mp=edge_index_mp,
+                    edge_attr_mp=edge_attr_mp,
+                ),
+            )
+            if self.ffn_blocks is not None:
+                x = self.ffn_blocks[i](x)
+            batch.x = x
+            layer_features.append(x)
+        return layer_features, batch
+
+    def forward_node_features(self, batch: Batch) -> Tuple[torch.Tensor, Batch]:
+        """Return last-layer node features ``x`` (before the prediction head).
+
+        Convenience wrapper around :meth:`forward_all_layer_features`.
+        """
+        layer_features, batch = self.forward_all_layer_features(batch)
+        return layer_features[-1], batch

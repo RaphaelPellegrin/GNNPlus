@@ -5,7 +5,7 @@ from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.models.gnn import FeatureEncoder, GNNPreMP
 from torch_geometric.graphgym.register import register_network
 
-from typing import Any, Dict
+from typing import Any, Dict, List, Tuple
 
 from GNNPlus.layer.gatedgcn_layer import GatedGCNLayer
 from GNNPlus.layer.gine_conv_layer import GINEConvLayer
@@ -66,6 +66,31 @@ class CustomGNN(torch.nn.Module):
         for module in self.children():
             batch = module(batch)
         return batch
+
+    def forward_all_layer_features(
+        self, batch: Any
+    ) -> Tuple[List[Any], Any]:
+        """Return node features after every MP layer (before the head).
+
+        Returns:
+            ``(layer_features, batch)`` with one ``[N, F]`` tensor per MP layer.
+        """
+        batch = self.encoder(batch)
+        if hasattr(self, 'pre_mp'):
+            batch = self.pre_mp(batch)
+        layer_features: List[Any] = []
+        for layer in self.gnn_layers:
+            batch = layer(batch)
+            layer_features.append(batch.x)
+        return layer_features, batch
+
+    def forward_node_features(self, batch: Any) -> Tuple[Any, Any]:
+        """Return last-layer node features before the prediction head.
+
+        Convenience wrapper around :meth:`forward_all_layer_features`.
+        """
+        layer_features, batch = self.forward_all_layer_features(batch)
+        return layer_features[-1], batch
 
     def collect_gate_stats(self, batch: Any) -> Dict[str, float]:
         """Run encoder + MP layers; return per-layer GCNE gate means."""
