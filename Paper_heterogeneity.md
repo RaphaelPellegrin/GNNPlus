@@ -50,10 +50,9 @@ Implementation:
 
 ```text
 ╔══════════════════════════════════════════════════════════════════╗
-║  ✅  RUNNING  ·  SLURM 34410913  ·  gpu_h200  ·  2026-07-22      ║
-║  📈 Heterogeneity profiles · MUTAG/ENZYMES/PROTEINS × GCN/GIN/SiGMA ║
-║  🔁 ≥100 test appearances · 9 jobs · ≤3 GPUs · 72h               ║
-║  ✅ sanity: 188 graphs + past trial 1                            ║
+║  ✅  RUNNING  ·  SLURM 34869869  ·  mweber_gpu  ·  2026-07-24    ║
+║  📈 proteins_sigma only (task 9) · ≥100 appearances               ║
+║  Prior full 9-job: 34410913 (MUTAG/PROTEINS fixed; ENZYMES OK)   ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
@@ -84,11 +83,11 @@ python scripts/heterogeneity/run_heterogeneity_profiles.py \
 
 | Field | Value |
 |-------|-------|
-| **SLURM array** | ✅ **`34410913`** (`gpu_h200`, 2026-07-22) — sanity OK: `Dataset MUTAG: 188 graphs`, trials progressing. Priors ❌ `34409940` / `34073629`. |
+| **SLURM array** | ✅ **`34869869`** task `9` (`proteins_sigma` relaunch, 2026-07-24). Prior full grid ✅ **`34410913`**. Priors ❌ `34409940` / `34073629`. |
 | **Partition** | `mweber_gpu` · time `192:00:00` |
-| **Tasks** | `1-9%3` = 3 datasets × 3 models |
-| **Parallel** | ≤**3** GPUs |
-| **Logs** | `logs_gnnplus/hetero_tu_34073629_<TASK>.log` |
+| **Tasks** | `9` = proteins × SiGMA |
+| **Parallel** | ≤**1** GPU |
+| **Logs** | `logs_gnnplus/hetero_tu_34869869_<TASK>.log` |
 | **Local outs** | `results/heterogeneity/<dataset>_<MODEL>/` (pickle + appearances CSV + PNGs) |
 | **W&B** | see below |
 | **Master tracker** | [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md) |
@@ -114,6 +113,47 @@ Each (dataset, model) job is one W&B run.
 1. `*_graph_dict.pickle` — full per-graph 0/1 history + `test_appearances`
 2. `*_test_appearances.csv` — `graph_idx, n_test_appearances, n_correct, avg_accuracy`
 3. Profile PNGs (`*_by_index.png`, `*_by_accuracy.png`)
+
+### Local figures + interactive HTML (by average accuracy)
+
+Pulled W&B artifacts live under `results/heterogeneity/` (8/9 cells as of 2026-07-24;
+`proteins_sigma` crashed at ~85/100 appearances — relaunch needed).
+
+```bash
+cd /Users/pellegrinraphael/Desktop/Academic_Research/Repos_GNN/GNNPlus
+
+# regenerate by-accuracy PNGs + interactive HTML (toggle datasets & models)
+python scripts/heterogeneity/build_heterogeneity_html.py
+
+# open
+open results/heterogeneity/heterogeneity_profiles.html
+```
+
+- PNGs (x = rank hard→easy): `results/heterogeneity/paper_figures_by_accuracy/`
+- HTML: `results/heterogeneity/heterogeneity_profiles.html`
+
+When `proteins_sigma` finishes, pull its artifact then re-run the builder.
+
+### ENZYMES SiGMA large model (a8g8 L12 — match MOE_6/`7dsqq7z2`)
+
+Default grid task 6 uses small `enzymes-sigma.yaml` (a2g2 L4). For the
+Heterogeneity_Profile–scale SiGMA (~0.58 test Acc), launch separately:
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+bash bash_interface/cluster/submit_heterogeneity_enzymes_sigma_a8g8.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *paste JOBID* |
+| **Config** | `configs/heterogeneity/enzymes-sigma-a8g8.yaml` |
+| **W&B** | `building_hetero_profile_enzymes` / `enzymes_sigma_a8g8` |
+| **Source** | [MOE_6/7dsqq7z2](https://wandb.ai/weber-geoml-harvard-university/MOE_6/runs/7dsqq7z2) |
 
 Disable W&B: `HETERO_WANDB=0 bash …/submit_heterogeneity_tu.sh`
 

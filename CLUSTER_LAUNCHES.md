@@ -223,43 +223,42 @@ bash bash_interface/cluster/submit_peptides_func_o5cdk766_vn_lr_grid.sh
 | **SLURM** | **`33811552`** (`gpu_h200` — fake-finish under quota) |
 | **Failed** | ❌ **`34073629`** — GCN/GIN `IndexError` after trial 1 (`dataset[idx]` on split-local view) |
 | **Relaunch** | ✅ **`34410913`** · `gpu_h200` · `%3` · 72h (2026-07-22) — ❌ **binary acc bug** (MUTAG/PROTEINS junk; ENZYMES OK). Fix in `run_heterogeneity_profiles.py` — **re-run MUTAG+PROTEINS** after pull |
+| **proteins_sigma** | ✅ **`34869869`** task `9` · `mweber_gpu` · 192h (2026-07-24) — prior `fls85zer` crashed @ ~85/100 apps |
 | **Docs** | [`Paper_heterogeneity.md`](Paper_heterogeneity.md) |
 | **W&B** | `building_hetero_profile_{mutag,enzymes,proteins}` |
-| **Logs** | `logs_gnnplus/hetero_tu_34410913_<TASK>.log` |
+| **Logs** | `logs_gnnplus/hetero_tu_34410913_<TASK>.log` · `hetero_tu_34869869_9.log` |
 | **Outs** | `$GNNPLUS_OUT_DIR/heterogeneity/<ds>_<model>/` |
 | **Priors** | ❌ `34409940` / `34073629` / `34070246` (94 graphs → IndexError) |
 
 ---
 
-## 🛑🛑🛑 TO RUN — cluster was full — COPY/PASTE WHEN SLOTS FREE 🛑🛑🛑
+### 🧪 COCO Table 6 Attn a3 + MP a0g3 @ ep150 (10 jobs)
 
-```text
-╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  COCO Table 6 Attn_only a3 + MP_only a0g3 (10 jobs)      ║
-║  🧪  3 attn heads / 3×GATEDGCN · 5 seeds each · distinct W&B groups     ║
-║  📄  Paper_ablations.md                                                  ║
-╚══════════════════════════════════════════════════════════════════════════╝
-```
-
-```bash
-source ~/.gnnplus_env
-export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
-export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
-cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-git pull
-
-bash bash_interface/cluster/submit_paper_table5_coco_attn_mp_a3.sh
-# 👉 paste JOBID into Paper_ablations.md + here
-```
-
-| Field | Value |
-|-------|-------|
-| **SLURM** | 🛑 *not submitted yet* |
-| **Tasks** | `1-10%5` (1–5 Attn a3g0; 6–10 MP a0g3) |
+| | |
+|--|--|
+| **SLURM** | ✅ **`34869787`** (2026-07-24) |
+| **Tasks** | `1-10%5` (1–5 Attn a3g0; 6–10 MP a0g3 GATEDGCN×3) |
+| **Epochs** | **150** (`_ep150`) |
+| **Docs** | [`Paper_ablations.md`](Paper_ablations.md) |
 | **W&B** | `paper_T5_coco_Attn_only_a3` · `paper_T5_coco_MP_only_a0g3` |
-| **Epochs** | **150** (suffix `_ep150`) |
+| **Logs** | `logs_gnnplus/sigma_T5_coco_a3_34869787_<TASK>.log` |
 
 ---
+
+### 🧪 TU all-layer activations (3 jobs)
+
+| | |
+|--|--|
+| **SLURM** | ✅ **`34869795`** (2026-07-24) |
+| **Tasks** | `1-3%3` (MUTAG / ENZYMES ogpkubk9 / PROTEINS · seed 0) |
+| **Docs** | [`Paper_last_layer_activations.md`](Paper_last_layer_activations.md) |
+| **W&B** | `layer_act_{mutag,enzymes,proteins}` |
+| **Logs** | `logs_gnnplus/tu_last_act_34869795_<TASK>.log` |
+| **Outs** | `$GNNPLUS_OUT_DIR/activations/<ds>_<tag>_seed0/{mid,last,best}/` |
+
+---
+
+## 🛑🛑🛑 TO RUN — cluster was full — COPY/PASTE WHEN SLOTS FREE 🛑🛑🛑
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
@@ -330,37 +329,6 @@ bash bash_interface/cluster/submit_paper_table5_mnist_cifar_ablations.sh
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  TU all-layer activation plots (MUTAG/ENZYMES/PROTEINS)  ║
-║  📈  y=mean node ‖h‖₂ @ every layer · x=graph index · mid+last+best     ║
-║  📄  Paper_last_layer_activations.md                                     ║
-╚══════════════════════════════════════════════════════════════════════════╝
-```
-
-```bash
-source ~/.gnnplus_env
-export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
-export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
-cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-git pull
-
-# 🚀 activation figure (seed 0, 3 jobs)
-bash bash_interface/cluster/submit_last_layer_activations_tu.sh
-# 👉 paste JOBID into Paper_last_layer_activations.md + here
-
-# optional appendix Acc mean±std (seeds 0–4, 15 jobs):
-# ACT_ARRAY=1-15 ACT_PARALLEL=5 bash bash_interface/cluster/submit_last_layer_activations_tu.sh
-```
-
-| Field | Value |
-|-------|-------|
-| **SLURM** | 🛑 *not submitted yet* |
-| **W&B** | `layer_act_{mutag,enzymes,proteins}` |
-| **Outs** | `$GNNPLUS_OUT_DIR/activations/<ds>_<tag>_seed<S>/{mid,last,best}/` |
-
----
-
-```text
-╔══════════════════════════════════════════════════════════════════════════╗
 ║  🛑  TO RUN  ·  ENZYMES ogpkubk9 centered W&B sweep                     ║
 ║  🎯  vary lr · #attn/MP heads (gates) · hybrid d_h                      ║
 ║  📄  Paper_enzymes_ogpkubk9.md                                           ║
@@ -394,7 +362,7 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Table 5 COCO gaps relaunch | ✅ Attn `34070241`; MP/ungated ✅ `34081524` (prior ❌ `34070242`/`43`) | `34081524` |
 | Table 5+6 COCO H200 twin | ✅ T5 `34098505` · T6 `34098527` | `34098505` / `34098527` |
 | Table 5+6 COCO ep150 twin | ✅ T5 `34682558` · T6 `34682560` | `34682558` / `34682560` |
-| COCO Table6 Attn a3 + MP a0g3 | 🛑 TO RUN | — |
+| COCO Table6 Attn a3 + MP a0g3 | ✅ | `34869787` |
 | CLUSTER push-to-80% sweep | 🛑 TO RUN | — |
 | Table 5 VOC SiGMA+ungated H200 | ✅ `34099247` (`41-50%5`) | `34099247` |
 | ENZYMES ogpkubk9 seeds | ✅ | `34081517` (priors ❌ `34076119` / `34070247`) |
@@ -407,8 +375,9 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Table 6 VOC (SiGMA / Hetero ± ungated) | ✅ | `32717593` |
 | Table 6 VOC Homog_MP | ✅ | `33810534` |
 | Table 6 VOC Homog_MP_ungated relaunch | ✅ `34070244` (4/5); seed1 retry ✅ `34409933` | `34409933` |
-| Heterogeneity TU relaunch | ✅ `34410913` (priors ❌ `34409940` / `34073629`) | `34410913` |
-| TU last-layer activations | 🛑 TO RUN | — |
+| Heterogeneity TU relaunch | ✅ `34410913`; proteins_sigma ✅ `34869869` | `34869869` |
+| ENZYMES SiGMA a8g8 hetero | 🛑 TO RUN | — |
+| TU all-layer activations | ✅ | `34869795` |
 | Table 6 1-MP peptides | ✅ | `32717625` |
 | Table 6 COCO relaunch | ✅ mweber `34070245`; H200 twin `34098527` | `34070245` / `34098527` |
 | ENZYMES ogpkubk9 sweep | 🛑 TO RUN | — |
