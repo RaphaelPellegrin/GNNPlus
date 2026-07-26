@@ -613,6 +613,7 @@ class GatedHybridGraphLayer(nn.Module):
         d_h: int,
         attn_mask_type: AttnMaskType = "full",
         gate_mode: GateMode = "elementwise",
+        mp_gate_mode: Optional[GateMode] = None,
         norm_type: NormType = "layernorm",
         gnn_types: Optional[List[str]] = None,
         attn_dropout: float = 0.0,
@@ -661,6 +662,12 @@ class GatedHybridGraphLayer(nn.Module):
         self.d_h = d_h
         self.attn_mask_type: AttnMaskType = attn_mask_type
         self.gate_mode: GateMode = _normalize_gate_mode(gate_mode)
+        # MP heads may use a different gate (e.g. attn gated + MP ungated).
+        self.mp_gate_mode: GateMode = (
+            self.gate_mode
+            if mp_gate_mode is None
+            else _normalize_gate_mode(mp_gate_mode)
+        )
         self.attn_dropout = float(attn_dropout)
         self._mp_gnn_dropout = float(mp_gnn_dropout)
         self.block_bn = bool(block_bn)
@@ -720,7 +727,7 @@ class GatedHybridGraphLayer(nn.Module):
                     t,
                     d_model,
                     d_h,
-                    self.gate_mode,
+                    self.mp_gate_mode,
                     gnn_dropout=self._mp_gnn_dropout,
                     identity_proj=use_identity,
                 )

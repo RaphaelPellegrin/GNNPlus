@@ -1,4 +1,4 @@
-# 🚦 Cluster launches tracker (SiGMA paper week)
+d# 🚦 Cluster launches tracker (SiGMA paper week)
 
 > **Status legend**  
 > ✅ **SUBMITTED / RUNNING** — job already on FASRC  
@@ -19,7 +19,7 @@ Entity/project: [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/webe
 | **When** | 2026-07-17 |
 | **Tasks** | `1-80%18` |
 | **Docs** | [`Paper_ablations.md`](Paper_ablations.md) |
-| **W&B** | `paper_T5_<ds>_{SiGMA,SiGMA_ungated,Attn_only,MP_only}` |
+| **W&B** | `paper_T5_<ds>_{SiGMA,SiGMA_ungated,SiGMA_attn_gate,Attn_only,MP_only}` |
 | **Logs** | `logs_gnnplus/sigma_T5_abl_32232124_<TASK>.log` |
 
 ```bash
@@ -61,15 +61,18 @@ export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 bash bash_interface/cluster/submit_coco_ep150_relaunch.sh
 ```
 
-**COCO dead-seed retry** (only seeds with no finished twin; skip still-running/queued):
+**COCO dead-seed retry** (H200 ≤10 GPUs; only seeds with no finished twin):
 
-| Tasks | What |
-|-------|------|
-| T6 `57,60,61,63,65,67` | Homog_MP 1/4 · Hetero_MP 0/2/4 · Homog_ungated 1 · full epochs · `_retry` |
-| optional ep150 | `COCO_DEAD_INCLUDE_EP150=1` → T5 SiGMA 62,63 + T6 SiGMA 55 |
+| JOBID | Tasks | What |
+|-------|-------|------|
+| ✅ **`3524720?`** | T6 `57,60,61,63,65,67` | Homog_MP 1/4 · Hetero_MP 0/2/4 · Homog_ungated 1 · full ep · `_h200_retry` — *paste first JOBID from submit if not 35247207* |
+| ✅ **`35247208`** | T5 `62,63` | ep150 SiGMA seeds 1,2 · `_ep150_h200_retry` |
+| ✅ **`35247209`** | T6 `55` | ep150 SiGMA seed 4 · `_ep150_h200_retry` |
+
+Submitted 2026-07-26. W&B: `paper_T6_coco_*` / `paper_T5_ep150_coco_SiGMA` / `paper_T6_ep150_coco_SiGMA`.  
+Logs: `logs_gnnplus/sigma_T6_1mp_<JOBID>_*.log`, `sigma_T5_abl_35247208_*.log`.
 
 ```bash
-# H200 ≤10 GPUs + ep150 SiGMA holes (recommended for this fill):
 COCO_DEAD_PARTITION=gpu_h200 COCO_DEAD_PARALLEL=10 \
   COCO_DEAD_INCLUDE_EP150=1 \
   bash bash_interface/cluster/submit_coco_dead_seeds_relaunch.sh
@@ -313,6 +316,35 @@ sbatch --job-name=cluster_push80_cluster --array=1-16%4 --mem=128GB --time=120:0
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑  TO RUN  ·  Table 6 SiGMA_attn_gate (20 jobs)                        ║
+║  🧪  gate attention only · MP ungated · 4 LRGB × 5 seeds                 ║
+║  📄  Paper_ablations.md                                                  ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+# 🚀 20 jobs, ≤10 GPUs
+bash bash_interface/cluster/submit_paper_table5_attn_gate_only.sh
+# 👉 paste JOBID into Paper_ablations.md + here
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *not submitted yet* |
+| **W&B** | `paper_T5_<ds>_SiGMA_attn_gate` |
+| **Override** | `gnn.hybrid.mp_gate none` (yaml `gate` kept) |
+| **Aggregate** | `python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5` |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
 ║  🛑  TO RUN  ·  Table 5 MNIST + CIFAR10 ablations (40 jobs)             ║
 ║  🧪  SiGMA / ungated / Attn_only / MP_only × 5 seeds                     ║
 ║  📄  Paper_ablations_mnist_cifar.md                                      ║
@@ -373,11 +405,12 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Campaign | Status | JOBID |
 |----------|--------|-------|
 | Table 5 LRGB | ✅ | `32232124` |
+| Table 6 SiGMA_attn_gate (LRGB) | 🛑 TO RUN | — |
 | Table 5 COCO gaps relaunch | ✅ Attn `34070241`; MP/ungated ✅ `34081524` (prior ❌ `34070242`/`43`) | `34081524` |
 | Table 5+6 COCO H200 twin | ✅ T5 `34098505` · T6 `34098527` | `34098505` / `34098527` |
 | Table 5+6 COCO ep150 twin | ✅ T5 `34682558` · T6 `34682560` | `34682558` / `34682560` |
 | COCO Table6 Attn a3 + MP a0g3 | ✅ | `34869787` |
-| COCO dead-seed retry (Homog/Hetero gaps) | 🛑 TO RUN | — |
+| COCO dead-seed retry (Homog/Hetero + ep150 SiGMA) | ✅ `35247208`/`35247209` (+ T6 main JOBID) | `35247208` / `35247209` |
 | CLUSTER push-to-80% sweep | 🛑 TO RUN | — |
 | Table 5 VOC SiGMA+ungated H200 | ✅ `34099247` (`41-50%5`) | `34099247` |
 | ENZYMES ogpkubk9 seeds | ✅ | `34081517` (priors ❌ `34076119` / `34070247`) |

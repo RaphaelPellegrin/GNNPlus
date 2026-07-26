@@ -62,6 +62,7 @@ TABLE5_MNIST_CIFAR_DATASETS: tuple[str, ...] = (
 TABLE5_VARIANTS: tuple[str, ...] = (
     "SiGMA",
     "SiGMA_ungated",
+    "SiGMA_attn_gate",
     "Attn_only",
     "MP_only",
 )
