@@ -61,6 +61,20 @@ export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 bash bash_interface/cluster/submit_coco_ep150_relaunch.sh
 ```
 
+**COCO dead-seed retry** (only seeds with no finished twin; skip still-running/queued):
+
+| Tasks | What |
+|-------|------|
+| T6 `57,60,61,63,65,67` | Homog_MP 1/4 · Hetero_MP 0/2/4 · Homog_ungated 1 · full epochs · `_retry` |
+| optional ep150 | `COCO_DEAD_INCLUDE_EP150=1` → T5 SiGMA 62,63 + T6 SiGMA 55 |
+
+```bash
+# H200 ≤10 GPUs + ep150 SiGMA holes (recommended for this fill):
+COCO_DEAD_PARTITION=gpu_h200 COCO_DEAD_PARALLEL=10 \
+  COCO_DEAD_INCLUDE_EP150=1 \
+  bash bash_interface/cluster/submit_coco_dead_seeds_relaunch.sh
+```
+
 **VOC Table 5 SiGMA + SiGMA_ungated H200 twin** (tasks `41-50`, keep `32232124`):
 
 | JOBID | Tasks | What |
@@ -363,6 +377,7 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Table 5+6 COCO H200 twin | ✅ T5 `34098505` · T6 `34098527` | `34098505` / `34098527` |
 | Table 5+6 COCO ep150 twin | ✅ T5 `34682558` · T6 `34682560` | `34682558` / `34682560` |
 | COCO Table6 Attn a3 + MP a0g3 | ✅ | `34869787` |
+| COCO dead-seed retry (Homog/Hetero gaps) | 🛑 TO RUN | — |
 | CLUSTER push-to-80% sweep | 🛑 TO RUN | — |
 | Table 5 VOC SiGMA+ungated H200 | ✅ `34099247` (`41-50%5`) | `34099247` |
 | ENZYMES ogpkubk9 seeds | ✅ | `34081517` (priors ❌ `34076119` / `34070247`) |
@@ -376,7 +391,7 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Table 6 VOC Homog_MP | ✅ | `33810534` |
 | Table 6 VOC Homog_MP_ungated relaunch | ✅ `34070244` (4/5); seed1 retry ✅ `34409933` | `34409933` |
 | Heterogeneity TU relaunch | ✅ `34410913`; proteins_sigma ✅ `34869869` | `34869869` |
-| ENZYMES SiGMA a8g8 hetero | 🛑 TO RUN | — |
+| ENZYMES SiGMA a8g8 hetero | ✅ | `34875028` |
 | TU all-layer activations | ✅ | `34869795` |
 | Table 6 1-MP peptides | ✅ | `32717625` |
 | Table 6 COCO relaunch | ✅ mweber `34070245`; H200 twin `34098527` | `34070245` / `34098527` |
