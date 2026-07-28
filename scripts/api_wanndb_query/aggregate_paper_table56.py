@@ -12,7 +12,7 @@ Examples::
     # Table 5 only (LRGB), finished runs
     python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
 
-    # Table 5 MNIST + CIFAR10
+    # Table 6 MNIST + CIFAR10 + PATTERN (code: paper_T5_* / --table 5mc)
     python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5mc
 
     # Table 6 only (VOC + 1-MP campaigns)
@@ -47,6 +47,7 @@ HIGHER_BETTER: dict[str, bool] = {
     "coco": True,
     "mnist": True,
     "cifar10": True,
+    "pattern": True,
 }
 
 TABLE5_DATASETS: tuple[str, ...] = (
@@ -55,9 +56,11 @@ TABLE5_DATASETS: tuple[str, ...] = (
     "voc",
     "coco",
 )
+# Dwivedi benchmarks for paper Table 6 (code group prefix paper_T5_*).
 TABLE5_MNIST_CIFAR_DATASETS: tuple[str, ...] = (
     "mnist",
     "cifar10",
+    "pattern",
 )
 TABLE5_VARIANTS: tuple[str, ...] = (
     "SiGMA",
@@ -315,7 +318,7 @@ def print_summary_tables(aggs: Sequence[ExperimentAgg], *, expected_n: int) -> N
         _print_pivot(by_table["5"], datasets=datasets, variants=variants, expected_n=expected_n)
 
     if "5mc" in by_table:
-        print("\n## Table 5 — MNIST + CIFAR10 (paper_T5_*)\n")
+        print("\n## Table 6 — MNIST + CIFAR10 + PATTERN (paper_T5_*)\n")
         _print_pivot(
             by_table["5mc"],
             datasets=TABLE5_MNIST_CIFAR_DATASETS,

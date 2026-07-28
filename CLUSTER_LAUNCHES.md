@@ -27,6 +27,24 @@ Entity/project: [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/webe
 python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
 ```
 
+### 🧪 Table 6 — SiGMA_attn_gate (20 jobs)
+
+| | |
+|--|--|
+| **SLURM** | **`35354579`** |
+| **When** | 2026-07-26 |
+| **Tasks** | `1-20%10` |
+| **Partition** | `mweber_gpu` · 120h · out_dir netscratch |
+| **Docs** | [`Paper_ablations.md`](Paper_ablations.md) |
+| **W&B** | `paper_T5_<ds>_SiGMA_attn_gate` |
+| **Override** | `gnn.hybrid.mp_gate none` (yaml `gate` kept) |
+| **Logs** | `logs_gnnplus/sigma_T5_attn_gate_35354579_<TASK>.log` |
+
+```bash
+# 📊 aggregate (includes SiGMA_attn_gate row)
+python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
+```
+
 **COCO gap relaunch** (inode-quota recovery, 2026-07-21, `mweber_gpu` 192h):
 
 | JOBID | Tasks | What |
@@ -316,9 +334,9 @@ sbatch --job-name=cluster_push80_cluster --array=1-16%4 --mem=128GB --time=120:0
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  Table 6 SiGMA_attn_gate (20 jobs)                        ║
-║  🧪  gate attention only · MP ungated · 4 LRGB × 5 seeds                 ║
-║  📄  Paper_ablations.md                                                  ║
+║  🛑  TO RUN  ·  Hetero MUTAG/ENZYMES · Xu et al. ICLR 2019 HPs (6 jobs) ║
+║  🧪  GCN / GIN / SiGMA · arXiv:1810.00826 / weihua916/powerful-gnns      ║
+║  📄  Paper_heterogeneity.md                                              ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -329,24 +347,22 @@ export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-# 🚀 20 jobs, ≤10 GPUs
-bash bash_interface/cluster/submit_paper_table5_attn_gate_only.sh
-# 👉 paste JOBID into Paper_ablations.md + here
+bash bash_interface/cluster/submit_heterogeneity_powerful_gnns.sh
+# 👉 paste JOBID into Paper_heterogeneity.md + here
 ```
 
 | Field | Value |
 |-------|-------|
 | **SLURM** | 🛑 *not submitted yet* |
-| **W&B** | `paper_T5_<ds>_SiGMA_attn_gate` |
-| **Override** | `gnn.hybrid.mp_gate none` (yaml `gate` kept) |
-| **Aggregate** | `python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5` |
+| **W&B** | `building_hetero_profile_{mutag,enzymes}_powerful_gnns` |
+| **Configs** | `configs/heterogeneity/powerful_gnns/` |
 
 ---
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  Table 5 MNIST + CIFAR10 ablations (40 jobs)             ║
-║  🧪  SiGMA / ungated / Attn_only / MP_only × 5 seeds                     ║
+║  🛑  TO RUN  ·  Table 6 MNIST + CIFAR10 + PATTERN ablations (75 jobs)   ║
+║  🧪  SiGMA / ungated / attn_gate / Attn_only / MP_only × 5 seeds         ║
 ║  📄  Paper_ablations_mnist_cifar.md                                      ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
@@ -360,7 +376,7 @@ git pull
 # once if needed:
 # bash bash_interface/cluster/prep_gnnplus_datasets.sh mnist cifar10
 
-# 🚀 40 jobs, ≤10 GPUs
+# 🚀 75 jobs, ≤10 GPUs
 bash bash_interface/cluster/submit_paper_table5_mnist_cifar_ablations.sh
 # 👉 paste JOBID into Paper_ablations_mnist_cifar.md + here
 ```
@@ -368,7 +384,7 @@ bash bash_interface/cluster/submit_paper_table5_mnist_cifar_ablations.sh
 | Field | Value |
 |-------|-------|
 | **SLURM** | 🛑 *not submitted yet* |
-| **W&B** | `paper_T5_{mnist,cifar10}_{SiGMA,SiGMA_ungated,Attn_only,MP_only}` |
+| **W&B** | `paper_T5_{mnist,cifar10,pattern}_{SiGMA,SiGMA_ungated,SiGMA_attn_gate,Attn_only,MP_only}` |
 | **Aggregate** | `python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5mc` |
 
 ---
@@ -405,7 +421,7 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Campaign | Status | JOBID |
 |----------|--------|-------|
 | Table 5 LRGB | ✅ | `32232124` |
-| Table 6 SiGMA_attn_gate (LRGB) | 🛑 TO RUN | — |
+| Table 6 SiGMA_attn_gate (LRGB) | ✅ | `35354579` |
 | Table 5 COCO gaps relaunch | ✅ Attn `34070241`; MP/ungated ✅ `34081524` (prior ❌ `34070242`/`43`) | `34081524` |
 | Table 5+6 COCO H200 twin | ✅ T5 `34098505` · T6 `34098527` | `34098505` / `34098527` |
 | Table 5+6 COCO ep150 twin | ✅ T5 `34682558` · T6 `34682560` | `34682558` / `34682560` |
@@ -424,6 +440,7 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Table 6 VOC Homog_MP | ✅ | `33810534` |
 | Table 6 VOC Homog_MP_ungated relaunch | ✅ `34070244` (4/5); seed1 retry ✅ `34409933` | `34409933` |
 | Heterogeneity TU relaunch | ✅ `34410913`; proteins_sigma ✅ `34869869` | `34869869` |
+| Hetero MUTAG/ENZYMES Xu et al. HPs | 🛑 TO RUN | — |
 | ENZYMES SiGMA a8g8 hetero | ✅ | `34875028` |
 | TU all-layer activations | ✅ | `34869795` |
 | Table 6 1-MP peptides | ✅ | `32717625` |

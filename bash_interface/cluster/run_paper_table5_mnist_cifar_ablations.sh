@@ -1,21 +1,23 @@
 #!/usr/bin/env bash
 # =============================================================================
-# SiGMA paper Table 5 ablations — MNIST + CIFAR10 (Dwivedi benchmarks)
+# SiGMA paper Table 6 (code: paper_T5) — MNIST + CIFAR10 + PATTERN
 #
-# 2 datasets × 4 variants × 5 seeds = 40 tasks (default).
+# 3 datasets × 5 variants × 5 seeds = 75 tasks (default).
 #
-# Variants (W&B group suffix + tag — same names as LRGB Table 5):
-#   0  SiGMA           — best gated hybrid (paper baseline)
-#   1  SiGMA_ungated   — same architecture, gnn.hybrid.gate=none
-#   2  Attn_only       — all MP heads replaced by attention
-#   3  MP_only         — all attention heads replaced by same MP type(s)
+# Variants (W&B group suffix + tag — same names as LRGB Table 6 / paper_T5):
+#   0  SiGMA             — best gated hybrid (paper Table 3 baseline)
+#   1  SiGMA_ungated     — same architecture, gnn.hybrid.gate=none
+#   2  SiGMA_attn_gate   — yaml gate on attention; mp_gate=none
+#   3  Attn_only         — all MP heads replaced by attention
+#   4  MP_only           — all attention heads replaced by same MP type(s)
 #
 # W&B group:  paper_T5_<dataset>_<Variant>
-# W&B tags:   paper_table5, <Variant>, <dataset>, seed<k>
+# W&B tags:   paper_table5, paper_table6, <Variant>, <dataset>, seed<k>
 #
 # Source anchors / best exemplar runs (hyperparams frozen in yaml):
-#   mnist    lcvbyyss a2g2     seed0  uh7nxm4e
-#   cifar10  ulij45a2 a8g4     seed1  3tx560wq
+#   mnist    lcvbyyss a2g2 GATEDGCN×2   seed0  uh7nxm4e
+#   cifar10  ulij45a2 a8g4 GATEDGCN×4   seed1  3tx560wq
+#   pattern  ta9qtxb9 a2g2 GCNE×2       seed0  ta9qtxb9
 #
 # Submit:
 #   bash bash_interface/cluster/submit_paper_table5_mnist_cifar_ablations.sh
@@ -23,8 +25,8 @@
 
 #SBATCH --job-name=sigma_T5_mc
 #SBATCH --ntasks=1
-#SBATCH --time=72:00:00
-#SBATCH --mem=64GB
+#SBATCH --time=96:00:00
+#SBATCH --mem=96GB
 #SBATCH --output=logs_gnnplus/%x_%A_%a.log
 #SBATCH --partition=mweber_gpu
 #SBATCH --gpus=1
@@ -40,8 +42,8 @@ source "${SCRIPT_DIR}/common_env.sh"
 
 task_id=${SLURM_ARRAY_TASK_ID:-1}
 num_seeds="${PAPER_T5_MC_NUM_SEEDS:-5}"
-num_variants="${PAPER_T5_MC_NUM_VARIANTS:-4}"
-num_datasets="${PAPER_T5_MC_NUM_DATASETS:-2}"
+num_variants="${PAPER_T5_MC_NUM_VARIANTS:-5}"
+num_datasets="${PAPER_T5_MC_NUM_DATASETS:-3}"
 num_tasks="${PAPER_T5_MC_NUM_TASKS:-$((num_datasets * num_variants * num_seeds))}"
 
 if [ "$task_id" -lt 1 ] || [ "$task_id" -gt "$num_tasks" ]; then
@@ -68,6 +70,12 @@ case "${dataset_idx}" in
         source_run="3tx560wq"
         na=8; ng=4; gnn_types="GATEDGCN"
         ;;
+    2)
+        ds_tag="pattern"
+        cfg="configs/gated_hybrid/pattern-gcne-best-hybrid.yaml"
+        source_run="ta9qtxb9"
+        na=2; ng=2; gnn_types="GCNE,GCNE"
+        ;;
     *)
         log_message "bad dataset_idx=${dataset_idx}"
         exit 1
@@ -88,6 +96,11 @@ case "${variant_idx}" in
         extra_args+=(gnn.hybrid.gate none)
         ;;
     2)
+        variant="SiGMA_attn_gate"
+        # Keep yaml ``gate`` on attention; disable MP gating only.
+        extra_args+=(gnn.hybrid.mp_gate none)
+        ;;
+    3)
         variant="Attn_only"
         extra_args+=(
             gnn.hybrid.num_attn_heads "${total_heads}"
@@ -95,7 +108,7 @@ case "${variant_idx}" in
             "gnn.hybrid.gnn_types" ""
         )
         ;;
-    3)
+    4)
         variant="MP_only"
         mp_types="${first_type}"
         for ((i = 1; i < total_heads; i++)); do
@@ -122,13 +135,19 @@ job_tag="${SLURM_ARRAY_JOB_ID:-${SLURM_JOB_ID:-local}}"
 wandb_group_prefix="${PAPER_T5_MC_WANDB_PREFIX:-paper_T5}"
 wandb_group="${wandb_group_prefix}_${ds_tag}_${variant}"
 wandb_name="${wandb_group_prefix}_${ds_tag}_${variant}_seed${seed}_job${job_tag}_${task_id}"
-wandb_tags="paper_table5,${variant},${ds_tag},seed${seed},source_${source_run}"
+wandb_tags="paper_table5,paper_table6,${variant},${ds_tag},seed${seed},source_${source_run}"
 
-log_message "Table5 MC task ${task_id}/${num_tasks}: ds=${ds_tag} variant=${variant} seed=${seed} source=${source_run} cfg=${cfg}"
+log_message "Table6 MC task ${task_id}/${num_tasks}: ds=${ds_tag} variant=${variant} seed=${seed} source=${source_run} cfg=${cfg}"
 log_message "W&B group=${wandb_group} name=${wandb_name}"
 
 if [ -n "${GNNPLUS_DATASET_DIR:-}" ]; then
     extra_args+=(dataset.dir "${GNNPLUS_DATASET_DIR}")
+fi
+
+if [ -n "${GNNPLUS_OUT_DIR:-}" ]; then
+    mkdir -p "${GNNPLUS_OUT_DIR}"
+    extra_args+=(out_dir "${GNNPLUS_OUT_DIR}")
+    log_message "out_dir override: ${GNNPLUS_OUT_DIR}"
 fi
 
 export WANDB_EXTRA_TAGS="${wandb_tags}"
