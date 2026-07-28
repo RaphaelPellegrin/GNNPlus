@@ -280,6 +280,29 @@ bash bash_interface/cluster/submit_peptides_func_o5cdk766_vn_lr_grid.sh
 
 ---
 
+### 🧪 COCO Table 6 a1g1 @ ep150 — fill crashed / never launched
+
+| | |
+|--|--|
+| **Status** | 🛑 **TO RUN** — `submit_coco_ep150_table6_a1g1_fill.sh` |
+| **Baseline** | a1g1 SiGMA → Attn a2 / MP a0g2 |
+| **T5 array** | `62,75,76-80` (SiGMA s1 · Attn s4 · MP×5) |
+| **attn_gate** | `16-20` → `paper_T5_ep150_coco_SiGMA_attn_gate` |
+| **Skip** | ungated done; Attn seeds 0–3 still running |
+| **W&B** | `paper_T5_ep150_coco_{SiGMA,Attn_only,MP_only,SiGMA_attn_gate}` |
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+bash bash_interface/cluster/submit_coco_ep150_table6_a1g1_fill.sh
+# 👉 paste BOTH JOBIDs here
+```
+
+---
+
 ### 🧪 TU all-layer activations (3 jobs)
 
 | | |
@@ -361,29 +384,16 @@ bash bash_interface/cluster/submit_heterogeneity_powerful_gnns.sh
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  Table 6 MNIST + CIFAR10 + PATTERN ablations (75 jobs)   ║
+║  🔄  RUNNING  ·  Table 6 MNIST + CIFAR10 + PATTERN · 35720034           ║
 ║  🧪  SiGMA / ungated / attn_gate / Attn_only / MP_only × 5 seeds         ║
 ║  📄  Paper_ablations_mnist_cifar.md                                      ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
-```bash
-source ~/.gnnplus_env
-export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
-cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-git pull
-
-# once if needed:
-# bash bash_interface/cluster/prep_gnnplus_datasets.sh mnist cifar10
-
-# 🚀 75 jobs, ≤10 GPUs
-bash bash_interface/cluster/submit_paper_table5_mnist_cifar_ablations.sh
-# 👉 paste JOBID into Paper_ablations_mnist_cifar.md + here
-```
-
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *not submitted yet* |
+| **SLURM** | `35720034` (`1-75%10`, 96GB / 96h) |
+| **Logs** | `logs_gnnplus/sigma_T5_mc_35720034_<TASK>.log` |
 | **W&B** | `paper_T5_{mnist,cifar10,pattern}_{SiGMA,SiGMA_ungated,SiGMA_attn_gate,Attn_only,MP_only}` |
 | **Aggregate** | `python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5mc` |
 

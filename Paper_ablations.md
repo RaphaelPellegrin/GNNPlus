@@ -90,10 +90,11 @@ bash bash_interface/cluster/submit_paper_table5_attn_gate_only.sh
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *not submitted yet* |
-| **Tasks** | `1-20` (func 1–5 · struct 6–10 · voc 11–15 · coco 16–20) |
+| **SLURM** | ✅ **`35354579`** (2026-07-26) |
+| **Tasks** | `1-20%10` (func 1–5 · struct 6–10 · voc 11–15 · coco 16–20) |
 | **Scripts** | `submit_paper_table5_attn_gate_only.sh` → `run_paper_table5_attn_gate_only.sh` |
 | **W&B** | `paper_T5_<ds>_SiGMA_attn_gate` |
+| **Logs** | `logs_gnnplus/sigma_T5_attn_gate_35354579_<TASK>.log` |
 | **Needs** | `gnn.hybrid.mp_gate` (this branch) |
 
 ### Relaunch — COCO Attn_only on `gpu_h200` (5 seeds, new job)
@@ -118,9 +119,37 @@ bash bash_interface/cluster/submit_paper_table5_coco_attn_only_h200.sh
 | **VOC SiGMA+ungated H200** | ✅ **`34099247`** · tasks `41-50%5` · `gpu_h200` · 72h · `_h200` (keeps `32232124`) |
 | **W&B groups** | `paper_T5_{coco,voc}_{SiGMA,SiGMA_ungated,...}` |
 
-### Relaunch — COCO Attn_only **a3g0** + MP_only **a0g3** (paper Table 6)
+### Relaunch — COCO **a1g1** Table 6 @ ep150 (fill gaps)
 
-Old COCO Attn/MP used **total_heads=2** (a1g1 → a2g0 / a0g2). For the paper Table 6 COCO cells we instead run **3 heads**:
+Baseline remains **a1g1** (1 attn + 1 GATEDGCN). Matched Attn/MP = **a2 / a0g2**.
+
+| Cell | Status (2026-07-28) | Action |
+|------|---------------------|--------|
+| SiGMA | seed 1 crashed | relaunch task 62 |
+| SiGMA_ungated | ✅ 5/5 | skip |
+| Attn_only a2 | seeds 0–3 running; seed 4 crashed | relaunch task 75 only |
+| MP_only a0g2 | never @ ep150 | launch tasks 76–80 |
+| SiGMA_attn_gate | never @ ep150 | launch attn_gate 16–20 |
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+bash bash_interface/cluster/submit_coco_ep150_table6_a1g1_fill.sh
+# 👉 paste BOTH JOBIDs here
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *not submitted yet* |
+| **Script** | `submit_coco_ep150_table6_a1g1_fill.sh` |
+| **W&B** | `paper_T5_ep150_coco_{SiGMA,Attn_only,MP_only,SiGMA_attn_gate}` |
+
+### Relaunch — COCO Attn_only **a3g0** + MP_only **a0g3** (extra 3-head cells)
+
+Separate from a1g1-matched Attn/MP. Old a2 cells stay; these use **3 heads**:
 
 | Variant | Heads | W&B group |
 |---------|-------|-----------|
