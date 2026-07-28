@@ -393,28 +393,33 @@ bash bash_interface/cluster/submit_heterogeneity_powerful_gnns.sh
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  Table 7 MNIST + CIFAR10 + PATTERN (homog/hetero MP)     ║
-║  🧪  SiGMA / Homog / Hetero ±ungated × 5 seeds = 75 jobs                 ║
+║  🛑  CANCEL 35720920 → RESUBMIT Table 7 MNIST/CIFAR/PATTERN (45 jobs)   ║
+║  🧪  Homog_ungated / Hetero / Hetero_ungated only (1-head swap)          ║
 ║  📄  Paper_table6_mnist_cifar_pattern.md                                 ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
 ```bash
+scancel 35720920   # broken 75-job submit (5-variant mismatch)
+
 source ~/.gnnplus_env
 export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-# 🚀 75 jobs, ≤10 GPUs
 bash bash_interface/cluster/submit_paper_table6_mnist_cifar_pattern.sh
 # 👉 paste JOBID into Paper_table6_mnist_cifar_pattern.md + here
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *not submitted yet* |
-| **W&B** | `paper_T6_{mnist,cifar10,pattern}_{SiGMA,Homog_MP,Hetero_MP,Homog_MP_ungated,Hetero_MP_ungated}` |
+| **Cancel** | `35720920` |
+| **Resubmit** | 45 jobs (`1-45%10`) after pull |
+| **W&B** | `paper_T6_{mnist,cifar10,pattern}_{Homog_MP_ungated,Hetero_MP,Hetero_MP_ungated}` |
+| **Reuse** | SiGMA/Homog gated ← `paper_bestmodel_v1_*` |
+| **CIFAR hetero** | `GATEDGCN×3,GCN` (one head swap, not alternating) |
 | **Aggregate** | `python scripts/api_wanndb_query/aggregate_paper_table56.py --table 6mc` |
+
 
 ---
 

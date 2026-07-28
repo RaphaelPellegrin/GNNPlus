@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 # Launch SiGMA Table 7 (code paper_T6) for MNIST + CIFAR10 + PATTERN.
 #
-# 3 datasets × {SiGMA, Homog_MP, Hetero_MP, Homog_MP_ungated, Hetero_MP_ungated}
-#   × 5 seeds = 75 jobs.
-# Multi-MP VOC-style: keep head counts; ablate homog vs hetero MP ± gates.
+# Baselines already have multiple homogeneous MP heads. Launch only:
+#   Homog_MP_ungated / Hetero_MP / Hetero_MP_ungated
+# SiGMA / Homog_MP gated → reuse paper_bestmodel (do not relaunch).
+#
+# Hetero = swap ONE (last) MP head to a different type.
+# 3 datasets × 3 variants × 5 seeds = 45 jobs.
 #
 # Prerequisites:
 #   source ~/.gnnplus_env
 #   export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
 #   cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 #   git pull
-#   # once if needed:
-#   # bash bash_interface/cluster/prep_gnnplus_datasets.sh mnist cifar10
 #
-# Launch:
+# Cancel broken 75-job array if needed, then:
+#   scancel 35720920
 #   bash bash_interface/cluster/submit_paper_table6_mnist_cifar_pattern.sh
-#
-# Then paste ARRAY JOBID into Paper_table6_mnist_cifar_pattern.md + CLUSTER_LAUNCHES.md
 
 set -euo pipefail
 
@@ -27,7 +27,7 @@ mkdir -p logs_gnnplus
 
 NUM_SEEDS="${PAPER_T6_MC_NUM_SEEDS:-5}"
 NUM_DATASETS="${PAPER_T6_MC_NUM_DATASETS:-3}"
-NUM_VARIANTS="${PAPER_T6_MC_NUM_VARIANTS:-5}"
+NUM_VARIANTS="${PAPER_T6_MC_NUM_VARIANTS:-3}"
 NUM_TASKS="${PAPER_T6_MC_NUM_TASKS:-$((NUM_DATASETS * NUM_VARIANTS * NUM_SEEDS))}"
 ARRAY_SPEC="${PAPER_T6_MC_ARRAY:-1-${NUM_TASKS}}"
 PARALLEL="${PAPER_T6_MC_PARALLEL:-10}"
@@ -72,18 +72,16 @@ cat <<EOF
 
   W&B entity/project: weber-geoml-harvard-university/GNNPlus
   W&B group pattern:  ${WANDB_PREFIX}_<dataset>_<Variant>
-  W&B tags:           paper_table6, paper_table7, <Variant>, <dataset>, seed<k>
 
-  Variants:
-    SiGMA / Homog_MP     = homogeneous MP, gated (paper best arch)
-    Hetero_MP            = heterogeneous MP types, gated
-    Homog_MP_ungated     = homogeneous MP, gate=none
-    Hetero_MP_ungated    = heterogeneous MP, gate=none
+  Launching only (SiGMA/Homog_MP gated = reuse paper_bestmodel):
+    Homog_MP_ungated     = same homog types, gate=none
+    Hetero_MP            = swap ONE last MP head, gated
+    Hetero_MP_ungated    = same one-head swap, gate=none
 
-  Datasets / anchors / hetero mix:
-    mnist     uh7nxm4e   a2g2 GATEDGCN×2   → hetero GATEDGCN,GCN
-    cifar10   3tx560wq   a8g4 GATEDGCN×4   → hetero GATEDGCN,GCN×alt
-    pattern   ta9qtxb9   a2g2 GCNE×2       → hetero GCNE,GINE
+  Hetero one-head swap:
+    mnist     GATEDGCN,GATEDGCN                 → GATEDGCN,GCN
+    cifar10   GATEDGCN×4                        → GATEDGCN,GATEDGCN,GATEDGCN,GCN
+    pattern   GCNE,GCNE                         → GCNE,GINE
 
   Paste JOBID into Paper_table6_mnist_cifar_pattern.md + CLUSTER_LAUNCHES.md
 

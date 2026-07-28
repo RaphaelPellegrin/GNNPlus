@@ -2,30 +2,26 @@
 # =============================================================================
 # SiGMA paper Table 7 (code: paper_T6) — MNIST + CIFAR10 + PATTERN
 #
-# Multi-MP baselines (like VOC): keep head counts; ablate homog vs hetero MP
-# types ± gating. Does NOT add a new MP head (that is the LRGB 1-MP campaign).
+# Baselines already have multiple homogeneous MP heads. Table 7 only needs:
+#   - Homog_MP_ungated  (same types, gate=none)
+#   - Hetero_MP         (swap ONE MP head to a different type, gated)
+#   - Hetero_MP_ungated (same one-head swap, gate=none)
 #
-# 3 datasets × 5 variants × 5 seeds = 75 tasks (default).
+# SiGMA / Homog_MP gated cells → reuse paper_bestmodel anchors (do not relaunch).
 #
-# Variants (W&B group suffix — same names as LRGB/VOC Table 7):
-#   0  SiGMA               — best gated hybrid as-is
-#   1  Homog_MP            — homogeneous MP types, gated (= SiGMA arch)
-#   2  Hetero_MP           — heterogeneous MP types, gated
-#   3  Homog_MP_ungated    — homogeneous MP, gate=none
-#   4  Hetero_MP_ungated   — heterogeneous MP, gate=none
+# 3 datasets × 3 variants × 5 seeds = 45 tasks (default).
 #
-# Anchors / source runs (Paper_final_runs.md / Paper_ablations_mnist_cifar.md):
+# Anchors / source runs (Paper_final_runs.md):
 #   mnist    lcvbyyss a2g2 GATEDGCN×2   uh7nxm4e
 #   cifar10  ulij45a2 a8g4 GATEDGCN×4   3tx560wq
 #   pattern  ta9qtxb9 a2g2 GCNE×2       ta9qtxb9
 #
-# Hetero type mixes (VOC-style: replace half the MP heads):
-#   mnist    GATEDGCN,GCN
-#   cifar10  GATEDGCN,GCN,GATEDGCN,GCN
-#   pattern  GCNE,GINE
+# Hetero (swap last MP head only):
+#   mnist    GATEDGCN,GATEDGCN  →  GATEDGCN,GCN
+#   cifar10  GATEDGCN×4         →  GATEDGCN,GATEDGCN,GATEDGCN,GCN
+#   pattern  GCNE,GCNE          →  GCNE,GINE
 #
 # W&B group:  paper_T6_<dataset>_<Variant>
-# W&B tags:   paper_table6, paper_table7, <Variant>, <dataset>, seed<k>
 #
 # Submit:
 #   bash bash_interface/cluster/submit_paper_table6_mnist_cifar_pattern.sh
@@ -50,7 +46,7 @@ source "${SCRIPT_DIR}/common_env.sh"
 
 task_id=${SLURM_ARRAY_TASK_ID:-1}
 num_seeds="${PAPER_T6_MC_NUM_SEEDS:-5}"
-num_variants="${PAPER_T6_MC_NUM_VARIANTS:-5}"
+num_variants="${PAPER_T6_MC_NUM_VARIANTS:-3}"
 num_datasets="${PAPER_T6_MC_NUM_DATASETS:-3}"
 num_tasks="${PAPER_T6_MC_NUM_TASKS:-$((num_datasets * num_variants * num_seeds))}"
 
@@ -71,6 +67,7 @@ case "${dataset_idx}" in
         cfg="configs/gated_hybrid/mnist-hybrid-lcvbyyss-a2g2-anchor.yaml"
         source_run="uh7nxm4e"
         homog_types="GATEDGCN,GATEDGCN"
+        # Swap one (last) MP head only.
         hetero_types="GATEDGCN,GCN"
         ng=2
         ;;
@@ -79,7 +76,8 @@ case "${dataset_idx}" in
         cfg="configs/gated_hybrid/cifar10-hybrid-ulij45a2-anchor.yaml"
         source_run="3tx560wq"
         homog_types="GATEDGCN,GATEDGCN,GATEDGCN,GATEDGCN"
-        hetero_types="GATEDGCN,GCN,GATEDGCN,GCN"
+        # Swap one (last) MP head only — not alternating.
+        hetero_types="GATEDGCN,GATEDGCN,GATEDGCN,GCN"
         ng=4
         ;;
     2)
@@ -87,6 +85,7 @@ case "${dataset_idx}" in
         cfg="configs/gated_hybrid/pattern-gcne-best-hybrid.yaml"
         source_run="ta9qtxb9"
         homog_types="GCNE,GCNE"
+        # Swap one (last) MP head only.
         hetero_types="GCNE,GINE"
         ng=2
         ;;
@@ -100,25 +99,6 @@ extra_args=()
 
 case "${variant_idx}" in
     0)
-        variant="SiGMA"
-        # Anchor as-is (homogeneous MP, gated).
-        ;;
-    1)
-        variant="Homog_MP"
-        # Same arch as SiGMA; explicit types for logging clarity.
-        extra_args+=(
-            gnn.hybrid.num_gnn_heads "${ng}"
-            "gnn.hybrid.gnn_types" "${homog_types}"
-        )
-        ;;
-    2)
-        variant="Hetero_MP"
-        extra_args+=(
-            gnn.hybrid.num_gnn_heads "${ng}"
-            "gnn.hybrid.gnn_types" "${hetero_types}"
-        )
-        ;;
-    3)
         variant="Homog_MP_ungated"
         extra_args+=(
             gnn.hybrid.num_gnn_heads "${ng}"
@@ -126,7 +106,14 @@ case "${variant_idx}" in
             gnn.hybrid.gate none
         )
         ;;
-    4)
+    1)
+        variant="Hetero_MP"
+        extra_args+=(
+            gnn.hybrid.num_gnn_heads "${ng}"
+            "gnn.hybrid.gnn_types" "${hetero_types}"
+        )
+        ;;
+    2)
         variant="Hetero_MP_ungated"
         extra_args+=(
             gnn.hybrid.num_gnn_heads "${ng}"
@@ -150,7 +137,7 @@ wandb_group_prefix="${PAPER_T6_MC_WANDB_PREFIX:-paper_T6}"
 wandb_group="${wandb_group_prefix}_${ds_tag}_${variant}"
 name_suffix="${PAPER_T6_MC_NAME_SUFFIX:-}"
 wandb_name="${wandb_group_prefix}_${ds_tag}_${variant}_seed${seed}_job${job_tag}_${task_id}${name_suffix}"
-wandb_tags="paper_table6,paper_table7,${variant},${ds_tag},seed${seed},source_${source_run}"
+wandb_tags="paper_table6,paper_table7,${variant},${ds_tag},seed${seed},source_${source_run},one_mp_swap"
 if [ -n "${name_suffix}" ]; then
     tag_suffix="${name_suffix#_}"
     wandb_tags="${wandb_tags},relaunch_${tag_suffix}"

@@ -100,7 +100,11 @@ TABLE6_MNIST_CIFAR_PATTERN_DATASETS: tuple[str, ...] = (
     "cifar10",
     "pattern",
 )
-TABLE6_MNIST_CIFAR_PATTERN_VARIANTS: tuple[str, ...] = TABLE6_1MP_VARIANTS
+TABLE6_MNIST_CIFAR_PATTERN_VARIANTS: tuple[str, ...] = (
+    "Homog_MP_ungated",
+    "Hetero_MP",
+    "Hetero_MP_ungated",
+)
 
 
 @dataclass(frozen=True)
