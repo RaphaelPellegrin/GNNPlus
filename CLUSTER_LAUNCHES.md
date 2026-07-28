@@ -284,23 +284,15 @@ bash bash_interface/cluster/submit_peptides_func_o5cdk766_vn_lr_grid.sh
 
 | | |
 |--|--|
-| **Status** | 🛑 **TO RUN** — `submit_coco_ep150_table6_a1g1_fill.sh` |
+| **Status** | 🔄 **RUNNING** |
 | **Baseline** | a1g1 SiGMA → Attn a2 / MP a0g2 |
-| **T5 array** | `62,75,76-80` (SiGMA s1 · Attn s4 · MP×5) |
-| **attn_gate** | `16-20` → `paper_T5_ep150_coco_SiGMA_attn_gate` |
-| **Skip** | ungated done; Attn seeds 0–3 still running |
+| **T5 SLURM** | ✅ **`35720666`** · `62,75,76-80%10` · `mweber_gpu` · 96h |
+| **attn_gate SLURM** | ✅ **`35720667`** · `16-20%10` · `mweber_gpu` · 96h |
+| **Skip** | ungated done; Attn seeds 0–3 still running (prior array) |
 | **W&B** | `paper_T5_ep150_coco_{SiGMA,Attn_only,MP_only,SiGMA_attn_gate}` |
+| **Logs** | `logs_gnnplus/sigma_T5_abl_35720666_<TASK>.log` · `sigma_T5_attn_gate_35720667_<TASK>.log` |
 
-```bash
-source ~/.gnnplus_env
-export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
-export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
-cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-git pull
-bash bash_interface/cluster/submit_coco_ep150_table6_a1g1_fill.sh
-# 👉 paste BOTH JOBIDs here
-```
-
+Submitted 2026-07-28. Tasks: 62=SiGMA s1 · 75=Attn s4 · 76–80=MP a0g2 · 16–20=attn_gate.
 ---
 
 ### 🧪 TU all-layer activations (3 jobs)
@@ -396,6 +388,33 @@ bash bash_interface/cluster/submit_heterogeneity_powerful_gnns.sh
 | **Logs** | `logs_gnnplus/sigma_T5_mc_35720034_<TASK>.log` |
 | **W&B** | `paper_T5_{mnist,cifar10,pattern}_{SiGMA,SiGMA_ungated,SiGMA_attn_gate,Attn_only,MP_only}` |
 | **Aggregate** | `python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5mc` |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑  TO RUN  ·  Table 7 MNIST + CIFAR10 + PATTERN (homog/hetero MP)     ║
+║  🧪  SiGMA / Homog / Hetero ±ungated × 5 seeds = 75 jobs                 ║
+║  📄  Paper_table6_mnist_cifar_pattern.md                                 ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+# 🚀 75 jobs, ≤10 GPUs
+bash bash_interface/cluster/submit_paper_table6_mnist_cifar_pattern.sh
+# 👉 paste JOBID into Paper_table6_mnist_cifar_pattern.md + here
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *not submitted yet* |
+| **W&B** | `paper_T6_{mnist,cifar10,pattern}_{SiGMA,Homog_MP,Hetero_MP,Homog_MP_ungated,Hetero_MP_ungated}` |
+| **Aggregate** | `python scripts/api_wanndb_query/aggregate_paper_table56.py --table 6mc` |
 
 ---
 

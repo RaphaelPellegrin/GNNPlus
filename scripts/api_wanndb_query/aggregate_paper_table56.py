@@ -12,11 +12,14 @@ Examples::
     # Table 5 only (LRGB), finished runs
     python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
 
-    # Table 6 MNIST + CIFAR10 + PATTERN (code: paper_T5_* / --table 5mc)
+    # Table 6 MNIST + CIFAR10 + PATTERN arch ablations (code: paper_T5_* / --table 5mc)
     python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5mc
 
-    # Table 6 only (VOC + 1-MP campaigns)
+    # Table 7 LRGB/VOC homog-hetero (code: paper_T6_* / --table 6)
     python scripts/api_wanndb_query/aggregate_paper_table56.py --table 6
+
+    # Table 7 MNIST + CIFAR10 + PATTERN (code: paper_T6_* / --table 6mc)
+    python scripts/api_wanndb_query/aggregate_paper_table56.py --table 6mc
 
     # Include running jobs in the mean (not recommended for final numbers)
     python scripts/api_wanndb_query/aggregate_paper_table56.py --state finished,running
@@ -90,6 +93,14 @@ TABLE6_1MP_VARIANTS: tuple[str, ...] = (
     "Homog_MP_ungated",
     "Hetero_MP_ungated",
 )
+
+# Multi-MP Dwivedi benchmarks (VOC-style Table 7 / code paper_T6_*).
+TABLE6_MNIST_CIFAR_PATTERN_DATASETS: tuple[str, ...] = (
+    "mnist",
+    "cifar10",
+    "pattern",
+)
+TABLE6_MNIST_CIFAR_PATTERN_VARIANTS: tuple[str, ...] = TABLE6_1MP_VARIANTS
 
 
 @dataclass(frozen=True)
@@ -189,6 +200,18 @@ def build_experiment_specs(*, tables: Sequence[str], prefix_t5: str, prefix_t6: 
                 specs.append(
                     ExperimentSpec(
                         table="6_1mp",
+                        dataset=ds,
+                        variant=variant,
+                        group=f"{prefix_t6}_{ds}_{variant}",
+                    )
+                )
+
+    if "6mc" in table_set or "6_mnist_cifar_pattern" in table_set or "all" in table_set:
+        for ds in TABLE6_MNIST_CIFAR_PATTERN_DATASETS:
+            for variant in TABLE6_MNIST_CIFAR_PATTERN_VARIANTS:
+                specs.append(
+                    ExperimentSpec(
+                        table="6mc",
                         dataset=ds,
                         variant=variant,
                         group=f"{prefix_t6}_{ds}_{variant}",
@@ -336,11 +359,20 @@ def print_summary_tables(aggs: Sequence[ExperimentAgg], *, expected_n: int) -> N
         )
 
     if "6_1mp" in by_table:
-        print("\n## Table 6 — 1-MP LRGB (paper_T6_*)\n")
+        print("\n## Table 7 — 1-MP LRGB (paper_T6_*)\n")
         _print_pivot(
             by_table["6_1mp"],
             datasets=TABLE6_1MP_DATASETS,
             variants=TABLE6_1MP_VARIANTS,
+            expected_n=expected_n,
+        )
+
+    if "6mc" in by_table:
+        print("\n## Table 7 — MNIST + CIFAR10 + PATTERN (paper_T6_*)\n")
+        _print_pivot(
+            by_table["6mc"],
+            datasets=TABLE6_MNIST_CIFAR_PATTERN_DATASETS,
+            variants=TABLE6_MNIST_CIFAR_PATTERN_VARIANTS,
             expected_n=expected_n,
         )
 
@@ -381,7 +413,7 @@ def main() -> None:
     parser.add_argument(
         "--table",
         default="all",
-        help="Which tables: all | 5 | 5mc | 6 | 5,5mc,6 (default: all)",
+        help="Which tables: all | 5 | 5mc | 6 | 6mc | 5,5mc,6,6mc (default: all)",
     )
     parser.add_argument("--prefix-t5", default="paper_T5", help="W&B group prefix for Table 5")
     parser.add_argument("--prefix-t6", default="paper_T6", help="W&B group prefix for Table 6")
