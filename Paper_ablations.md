@@ -143,9 +143,11 @@ bash bash_interface/cluster/submit_coco_ep150_table6_a1g1_fill.sh
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *not submitted yet* |
+| **SLURM T5** | ✅ **`35720666`** · `62,75,76-80%10` · ep=150 · `_ep150_a1g1_fill` |
+| **SLURM attn_gate** | ✅ **`35720667`** · `16-20%10` · ep=150 · `_ep150_a1g1_fill` |
 | **Script** | `submit_coco_ep150_table6_a1g1_fill.sh` |
 | **W&B** | `paper_T5_ep150_coco_{SiGMA,Attn_only,MP_only,SiGMA_attn_gate}` |
+| **Logs** | `logs_gnnplus/sigma_T5_abl_35720666_<TASK>.log` · `sigma_T5_attn_gate_35720667_<TASK>.log` |
 
 ### Relaunch — COCO Attn_only **a3g0** + MP_only **a0g3** (extra 3-head cells)
 
@@ -173,11 +175,38 @@ bash bash_interface/cluster/submit_paper_table5_coco_attn_mp_a3.sh
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | ✅ **`34869787`** (2026-07-24) |
+| **SLURM** | ✅ **`34869787`** (2026-07-24) · seed4 retry ✅ **`35773784`** task 10 `_ep150_retry` |
 | **Tasks** | `1-10%5` (1–5 Attn a3; 6–10 MP a0g3) · **ep=150** |
 | **Anchor** | `coco-hybrid-5b4z9l3u-a1g1-anchor.yaml` |
 | **Aggregate** | `aggregate_paper_repro.py --group paper_T5_coco_Attn_only_a3` / `_MP_only_a0g3` |
-| **Logs** | `logs_gnnplus/sigma_T5_coco_a3_34869787_<TASK>.log` |
+| **Logs** | `logs_gnnplus/sigma_T5_coco_a3_34869787_<TASK>.log` · retry `…_35773784_10.log` |
+
+### Relaunch — COCO **a1g2** Hybrid ungated + attn_gate (extra twins, 300 ep)
+
+Main Table 6 ungated / attn_gate stay **a1g1**. These add +1 GATEDGCN (a1g2), same head count as Table 7 Homog:
+
+| Variant | Heads / gate | W&B group |
+|---------|--------------|-----------|
+| Hybrid ungated | a1g2 · `gate=none` | `paper_T5_coco_SiGMA_ungated_a1g2` |
+| Hybrid ungated MP | a1g2 · `mp_gate=none` | `paper_T5_coco_SiGMA_attn_gate_a1g2` |
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_paper_table5_coco_ungated_a1g2.sh
+# 👉 paste JOBID into CLUSTER_LAUNCHES.md
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 TO RUN |
+| **Tasks** | `1-10%5` · **ep=300** |
+| **Scripts** | `submit/run_paper_table5_coco_ungated_a1g2.sh` |
+| **Anchor** | `coco-hybrid-5b4z9l3u-a1g1-anchor.yaml` |
 
 ---
 

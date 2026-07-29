@@ -251,15 +251,28 @@ bash bash_interface/cluster/submit_peptides_func_o5cdk766_vn_lr_grid.sh
 
 ---
 
-### 🧪 ENZYMES ogpkubk9 gate-viz (1 job)
+### 🧪 COCO Table 6 a1g2 twins — ungated + attn_gate (10 jobs, 300 ep)
 
 | | |
 |--|--|
 | **SLURM** | 🛑 TO RUN |
+| **Submit** | `bash_interface/cluster/submit_paper_table5_coco_ungated_a1g2.sh` |
+| **Tasks** | `1-10%5` · 300 ep · a1g2 GATEDGCN×2 |
+| **W&B** | `paper_T5_coco_SiGMA_ungated_a1g2` · `paper_T5_coco_SiGMA_attn_gate_a1g2` |
+
+---
+
+### 🧪 ENZYMES ogpkubk9 gate-viz (1 job)
+
+| | |
+|--|--|
+| **SLURM** | ✅ **`36148089`** (2026-07-29) |
 | **Docs** | [`Paper_enzymes_ogpkubk9.md`](Paper_enzymes_ogpkubk9.md) §3 |
 | **Submit** | `bash_interface/cluster/submit_enzymes_ogpkubk9_gate_viz.sh` |
 | **Default** | plateau · seed 2 · `enable_ckpt` · period 50 |
-| **W&B** | `enzymes_ogpkubk9_gate_viz` |
+| **out_dir** | `$GNNPLUS_OUT_DIR/gate_viz_enzymes_ogpkubk9_plateau_seed2` |
+| **W&B** | `enzymes_ogpkubk9_gate_viz` / `enzymes_gate_viz_plateau_seed2` |
+| **Logs** | `logs_gnnplus/enz_gate_viz_36148089.log` |
 | **Dump** | `scripts/gate_viz/dump_per_graph_gates.py` |
 
 ---
