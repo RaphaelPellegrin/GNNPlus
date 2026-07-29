@@ -31,9 +31,9 @@ Configs:
 
 ```text
 ╔══════════════════════════════════════════════════════════════════╗
-║  ✅  RELAUNCH  ·  SLURM 34076119  ·  2026-07-21  ·  %5           ║
-║  ❌ 34070247 all FAILED: LinearEdge on ENZYMES (0 edges)         ║
-║  ✅ fix: dataset.edge_encoder: False                             ║
+║  ✅  RELAUNCH  ·  SLURM 34081517  ·  2026-07-22  ·  %5           ║
+║  ❌ 34076119 plateau: ReduceLROnPlateau _last_lr (ck2dwdc7)      ║
+║  ❌ 34070247 LinearEdge; 33651466 inode quota                    ║
 ║  🧬 ENZYMES ogpkubk9 · plateau×5 + cosine×5 = 10 jobs            ║
 ║  📒 also listed in CLUSTER_LAUNCHES.md                           ║
 ╚══════════════════════════════════════════════════════════════════╝
@@ -44,6 +44,7 @@ Configs:
 ```bash
 source ~/.gnnplus_env
 export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
@@ -53,10 +54,10 @@ git pull
 
 | Field | Value |
 |-------|-------|
-| **SLURM array** | ❌ **`34076119`** plateau died: `ReduceLROnPlateau` missing `_last_lr` ([ck2dwdc7](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ck2dwdc7)); relaunch after scheduler fix + `GNNPLUS_OUT_DIR`. Priors: ❌ `34070247` edge_encoder; `33651466` inode quota |
+| **SLURM array** | ✅ **`34081517`** (scheduler + out_dir fixes). Priors: ❌ `34076119` `_last_lr`; ❌ `34070247` edge_encoder; `33651466` inode |
 | **Tasks** | `1-10%5` |
 | **W&B** | `enzymes_ogpkubk9_a4g4_plateau_seeds` / `enzymes_ogpkubk9_a4g4_cosine_seeds` |
-| **Logs** | `logs_gnnplus/enz_ogpkubk9_34076119_<TASK>.log` |
+| **Logs** | `logs_gnnplus/enz_ogpkubk9_34081517_<TASK>.log` |
 
 ```bash
 python scripts/api_wanndb_query/aggregate_paper_repro.py \
@@ -100,3 +101,48 @@ bash bash_interface/sweeps/create_sweep.sh \
 |-------|-------|
 | **Sweep ID** | 🛑 *TO RUN — not created* |
 | **Agent job** | 🛑 *TO RUN — not submitted* |
+
+---
+
+## 3. Gate-viz (per-graph / per-head γ from checkpoint)
+
+W&B `gates/...` during training is **batch-mean** only. Prior seed grids used
+`train.enable_ckpt: False`, so those runs cannot be reloaded for per-graph gates.
+
+**Yes — saving the model checkpoint is enough.** Gates are computed from the
+forward pass (learned projections + activations); reload ckpt → forward → dump.
+
+```text
+╔══════════════════════════════════════════════════════════════════╗
+║  🛑  TO RUN  ·  ENZYMES gate-viz (1 job, ckpt every 50 ep)       ║
+║  Default: plateau · seed 2 (best plateau seed on W&B)            ║
+╚══════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_enzymes_ogpkubk9_gate_viz.sh
+# optional: GATE_VIZ_SEED=0 GATE_VIZ_SCHEDULER=cosine bash ...
+```
+
+| Field | Value |
+|-------|-------|
+| **Submit** | `bash_interface/cluster/submit_enzymes_ogpkubk9_gate_viz.sh` |
+| **Config** | `enzymes-hybrid-ogpkubk9-a4g4-{plateau\|cosine}-anchor.yaml` |
+| **out_dir** | `$GNNPLUS_OUT_DIR/gate_viz_enzymes_ogpkubk9_<sched>_seed<seed>` |
+| **Ckpt** | `train.enable_ckpt True` · `ckpt_clean False` · period 50 |
+| **W&B** | `enzymes_ogpkubk9_gate_viz` |
+| **Dump** | `scripts/gate_viz/dump_per_graph_gates.py` → `gate_values_per_graph.pt` |
+
+```bash
+python scripts/gate_viz/dump_per_graph_gates.py \
+  --run_dir $GNNPLUS_OUT_DIR/gate_viz_enzymes_ogpkubk9_plateau_seed2 \
+  --cfg configs/gated_hybrid/enzymes-hybrid-ogpkubk9-a4g4-plateau-anchor.yaml
+```
+
+Output tensors: `attn` `[N, L, Na]`, `gnn` `[N, L, Ng]` (per-graph mean of node γ).

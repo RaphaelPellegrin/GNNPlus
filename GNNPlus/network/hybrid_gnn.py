@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, List, Optional, Tuple, cast
 
 import torch
 import torch.nn as nn
@@ -11,6 +11,7 @@ from torch_geometric.data import Batch
 from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.models.gnn import FeatureEncoder, GNNPreMP
 from torch_geometric.graphgym.register import register_network
+from torch_geometric.utils import scatter
 
 from GNNPlus.layer.gated_hybrid_layer import (
     AttnMaskType,
@@ -248,6 +249,105 @@ class HybridGNN(torch.nn.Module):
             if self.ffn_blocks is not None:
                 x = self.ffn_blocks[layer_idx](x)
         return all_stats
+
+    def collect_per_graph_gates(self, batch: Batch) -> Dict[str, Any]:
+        """Per-graph mean gate γ for each layer and head (no prediction head).
+
+        For headwise gates, each node has a scalar γ; this averages over nodes
+        within each graph. For elementwise gates, averages over nodes and the
+        ``d_h`` feature dim.
+
+        Returns:
+            Dict with:
+              ``attn``: ``FloatTensor [G, L, Na]``
+              ``gnn``: ``FloatTensor [G, L, Ng]``
+              ``y``: graph labels when present (``LongTensor [G]`` or None)
+              ``num_graphs``: int
+        """
+        (
+            x,
+            batch,
+            edge_index_attn,
+            edge_attr_attn,
+            edge_index_mp,
+            edge_attr_mp,
+            _edge_index,
+            _edge_attr,
+        ) = self._encode_batch(batch)
+        graph_ids = batch.batch
+        num_graphs = int(graph_ids.max().item()) + 1 if graph_ids.numel() else 0
+
+        attn_layers: List[torch.Tensor] = []
+        gnn_layers: List[torch.Tensor] = []
+        for layer_idx, layer in enumerate(self.layers):
+            layer_out = layer(
+                x,
+                edge_index_mp,
+                batch.batch,
+                edge_attr_mp,
+                edge_index_attn=edge_index_attn,
+                edge_attr_attn=edge_attr_attn,
+                edge_index_mp=edge_index_mp,
+                edge_attr_mp=edge_attr_mp,
+                return_gate_stats=True,
+            )
+            assert isinstance(layer_out, tuple)
+            x, layer_aux = layer_out
+            gate_values = cast(
+                Dict[str, List[torch.Tensor]],
+                layer_aux.get('gate_values', {}),
+            )
+
+            def _heads_to_graph(heads: List[torch.Tensor]) -> torch.Tensor:
+                """Stack per-head per-graph means into ``[G, H]``."""
+                if not heads:
+                    return torch.zeros(num_graphs, 0, device=x.device)
+                cols: List[torch.Tensor] = []
+                for gamma in heads:
+                    # [N, 1] or [N, d_h] -> [N] mean over feature dims.
+                    node_gate = gamma.detach().float().mean(dim=-1)
+                    graph_gate = scatter(
+                        node_gate,
+                        graph_ids,
+                        dim=0,
+                        dim_size=num_graphs,
+                        reduce='mean',
+                    )
+                    cols.append(graph_gate)
+                return torch.stack(cols, dim=-1)
+
+            attn_layers.append(_heads_to_graph(gate_values.get('attn', [])))
+            gnn_layers.append(_heads_to_graph(gate_values.get('gnn', [])))
+            if self.ffn_blocks is not None:
+                x = self.ffn_blocks[layer_idx](x)
+
+        attn = (
+            torch.stack(attn_layers, dim=1)
+            if attn_layers
+            else torch.zeros(num_graphs, 0, 0)
+        )
+        gnn = (
+            torch.stack(gnn_layers, dim=1)
+            if gnn_layers
+            else torch.zeros(num_graphs, 0, 0)
+        )
+        y: Optional[torch.Tensor] = None
+        if hasattr(batch, 'y') and batch.y is not None:
+            y_t = batch.y
+            if y_t.dim() == 0:
+                y = y_t.view(1)
+            elif y_t.numel() == num_graphs:
+                y = y_t.view(num_graphs)
+            else:
+                # Node-level labels: take first label per graph is undefined —
+                # leave None for graph-level dump safety.
+                y = None
+        return {
+            'attn': attn.cpu(),
+            'gnn': gnn.cpu(),
+            'y': None if y is None else y.detach().cpu(),
+            'num_graphs': num_graphs,
+        }
 
     def forward(self, batch: Batch) -> Batch:
         """Run encoder, hybrid blocks, optional FFN, and prediction head."""

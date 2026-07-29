@@ -251,6 +251,19 @@ bash bash_interface/cluster/submit_peptides_func_o5cdk766_vn_lr_grid.sh
 
 ---
 
+### 🧪 ENZYMES ogpkubk9 gate-viz (1 job)
+
+| | |
+|--|--|
+| **SLURM** | 🛑 TO RUN |
+| **Docs** | [`Paper_enzymes_ogpkubk9.md`](Paper_enzymes_ogpkubk9.md) §3 |
+| **Submit** | `bash_interface/cluster/submit_enzymes_ogpkubk9_gate_viz.sh` |
+| **Default** | plateau · seed 2 · `enable_ckpt` · period 50 |
+| **W&B** | `enzymes_ogpkubk9_gate_viz` |
+| **Dump** | `scripts/gate_viz/dump_per_graph_gates.py` |
+
+---
+
 ### 🧪 Heterogeneity TU profiles (9 jobs)
 
 | | |
@@ -271,12 +284,12 @@ bash bash_interface/cluster/submit_peptides_func_o5cdk766_vn_lr_grid.sh
 
 | | |
 |--|--|
-| **SLURM** | ✅ **`34869787`** (2026-07-24) |
+| **SLURM** | ✅ **`34869787`** (2026-07-24) · seed4 retry ✅ **`35773784`** |
 | **Tasks** | `1-10%5` (1–5 Attn a3g0; 6–10 MP a0g3 GATEDGCN×3) |
 | **Epochs** | **150** (`_ep150`) |
 | **Docs** | [`Paper_ablations.md`](Paper_ablations.md) |
 | **W&B** | `paper_T5_coco_Attn_only_a3` · `paper_T5_coco_MP_only_a0g3` |
-| **Logs** | `logs_gnnplus/sigma_T5_coco_a3_34869787_<TASK>.log` |
+| **Logs** | `logs_gnnplus/sigma_T5_coco_a3_34869787_<TASK>.log` · retry `…_35773784_10.log` |
 
 ---
 
@@ -389,35 +402,30 @@ bash bash_interface/cluster/submit_heterogeneity_powerful_gnns.sh
 | **W&B** | `paper_T5_{mnist,cifar10,pattern}_{SiGMA,SiGMA_ungated,SiGMA_attn_gate,Attn_only,MP_only}` |
 | **Aggregate** | `python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5mc` |
 
+**Retries (2026-07-28 / 07-29):**
+| SLURM | What |
+|-------|------|
+| ✅ **`35773781`** | MNIST `SiGMA_ungated` seed4 (task 10) |
+| ✅ **`35773784`** | COCO `MP_only_a0g3` seed4 (task 10, `_ep150_retry`) |
+| ✅ **`36000721`** | MNIST `SiGMA_attn_gate` redo seeds 0–4 (tasks `11-15`) |
+
 ---
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  CANCEL 35720920 → RESUBMIT Table 7 MNIST/CIFAR/PATTERN (45 jobs)   ║
-║  🧪  Homog_ungated / Hetero / Hetero_ungated only (1-head swap)          ║
+║  🔄  RUNNING  ·  Table 7 MNIST/CIFAR/PATTERN · 35721068 (45 jobs)       ║
+║  🧪  Homog_ungated / Hetero / Hetero_ungated (1-head swap)               ║
 ║  📄  Paper_table6_mnist_cifar_pattern.md                                 ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
-```bash
-scancel 35720920   # broken 75-job submit (5-variant mismatch)
-
-source ~/.gnnplus_env
-export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
-cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-git pull
-
-bash bash_interface/cluster/submit_paper_table6_mnist_cifar_pattern.sh
-# 👉 paste JOBID into Paper_table6_mnist_cifar_pattern.md + here
-```
-
 | Field | Value |
 |-------|-------|
-| **Cancel** | `35720920` |
-| **Resubmit** | 45 jobs (`1-45%10`) after pull |
+| **SLURM** | ✅ **`35721068`** (`1-45%10`, 96GB / 96h) · cancelled prior `35720920` |
+| **Logs** | `logs_gnnplus/sigma_T6_mc_35721068_<TASK>.log` |
 | **W&B** | `paper_T6_{mnist,cifar10,pattern}_{Homog_MP_ungated,Hetero_MP,Hetero_MP_ungated}` |
 | **Reuse** | SiGMA/Homog gated ← `paper_bestmodel_v1_*` |
-| **CIFAR hetero** | `GATEDGCN×3,GCN` (one head swap, not alternating) |
+| **CIFAR hetero** | `GATEDGCN×3,GCN` (one head swap) |
 | **Aggregate** | `python scripts/api_wanndb_query/aggregate_paper_table56.py --table 6mc` |
 
 

@@ -903,11 +903,17 @@ class GatedHybridGraphLayer(nn.Module):
             mp_gate_vals.append(gamma)
 
         gate_stats: Dict[str, float] = {}
+        gate_values: Dict[str, List[Tensor]] = {}
         if return_gate_stats:
             for m, gamma in enumerate(attn_gate_vals):
                 gate_stats[f"attn_{m}_gate_mean"] = gamma.detach().mean().item()
             for m, gamma in enumerate(mp_gate_vals):
                 gate_stats[f"gnn_{m}_gate_mean"] = gamma.detach().mean().item()
+            # Per-node γ for offline per-graph aggregation (detached).
+            gate_values = {
+                "attn": [g.detach() for g in attn_gate_vals],
+                "gnn": [g.detach() for g in mp_gate_vals],
+            }
 
         if self.block_bn:
             branch_outs: List[Tensor] = []
@@ -947,6 +953,7 @@ class GatedHybridGraphLayer(nn.Module):
         aux: Dict[str, Any] = {}
         if return_gate_stats:
             aux["gate_stats"] = gate_stats
+            aux["gate_values"] = gate_values
         if return_attn_weights:
             aux["attn_weights"] = attn_weights_list
 
