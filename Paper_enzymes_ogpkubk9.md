@@ -114,35 +114,33 @@ forward pass (learned projections + activations); reload ckpt → forward → du
 
 ```text
 ╔══════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  ENZYMES gate-viz (1 job, ckpt every 50 ep)       ║
-║  Default: plateau · seed 2 (best plateau seed on W&B)            ║
+║  ✅  SUBMITTED  ·  SLURM 36148089  ·  2026-07-29                 ║
+║  plateau · seed 2 · ckpt every 50 ep                             ║
+║  out: …/gate_viz_enzymes_ogpkubk9_plateau_seed2                  ║
+║  log: logs_gnnplus/enz_gate_viz_36148089.log                     ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
 ```bash
-source ~/.gnnplus_env
-export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
-export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
-cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-git pull
-
-bash bash_interface/cluster/submit_enzymes_ogpkubk9_gate_viz.sh
-# optional: GATE_VIZ_SEED=0 GATE_VIZ_SCHEDULER=cosine bash ...
+# ✅ already submitted — do not re-run unless re-launching
+# bash bash_interface/cluster/submit_enzymes_ogpkubk9_gate_viz.sh
 ```
 
 | Field | Value |
 |-------|-------|
+| **SLURM** | ✅ **`36148089`** |
 | **Submit** | `bash_interface/cluster/submit_enzymes_ogpkubk9_gate_viz.sh` |
-| **Config** | `enzymes-hybrid-ogpkubk9-a4g4-{plateau\|cosine}-anchor.yaml` |
-| **out_dir** | `$GNNPLUS_OUT_DIR/gate_viz_enzymes_ogpkubk9_<sched>_seed<seed>` |
+| **Config** | `enzymes-hybrid-ogpkubk9-a4g4-plateau-anchor.yaml` |
+| **out_dir** | `$GNNPLUS_OUT_DIR/gate_viz_enzymes_ogpkubk9_plateau_seed2` |
 | **Ckpt** | `train.enable_ckpt True` · `ckpt_clean False` · period 50 |
-| **W&B** | `enzymes_ogpkubk9_gate_viz` |
-| **Dump** | `scripts/gate_viz/dump_per_graph_gates.py` → `gate_values_per_graph.pt` |
+| **W&B** | `enzymes_ogpkubk9_gate_viz` / `enzymes_gate_viz_plateau_seed2` |
+| **Logs** | `logs_gnnplus/enz_gate_viz_36148089.log` |
+| **Dump** | `submit_dump_enzymes_ogpkubk9_gates.sh` → `gate_values_per_graph.pt` |
 
 ```bash
-python scripts/gate_viz/dump_per_graph_gates.py \
-  --run_dir $GNNPLUS_OUT_DIR/gate_viz_enzymes_ogpkubk9_plateau_seed2 \
-  --cfg configs/gated_hybrid/enzymes-hybrid-ogpkubk9-a4g4-plateau-anchor.yaml
+# after training ckpts exist (preferred — uses common_env / gnnplus on GPU):
+bash bash_interface/cluster/submit_dump_enzymes_ogpkubk9_gates.sh
+# optional: GATE_DUMP_EPOCH=999 bash bash_interface/cluster/submit_dump_enzymes_ogpkubk9_gates.sh
 ```
 
 Output tensors: `attn` `[N, L, Na]`, `gnn` `[N, L, Ng]` (per-graph mean of node γ).

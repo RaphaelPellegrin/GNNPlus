@@ -255,10 +255,11 @@ bash bash_interface/cluster/submit_peptides_func_o5cdk766_vn_lr_grid.sh
 
 | | |
 |--|--|
-| **SLURM** | 🛑 TO RUN |
+| **SLURM** | ✅ **`36161505`** (2026-07-30) |
 | **Submit** | `bash_interface/cluster/submit_paper_table5_coco_ungated_a1g2.sh` |
 | **Tasks** | `1-10%5` · 300 ep · a1g2 GATEDGCN×2 |
 | **W&B** | `paper_T5_coco_SiGMA_ungated_a1g2` · `paper_T5_coco_SiGMA_attn_gate_a1g2` |
+| **Logs** | `logs_gnnplus/sigma_T5_coco_a1g2_36161505_<TASK>.log` |
 
 ---
 
@@ -273,7 +274,7 @@ bash bash_interface/cluster/submit_peptides_func_o5cdk766_vn_lr_grid.sh
 | **out_dir** | `$GNNPLUS_OUT_DIR/gate_viz_enzymes_ogpkubk9_plateau_seed2` |
 | **W&B** | `enzymes_ogpkubk9_gate_viz` / `enzymes_gate_viz_plateau_seed2` |
 | **Logs** | `logs_gnnplus/enz_gate_viz_36148089.log` |
-| **Dump** | `scripts/gate_viz/dump_per_graph_gates.py` |
+| **Dump** | `submit_dump_enzymes_ogpkubk9_gates.sh` → `gate_values_per_graph.pt` |
 
 ---
 
