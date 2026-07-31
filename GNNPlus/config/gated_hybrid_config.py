@@ -14,7 +14,9 @@ def gated_hybrid_cfg(cfg: CN) -> None:
     cfg.gnn.hybrid.attn_mask = 'full'  # full | graph_restricted
     cfg.gnn.hybrid.gate = 'headwise'  # elementwise | headwise | none (ungated)
     # Optional override for MP heads only. Empty ⇒ same as ``gate``.
-    # Set ``none`` for attention-gated / MP-ungated (paper Table 6 ablation).
+    # Set ``none`` for attention-gated / MP-ungated (paper Table 6 ``SiGMA_attn_gate``).
+    # For MP-gated / attention-ungated (``SiGMA_ungated_attn``): ``gate=none`` and
+    # ``mp_gate`` = the original yaml style (``headwise`` / ``elementwise``).
     cfg.gnn.hybrid.mp_gate = ''
     cfg.gnn.hybrid.norm = 'layernorm'  # layernorm | rmsnorm | none
     cfg.gnn.hybrid.gnn_types = ''  # e.g. "GCN,GIN,GCNE,GATEDGCN" — see configs/gated_hybrid/README.md (GATEDGCN semantics)

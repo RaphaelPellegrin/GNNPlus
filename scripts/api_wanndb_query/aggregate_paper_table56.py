@@ -69,6 +69,7 @@ TABLE5_VARIANTS: tuple[str, ...] = (
     "SiGMA",
     "SiGMA_ungated",
     "SiGMA_attn_gate",
+    "SiGMA_ungated_attn",
     "Attn_only",
     "MP_only",
 )
@@ -249,12 +250,16 @@ def aggregate_group(
     *,
     metric_key: str,
     score_states: Sequence[str],
+    dedupe_seed: bool = False,
+    higher_better: bool = True,
 ) -> ExperimentAgg:
-    """Compute mean ± std over runs in ``score_states`` that have the metric."""
+    """Compute mean ± std over runs in ``score_states`` that have the metric.
+
+    When ``dedupe_seed`` is True, keep one run per seed: prefer names without
+    ``_h200`` / ``retry``, then best metric (higher or lower per dataset).
+    """
     score_state_set = {s.lower() for s in score_states}
-    values: list[float] = []
-    seeds: list[Optional[int]] = []
-    run_ids: list[str] = []
+    scored: list[tuple[Optional[int], float, str, str]] = []
     n_other = 0
 
     for run in runs:
@@ -264,12 +269,28 @@ def aggregate_group(
         if state not in score_state_set or metric is None:
             n_other += 1
             continue
-        values.append(metric)
-        seeds.append(_parse_seed(run))
-        run_ids.append(str(run.id))
+        scored.append((_parse_seed(run), metric, str(run.id), str(run.name or "")))
+
+    if dedupe_seed and scored:
+        by_seed: dict[Optional[int], list[tuple[Optional[int], float, str, str]]] = {}
+        for row in scored:
+            by_seed.setdefault(row[0], []).append(row)
+
+        def _rank(row: tuple[Optional[int], float, str, str]) -> tuple[int, float]:
+            _seed, metric, _rid, name = row
+            prio = (2 if "_h200" in name else 0) + (1 if "retry" in name.lower() else 0)
+            # Lower tuple sorts first: prefer primary, then best metric.
+            metric_key_sort = -metric if higher_better else metric
+            return (prio, metric_key_sort)
+
+        scored = [sorted(rows, key=_rank)[0] for _, rows in sorted(by_seed.items(), key=lambda kv: (kv[0] is None, kv[0]))]
+        n_other += sum(len(rows) - 1 for rows in by_seed.values())
+
+    values = [m for _, m, _, _ in scored]
+    seeds = [s for s, _, _, _ in scored]
+    run_ids = [rid for _, _, rid, _ in scored]
 
     if not values:
-        # n_other already counts every unscored run from the loop above.
         return ExperimentAgg(
             spec=spec,
             n_finished=0,
@@ -440,6 +461,11 @@ def main() -> None:
         help="Print per-seed rows for every group",
     )
     parser.add_argument(
+        "--dedupe-seed",
+        action="store_true",
+        help="Keep one finished run per seed (prefer non-_h200/non-retry, then best metric)",
+    )
+    parser.add_argument(
         "--only-complete",
         action="store_true",
         help="Only print groups with expected_n scored runs",
@@ -484,6 +510,8 @@ def main() -> None:
                 runs,
                 metric_key=args.metric,
                 score_states=score_states,
+                dedupe_seed=bool(args.dedupe_seed),
+                higher_better=HIGHER_BETTER.get(spec.dataset, True),
             )
         )
 

@@ -65,3 +65,35 @@ def test_default_mp_gate_matches_gate() -> None:
     mp = layer.mp_heads[0]
     assert isinstance(mp, _ProjectedMPHead)
     assert mp.gate_mode == "headwise"
+
+
+def test_ungated_attn_mp_gated() -> None:
+    """Attention ungated (``gate_mode=none``) while MP keeps headwise gates."""
+    d_model = 16
+    d_h = 8
+    layer = GatedHybridGraphLayer(
+        d_model=d_model,
+        num_attn_heads=1,
+        num_gnn_heads=1,
+        d_h=d_h,
+        gate_mode="none",
+        mp_gate_mode="headwise",
+        gnn_types=["GCN"],
+    )
+    assert layer.gate_mode == "none"
+    assert layer.mp_gate_mode == "headwise"
+    # Ungated attention Q proj is ``d_h`` only (no gate logit).
+    assert layer.qg_linears[0].out_features == d_h
+    mp = layer.mp_heads[0]
+    assert isinstance(mp, _ProjectedMPHead)
+    assert mp.gate_mode == "headwise"
+
+    n = 6
+    x = torch.randn(n, d_model)
+    edge_index = torch.tensor([[0, 1, 2, 3], [1, 2, 3, 4]], dtype=torch.long)
+    batch = torch.zeros(n, dtype=torch.long)
+    out = layer(x, edge_index, batch)
+    if isinstance(out, tuple):
+        out = out[0]
+    assert out.shape == (n, d_model)
+    assert torch.isfinite(out).all()

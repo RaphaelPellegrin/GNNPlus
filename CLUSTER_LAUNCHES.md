@@ -45,6 +45,16 @@ python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
 python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
 ```
 
+### 🛑 TO RUN — Table 6 Hybrid ungated Att (`SiGMA_ungated_attn`, 35 jobs)
+
+| | |
+|--|--|
+| **Submit** | `bash bash_interface/cluster/submit_paper_table5_ungated_attn.sh` |
+| **Tasks** | `1-35%10` |
+| **W&B** | `paper_T5_<ds>_SiGMA_ungated_attn` |
+| **Override** | `gate none` (attn) + `mp_gate` = yaml style (MP gated) |
+| **Docs** | [`Paper_ablations.md`](Paper_ablations.md) |
+
 **COCO gap relaunch** (inode-quota recovery, 2026-07-21, `mweber_gpu` 192h):
 
 | JOBID | Tasks | What |
@@ -478,6 +488,7 @@ bash bash_interface/sweeps/create_sweep.sh \
 |----------|--------|-------|
 | Table 5 LRGB | ✅ | `32232124` |
 | Table 6 SiGMA_attn_gate (LRGB) | ✅ | `35354579` |
+| Table 6 SiGMA_ungated_attn (7 ds) | 🛑 TO RUN | `submit_paper_table5_ungated_attn.sh` |
 | Table 5 COCO gaps relaunch | ✅ Attn `34070241`; MP/ungated ✅ `34081524` (prior ❌ `34070242`/`43`) | `34081524` |
 | Table 5+6 COCO H200 twin | ✅ T5 `34098505` · T6 `34098527` | `34098505` / `34098527` |
 | Table 5+6 COCO ep150 twin | ✅ T5 `34682558` · T6 `34682560` | `34682558` / `34682560` |
@@ -497,8 +508,8 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Table 6 VOC Homog_MP_ungated relaunch | ✅ `34070244` (4/5); seed1 retry ✅ `34409933` | `34409933` |
 | Heterogeneity TU relaunch | ✅ `34410913`; proteins_sigma ✅ `34869869` | `34869869` |
 | Hetero MUTAG/ENZYMES Xu et al. HPs | 🛑 TO RUN (6-job) | — |
-| Hetero full TU Xu HPs (6×4 + SAGE) | 🛑 TO RUN | `submit_heterogeneity_tu_powerful_full.sh` |
-| TU SiGMA gate-viz (Xu a2g2) | 🛑 TO RUN | `submit_tu_sigma_gate_viz.sh` |
+| Hetero full TU Xu HPs (6×4 + SAGE) | ✅ | `36604947` |
+| TU SiGMA gate-viz (Xu a2g2) | ✅ | `36604951` |
 | ENZYMES SiGMA a8g8 hetero | ✅ | `34875028` |
 | TU all-layer activations | ✅ | `34869795` |
 | Table 6 1-MP peptides | ✅ | `32717625` |

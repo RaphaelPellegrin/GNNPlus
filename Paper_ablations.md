@@ -31,6 +31,7 @@ If any anchor looks wrong, open the run → **Overview → Reproduce** and paste
 | **`SiGMA`** | Best gated hybrid (paper row) | none (anchor as-is) |
 | **`SiGMA_ungated`** | Same heads, **no gating** | `gnn.hybrid.gate none` |
 | **`SiGMA_attn_gate`** | Gate **attention only**; MP ungated | `gnn.hybrid.mp_gate none` (yaml `gate` kept) |
+| **`SiGMA_ungated_attn`** | Gate **MP only**; attention ungated | `gnn.hybrid.gate none` + `mp_gate` = yaml style |
 | **`Attn_only`** | Drop MP; replace with attention | `num_attn=Na+Ng`, `num_gnn=0` |
 | **`MP_only`** | Drop attention; replace with same MP type | `num_attn=0`, `num_gnn=Na+Ng`, types repeated |
 
@@ -42,11 +43,12 @@ If any anchor looks wrong, open the run → **Overview → Reproduce** and paste
   - `paper_T5_coco_SiGMA`
   - `paper_T5_coco_SiGMA_ungated`
   - `paper_T5_coco_SiGMA_attn_gate`
+  - `paper_T5_coco_SiGMA_ungated_attn`
   - `paper_T5_coco_Attn_only`
   - `paper_T5_coco_MP_only`
 - **Tags** on every run: `paper_table5`, `<Variant>`, `<dataset>`, `seed<k>`, `source_<runid>`
 
-Filter UI: Tags → `SiGMA` vs `SiGMA_ungated` vs `SiGMA_attn_gate` vs `Attn_only` vs `MP_only`.
+Filter UI: Tags → `SiGMA` vs `SiGMA_ungated` vs `SiGMA_attn_gate` vs `SiGMA_ungated_attn` vs `Attn_only` vs `MP_only`.
 
 ---
 
@@ -96,6 +98,31 @@ bash bash_interface/cluster/submit_paper_table5_attn_gate_only.sh
 | **W&B** | `paper_T5_<ds>_SiGMA_attn_gate` |
 | **Logs** | `logs_gnnplus/sigma_T5_attn_gate_35354579_<TASK>.log` |
 | **Needs** | `gnn.hybrid.mp_gate` (this branch) |
+
+### Hybrid ungated Att (`SiGMA_ungated_attn`) — 35 jobs
+
+Opposite of attn_gate: **attention ungated** (`gate none`), **MP keeps yaml gate** (`mp_gate` = elementwise|headwise).
+
+7 datasets × 5 seeds: peptides_func / peptides_struct / VOC / COCO / MNIST / CIFAR10 / PATTERN.
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_paper_table5_ungated_attn.sh
+# 👉 paste JOBID
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *submit above* |
+| **Tasks** | `1-35%10` |
+| **Scripts** | `submit_paper_table5_ungated_attn.sh` → `run_paper_table5_ungated_attn.sh` |
+| **W&B** | `paper_T5_<ds>_SiGMA_ungated_attn` |
+| **Override** | `gate none` + `mp_gate` elementwise\|headwise |
 
 ### Relaunch — COCO Attn_only on `gpu_h200` (5 seeds, new job)
 
@@ -203,10 +230,12 @@ bash bash_interface/cluster/submit_paper_table5_coco_ungated_a1g2.sh
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 TO RUN |
+| **SLURM** | ✅ **`36161505`** (2026-07-30) |
 | **Tasks** | `1-10%5` · **ep=300** |
 | **Scripts** | `submit/run_paper_table5_coco_ungated_a1g2.sh` |
 | **Anchor** | `coco-hybrid-5b4z9l3u-a1g1-anchor.yaml` |
+| **Logs** | `logs_gnnplus/sigma_T5_coco_a1g2_36161505_<TASK>.log` |
+| **W&B** | `paper_T5_coco_SiGMA_ungated_a1g2` · `paper_T5_coco_SiGMA_attn_gate_a1g2` |
 
 ---
 

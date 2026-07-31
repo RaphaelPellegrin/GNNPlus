@@ -126,11 +126,12 @@ bash bash_interface/cluster/submit_dump_tu_sigma_gates.sh
 
 | Field | Value |
 |-------|-------|
-| **SLURM hetero** | 🛑 *submit above* |
-| **SLURM gate-viz** | 🛑 *submit above* |
+| **SLURM hetero** | ✅ **`36604947`** · `1-24%8` · mweber_gpu |
+| **SLURM gate-viz** | ✅ **`36604951`** · `1-6%6` · seed 2 · ckpt period 50 |
 | **Tasks hetero** | `1-24%8` |
 | **Tasks gate** | `1-6%6` |
 | **Scripts** | `submit_heterogeneity_tu_powerful_full.sh`, `submit_tu_sigma_gate_viz.sh`, `submit_dump_tu_sigma_gates.sh` |
+| **Logs** | `logs_gnnplus/hetero_tu_full_36604947_<TASK>.log` · `tu_sigma_gate_36604951_<TASK>.log` |
 
 ---
 
