@@ -56,6 +56,9 @@ class CustomGNN(torch.nn.Module):
         elif model_type == 'gcne':
             from GNNPlus.layer.gcn_conv_layer_e import GCNConvLayer
             return GCNConvLayer
+        elif model_type in ('sage', 'graphsage'):
+            from GNNPlus.layer.sage_conv_layer import SAGEConvLayer
+            return SAGEConvLayer
         elif model_type in ('unitarygcn', 'unigcn', 'unitarygcnconv'):
             from GNNPlus.layer.unitary_conv_layer import UnitaryGCNConvLayer
             return UnitaryGCNConvLayer

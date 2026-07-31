@@ -9,3 +9,4 @@ tensorboardX
 ogb
 wandb
 opt_einsum
+matplotlib>=3.5.3

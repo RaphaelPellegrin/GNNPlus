@@ -496,7 +496,9 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Table 6 VOC Homog_MP | ✅ | `33810534` |
 | Table 6 VOC Homog_MP_ungated relaunch | ✅ `34070244` (4/5); seed1 retry ✅ `34409933` | `34409933` |
 | Heterogeneity TU relaunch | ✅ `34410913`; proteins_sigma ✅ `34869869` | `34869869` |
-| Hetero MUTAG/ENZYMES Xu et al. HPs | 🛑 TO RUN | — |
+| Hetero MUTAG/ENZYMES Xu et al. HPs | 🛑 TO RUN (6-job) | — |
+| Hetero full TU Xu HPs (6×4 + SAGE) | 🛑 TO RUN | `submit_heterogeneity_tu_powerful_full.sh` |
+| TU SiGMA gate-viz (Xu a2g2) | 🛑 TO RUN | `submit_tu_sigma_gate_viz.sh` |
 | ENZYMES SiGMA a8g8 hetero | ✅ | `34875028` |
 | TU all-layer activations | ✅ | `34869795` |
 | Table 6 1-MP peptides | ✅ | `32717625` |

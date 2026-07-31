@@ -46,7 +46,95 @@ Implementation:
 
 ---
 
-## Launch
+## Relaunch — Xu et al. ICLR 2019 hyperparams (arXiv:1810.00826)
+
+Official code: [`weihua916/powerful-gnns`](https://github.com/weihua916/powerful-gnns).
+
+**Recipe we freeze** (paper §7 + repo defaults; fixed train setting for fair model compare):
+
+| Knob | Value |
+|------|--------|
+| Depth | 5 GNN layers incl. input → `layers_mp: 4` |
+| Hidden | 64 |
+| Batch | 128 |
+| Dropout (final/head) | 0.5 |
+| Optimizer | Adam `lr=0.01`, `weight_decay=0` |
+| LR schedule | ×0.5 every 50 epochs (`scheduler: step`, milestones 50…300) |
+| Epochs | 350 |
+| Graph pooling | **sum** (`add`) on bio |
+| GIN | sum neigh. agg, no residual/FFN (GIN-0 style) |
+| GCN | mean neigh. agg |
+| SiGMA | a2g2 hybrid under the **same** optim/train recipe |
+
+**Note:** ENZYMES is **not** in Xu et al. (they use MUTAG/PTC/NCI1/PROTEINS); we apply the same bioinformatics recipe. Paper JK-sums layer-wise scores; our stack uses final-layer sum pooling.
+
+Configs: `configs/heterogeneity/powerful_gnns/{mutag,enzymes}-{gcn,gin,sigma}.yaml`  
+W&B: `building_hetero_profile_<ds>_powerful_gnns` / `<ds>_<model>_powerful_gnns`
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_heterogeneity_powerful_gnns.sh
+# 👉 paste JOBID
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *not submitted yet* |
+| **Tasks** | `1-6` (mutag×3 then enzymes×3) |
+| **Scripts** | `submit_heterogeneity_powerful_gnns.sh` → `run_heterogeneity_powerful_gnns.sh` |
+
+---
+
+## Full TU grid (Xu HPs) — GCN / GIN / SAGE / SiGMA · ≥100 test apps
+
+Loader-supported [TUDataset](https://pytorch-geometric.readthedocs.io/en/2.7.0/generated/torch_geometric.datasets.TUDataset.html)
+names only (not every PyG TU set): **MUTAG, ENZYMES, PROTEINS, DD, NCI1, TRIANGLES**.
+
+| Model | Architecture | Hyperparams |
+|-------|--------------|-------------|
+| **GCN** | `custom_gnn` · `layer_type: gcn` | Xu et al. (L4 / H64 / batch 128 / Adam 0.01 / step / 350 ep / sum pool) |
+| **GIN** | `custom_gnn` · `layer_type: gin` · sum agg | same |
+| **SAGE** | `custom_gnn` · `layer_type: sage` · mean agg | **same Xu schedule** (no dedicated TU graph-class paper; fair width/depth/optim match) |
+| **SiGMA** | `hybrid_gnn` **a2g2** · `gnn_types: GIN,GIN` + 2 attn | same optim; GIN = Xu-best bio MP + attention |
+
+Configs: `configs/heterogeneity/powerful_gnns/{mutag,enzymes,proteins,dd,nci1,triangles}-{gcn,gin,sage,sigma}.yaml`  
+(24 YAMLs; SiGMA overwrites prior `GCN,GIN` sigma to **`GIN,GIN`**.)
+
+**Also:** dedicated SiGMA **gate-viz** (ckpt every 50 ep) + dump → per-graph γ for plots.
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+# 1) Hetero profiles (24 jobs, ≥100 test appearances each)
+bash bash_interface/cluster/submit_heterogeneity_tu_powerful_full.sh
+
+# 2) SiGMA ckpt train for gate dumps (6 jobs)
+bash bash_interface/cluster/submit_tu_sigma_gate_viz.sh
+
+# 3) after (2) finishes — dump gate_values_per_graph.pt
+bash bash_interface/cluster/submit_dump_tu_sigma_gates.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM hetero** | 🛑 *submit above* |
+| **SLURM gate-viz** | 🛑 *submit above* |
+| **Tasks hetero** | `1-24%8` |
+| **Tasks gate** | `1-6%6` |
+| **Scripts** | `submit_heterogeneity_tu_powerful_full.sh`, `submit_tu_sigma_gate_viz.sh`, `submit_dump_tu_sigma_gates.sh` |
+
+---
+
+## Launch (prior TU grid)
 
 ```text
 ╔══════════════════════════════════════════════════════════════════╗
@@ -127,10 +215,29 @@ python scripts/heterogeneity/build_heterogeneity_html.py
 
 # open
 open results/heterogeneity/heterogeneity_profiles.html
+
+# MUTAG only, points colored by graph class (graph_idx ↔ TUDataset / TMD CSV)
+python scripts/heterogeneity/build_heterogeneity_html.py \
+  --datasets mutag --color_by_class \
+  --output results/heterogeneity/heterogeneity_profiles_mutag_by_class.html
+open results/heterogeneity/heterogeneity_profiles_mutag_by_class.html
 ```
 
 - PNGs (x = rank hard→easy): `results/heterogeneity/paper_figures_by_accuracy/`
 - HTML: `results/heterogeneity/heterogeneity_profiles.html`
+- MUTAG by class: `results/heterogeneity/heterogeneity_profiles_mutag_by_class.html`  
+  (class 0 is harder than class 1 across GCN / GIN / SiGMA; hover shows `graph_idx`)
+- Paper PNGs (class-colored hetero profiles + model mean±std):
+  ```bash
+  python scripts/heterogeneity/plot_mutag_class_profiles.py --dataset mutag
+  # → .../mutag_GCN_GIN_SiGMA_by_class.png
+  python scripts/heterogeneity/plot_mutag_class_profiles.py --dataset enzymes
+  # → .../enzymes_GCN_GIN_SiGMA_by_class.png  (3 panels)
+  # → .../enzymes_GCN_GIN_SiGMA_by_class_overlay.png  (18-color overlay)
+  python scripts/heterogeneity/build_heterogeneity_html.py \
+    --datasets enzymes --color_by_class --skip_png \
+    --output results/heterogeneity/heterogeneity_profiles_enzymes_by_class.html
+  ```
 
 When `proteins_sigma` finishes, pull its artifact then re-run the builder.
 
@@ -150,7 +257,7 @@ bash bash_interface/cluster/submit_heterogeneity_enzymes_sigma_a8g8.sh
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *paste JOBID* |
+| **SLURM** | ✅ **`34875028`** (2026-07-24, `mweber_gpu`) |
 | **Config** | `configs/heterogeneity/enzymes-sigma-a8g8.yaml` |
 | **W&B** | `building_hetero_profile_enzymes` / `enzymes_sigma_a8g8` |
 | **Source** | [MOE_6/7dsqq7z2](https://wandb.ai/weber-geoml-harvard-university/MOE_6/runs/7dsqq7z2) |

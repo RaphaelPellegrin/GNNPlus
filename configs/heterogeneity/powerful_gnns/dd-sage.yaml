@@ -1,0 +1,63 @@
+# Heterogeneity profile under Xu et al. ICLR 2019 (arXiv:1810.00826) HPs.
+# Official code: https://github.com/weihua916/powerful-gnns
+#
+# Recipe (bio / fixed train): layers_mp=4, hidden=64, batch=128, dropout=0.5,
+# Adam lr=0.01, step×0.5 every 50 epochs, SUM graph pool, 350 epochs.
+# SAGE uses the same schedule (GraphSAGE has no TU graph-class paper recipe;
+# we match Xu width/depth/optim for fair comparison with GCN/GIN).
+# SiGMA: a2g2 with GIN,GIN (Xu-best bio MP) + 2 attention heads, same optim.
+
+out_dir: results/heterogeneity/powerful_gnns
+metric_best: accuracy
+metric_agg: argmax
+wandb:
+  use: True
+  project: GNNPlus
+  entity: weber-geoml-harvard-university
+  group: ''
+  name: ''
+dataset:
+  format: PyG-TUDataset
+  name: DD
+  task: graph
+  task_type: classification
+  transductive: False
+  split_mode: random
+  split: [0.5, 0.25, 0.25]
+  node_encoder: True
+  node_encoder_name: LinearNode
+  node_encoder_bn: False
+  edge_encoder: False
+  edge_encoder_bn: False
+train:
+  mode: custom
+  batch_size: 128
+  eval_period: 1
+  ckpt_period: 100
+  enable_ckpt: False
+  eval_smoothing_metrics: False
+model:
+  type: custom_gnn
+  loss_fun: cross_entropy
+  graph_pooling: add
+gnn:
+  head: default
+  layer_type: sage
+  layers_mp: 4
+  layers_pre_mp: 0
+  layers_post_mp: 1
+  dim_inner: 64
+  act: relu
+  dropout: 0.5
+  agg: mean
+  ffn: False
+  residual: False
+optim:
+  clip_grad_norm: False
+  optimizer: adam
+  weight_decay: 0.0
+  base_lr: 0.01
+  max_epoch: 350
+  scheduler: step
+  steps: [50, 100, 150, 200, 250, 300]
+  lr_decay: 0.5
