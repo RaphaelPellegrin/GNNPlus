@@ -8,16 +8,16 @@ Master tracker: [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md)
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑🛑🛑  TO RUN  ·  not submitted yet  🛑🛑🛑                          ║
+║  🔄  RUNNING  ·  array 35720034  ·  1-75%10                              ║
 ║  🧪  3 ds × 5 variants × 5 seeds = 75 jobs                               ║
-║  🚀  bash bash_interface/cluster/submit_paper_table5_mnist_cifar_ablations.sh ║
+║  📄  logs_gnnplus/sigma_T5_mc_35720034_<TASK>.log                        ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🛑 **TO RUN** |
-| **SLURM array** | 🛑 *not submitted yet* — paste JOBID here after launch |
+| **Status** | 🔄 **RUNNING** |
+| **SLURM array** | `35720034` (`1-75%10`) · ungated seed4 retry ✅ **`35773781`** task 10 · attn_gate redo ✅ **`36000721`** tasks `11-15` |
 | **Job name** | `sigma_T5_mc` |
 | **Tasks** | `1-75%10` |
 | **W&B** | `paper_T5_{mnist,cifar10,pattern}_{SiGMA,SiGMA_ungated,SiGMA_attn_gate,Attn_only,MP_only}` |
@@ -31,6 +31,21 @@ Master tracker: [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md)
 | MNIST | 98.628 ± 0.105 (n=5) | `configs/gated_hybrid/mnist-hybrid-lcvbyyss-a2g2-anchor.yaml` | [`uh7nxm4e`](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/uh7nxm4e) seed0 | a2g2 GATEDGCN×2, elementwise, L6/H60/d_h64, lr=5e-4, ep=200 |
 | CIFAR10 | 79.528 ± 0.180 (n=5) | `configs/gated_hybrid/cifar10-hybrid-ulij45a2-anchor.yaml` | [`3tx560wq`](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/3tx560wq) seed1 | a8g4 GATEDGCN×4, headwise, L10/H35/d_h256, lr≈4.66e-4, ep=400 |
 | PATTERN | 86.991 ± 0.039 (n=5) | `configs/gated_hybrid/pattern-gcne-best-hybrid.yaml` | [`ta9qtxb9`](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/ta9qtxb9) seed0 | a2g2 GCNE×2, elementwise, L12/H90/d_h90, RWSE, ep=200 |
+
+**PATTERN paper-best SiGMA (GRIT+VN4)** — use this as the Table 5/6 PATTERN SiGMA anchor when reporting ~87.4%:
+
+| Dataset | Paper Acc (%) | Anchor | W&B group | Arch |
+|---------|---------------|--------|-----------|------|
+| PATTERN | **87.395 ± 0.194** (n=5, seeds 5–9) | `pattern-hybrid-ta9qtxb9-grit-attn-anchor.yaml` + VN=4 | [`paper_sigma_grit_attn_pattern_vn4`](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/paper_sigma_grit_attn_pattern_vn4) | a2g2 GCNE×2, **`attn_type=grit`**, **VN=4**, RRWP k=21 |
+
+Ablations on that anchor (do **not** mix with vanilla `paper_T5_pattern_*`):
+
+```bash
+bash bash_interface/cluster/submit_paper_table5_pattern_gritvn4_ablations.sh
+# W&B: paper_T5_pattern_gritvn4_{SiGMA_ungated,SiGMA_attn_gate,SiGMA_ungated_attn,Attn_only,MP_only}
+# SiGMA row: reuse paper_sigma_grit_attn_pattern_vn4 (INCLUDE_SIGMA=0 default)
+# Seeds 5–9; 25 jobs; mem 128GB / 120h
+```
 
 ---
 
@@ -68,12 +83,12 @@ Optional: `PAPER_T5_MC_PARALLEL=N` (default **10**).
 
 | Field | Value |
 |-------|-------|
-| **Status** | 🛑 **TO RUN** |
-| **SLURM array** | 🛑 *not submitted yet* |
+| **Status** | 🔄 **RUNNING** |
+| **SLURM array** | `35720034` |
 | **Job name** | `sigma_T5_mc` |
 | **Tasks** | `1-75%10` = 3×5×5 |
 | **Scripts** | `submit_paper_table5_mnist_cifar_ablations.sh` → `run_paper_table5_mnist_cifar_ablations.sh` |
-| **Logs** | `logs_gnnplus/sigma_T5_mc_<JOBID>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/sigma_T5_mc_35720034_<TASK>.log` |
 | **Master tracker** | [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md) |
 
 ---

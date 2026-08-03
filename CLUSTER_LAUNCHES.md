@@ -45,15 +45,26 @@ python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
 python scripts/api_wanndb_query/aggregate_paper_table56.py --table 5
 ```
 
-### 🛑 TO RUN — Table 6 Hybrid ungated Att (`SiGMA_ungated_attn`, 35 jobs)
+### 🧪 Table 6 — Hybrid ungated Att (`SiGMA_ungated_attn`, 35 jobs)
 
 | | |
 |--|--|
-| **Submit** | `bash bash_interface/cluster/submit_paper_table5_ungated_attn.sh` |
+| **SLURM** | ✅ **`36605829`** |
+| **When** | 2026-07-31 |
 | **Tasks** | `1-35%10` |
+| **Partition** | `mweber_gpu` · 120h · out_dir netscratch |
+| **Docs** | [`Paper_ablations.md`](Paper_ablations.md) |
 | **W&B** | `paper_T5_<ds>_SiGMA_ungated_attn` |
 | **Override** | `gate none` (attn) + `mp_gate` = yaml style (MP gated) |
-| **Docs** | [`Paper_ablations.md`](Paper_ablations.md) |
+| **Logs** | `logs_gnnplus/sigma_T5_ungated_attn_36605829_<TASK>.log` |
+
+### 🧪 Heterogeneity full TU (Xu HPs, 24 jobs)
+
+| | |
+|--|--|
+| **SLURM** | ✅ **`36604947`** · `1-24%8` |
+| **Gate-viz** | ✅ **`36604951`** · `1-6` |
+| **Docs** | [`Paper_heterogeneity.md`](Paper_heterogeneity.md) |
 
 **COCO gap relaunch** (inode-quota recovery, 2026-07-21, `mweber_gpu` 192h):
 
@@ -437,6 +448,46 @@ bash bash_interface/cluster/submit_heterogeneity_powerful_gnns.sh
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
+║  ⏳  READY  ·  PATTERN Table 5 on GRIT+VN4 SiGMA (~87.4%)               ║
+║  🧪  ungated / attn_gate / ungated_attn / Attn_only / MP_only × seeds5–9 ║
+║  📄  Paper_ablations_mnist_cifar.md · submit_…_pattern_gritvn4_….sh      ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+| Field | Value |
+|-------|-------|
+| **Anchor SiGMA** | `paper_sigma_grit_attn_pattern_vn4` · **87.395±0.194%** (seeds 5–9) |
+| **Config** | `pattern-hybrid-ta9qtxb9-grit-attn-anchor.yaml` + VN=4 |
+| **Submit (all remaining gaps)** | `bash bash_interface/cluster/submit_paper_table56_remaining_gaps.sh` |
+| **Or individually** | T5 gap-fill · T5 PATTERN gritvn4 · T6 PATTERN gritvn4 |
+| **T5 gap-fill** | CIFAR `MP_only` (5) + COCO `ungated_attn` seeds 1–4 · `submit_paper_table5_gap_fill.sh` |
+| **T5 PATTERN gritvn4** | 25 jobs · `paper_T5_pattern_gritvn4_*` |
+| **T6 PATTERN gritvn4** | 15 jobs · `paper_T6_pattern_gritvn4_{Homog_MP_ungated,Hetero_MP,Hetero_MP_ungated}` |
+| **Already done (no relaunch)** | CIFAR `ungated_attn` **79.754±0.339%** · CIFAR `Hetero_MP` **79.262±0.405%** |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
+║  ⏳  READY  ·  CLUSTER Table 5 + Table 6 on ht9bntg2 (78.956±0.112%)   ║
+║  🧪  T5 arch ablations (25) + T6 +1MP homog/hetero (20)                  ║
+║  📄  submit_paper_table5_cluster_ablations.sh / …_table6_cluster_1mp.sh  ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+| Field | Value |
+|-------|-------|
+| **SiGMA** | `paper_bestmodel_v1_cluster_ht9bntg2` · **78.956±0.112%** |
+| **Config** | `cluster-hybrid-ht9bntg2-anchor.yaml` — a1g1 GATEDGCN, headwise, LN, full, L16/56/64, lr=1.492e-3, 5/100, bs16 (**vanilla attn**) |
+| **T5 W&B** | `paper_T5_cluster_{SiGMA_ungated,SiGMA_attn_gate,SiGMA_ungated_attn,Attn_only,MP_only}` |
+| **T6 W&B** | `paper_T6_cluster_{Homog_MP,Hetero_MP,Homog_MP_ungated,Hetero_MP_ungated}` |
+| **T6 recipe** | +1 MP (like COCO a1g1): Homog `GATEDGCN×2` / Hetero `GATEDGCN,GCN` |
+| **Note** | GRIT CLUSTER ≈79.11% (`paper_sigma_grit_attn_cluster`) — higher, but not the cited paper SiGMA |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
 ║  🔄  RUNNING  ·  Table 7 MNIST/CIFAR/PATTERN · 35721068 (45 jobs)       ║
 ║  🧪  Homog_ungated / Hetero / Hetero_ungated (1-head swap)               ║
 ║  📄  Paper_table6_mnist_cifar_pattern.md                                 ║
@@ -488,7 +539,7 @@ bash bash_interface/sweeps/create_sweep.sh \
 |----------|--------|-------|
 | Table 5 LRGB | ✅ | `32232124` |
 | Table 6 SiGMA_attn_gate (LRGB) | ✅ | `35354579` |
-| Table 6 SiGMA_ungated_attn (7 ds) | 🛑 TO RUN | `submit_paper_table5_ungated_attn.sh` |
+| Table 6 SiGMA_ungated_attn (7 ds) | ✅ | `36605829` |
 | Table 5 COCO gaps relaunch | ✅ Attn `34070241`; MP/ungated ✅ `34081524` (prior ❌ `34070242`/`43`) | `34081524` |
 | Table 5+6 COCO H200 twin | ✅ T5 `34098505` · T6 `34098527` | `34098505` / `34098527` |
 | Table 5+6 COCO ep150 twin | ✅ T5 `34682558` · T6 `34682560` | `34682558` / `34682560` |
