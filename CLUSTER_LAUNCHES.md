@@ -448,41 +448,26 @@ bash bash_interface/cluster/submit_heterogeneity_powerful_gnns.sh
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  ⏳  READY  ·  PATTERN Table 5 on GRIT+VN4 SiGMA (~87.4%)               ║
-║  🧪  ungated / attn_gate / ungated_attn / Attn_only / MP_only × seeds5–9 ║
-║  📄  Paper_ablations_mnist_cifar.md · submit_…_pattern_gritvn4_….sh      ║
+║  🔄  SUBMITTED 2026-08-03 · remaining Table 5/6 gaps                     ║
+║  🧪  gap-fill + PATTERN gritvn4 T5/T6 + CLUSTER ht9bntg2 T5/T6             ║
+║  📄  submit_paper_table56_remaining_gaps.sh                              ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
-| Field | Value |
-|-------|-------|
-| **Anchor SiGMA** | `paper_sigma_grit_attn_pattern_vn4` · **87.395±0.194%** (seeds 5–9) |
-| **Config** | `pattern-hybrid-ta9qtxb9-grit-attn-anchor.yaml` + VN=4 |
-| **Submit (all remaining gaps)** | `bash bash_interface/cluster/submit_paper_table56_remaining_gaps.sh` |
-| **Or individually** | T5 gap-fill · T5 PATTERN gritvn4 · T6 PATTERN gritvn4 |
-| **T5 gap-fill** | CIFAR `MP_only` (5) + COCO `ungated_attn` seeds 1–4 · `submit_paper_table5_gap_fill.sh` |
-| **T5 PATTERN gritvn4** | 25 jobs · `paper_T5_pattern_gritvn4_*` |
-| **T6 PATTERN gritvn4** | 15 jobs · `paper_T6_pattern_gritvn4_{Homog_MP_ungated,Hetero_MP,Hetero_MP_ungated}` |
-| **Already done (no relaunch)** | CIFAR `ungated_attn` **79.754±0.339%** · CIFAR `Hetero_MP` **79.262±0.405%** |
-
----
-
-```text
-╔══════════════════════════════════════════════════════════════════════════╗
-║  ⏳  READY  ·  CLUSTER Table 5 + Table 6 on ht9bntg2 (78.956±0.112%)   ║
-║  🧪  T5 arch ablations (25) + T6 +1MP homog/hetero (20)                  ║
-║  📄  submit_paper_table5_cluster_ablations.sh / …_table6_cluster_1mp.sh  ║
-╚══════════════════════════════════════════════════════════════════════════╝
-```
+| Array | JOBID | What |
+|-------|-------|------|
+| T5 gap-fill | **`36912369`** | CIFAR `MP_only` (1–5) + COCO `ungated_attn` seeds 1–4 (6–9) |
+| T5 PATTERN gritvn4 | **`36912370`** | 25 jobs · `paper_T5_pattern_gritvn4_*` · seeds 5–9 |
+| T6 PATTERN gritvn4 | **`36912372`** | 15 jobs · `paper_T6_pattern_gritvn4_*` |
+| T5 CLUSTER | **`36912373`** | 25 jobs · `paper_T5_cluster_*` · ht9bntg2 |
+| T6 CLUSTER | **`36912374`** | 20 jobs · `paper_T6_cluster_*` · +1 MP |
 
 | Field | Value |
 |-------|-------|
-| **SiGMA** | `paper_bestmodel_v1_cluster_ht9bntg2` · **78.956±0.112%** |
-| **Config** | `cluster-hybrid-ht9bntg2-anchor.yaml` — a1g1 GATEDGCN, headwise, LN, full, L16/56/64, lr=1.492e-3, 5/100, bs16 (**vanilla attn**) |
-| **T5 W&B** | `paper_T5_cluster_{SiGMA_ungated,SiGMA_attn_gate,SiGMA_ungated_attn,Attn_only,MP_only}` |
-| **T6 W&B** | `paper_T6_cluster_{Homog_MP,Hetero_MP,Homog_MP_ungated,Hetero_MP_ungated}` |
-| **T6 recipe** | +1 MP (like COCO a1g1): Homog `GATEDGCN×2` / Hetero `GATEDGCN,GCN` |
-| **Note** | GRIT CLUSTER ≈79.11% (`paper_sigma_grit_attn_cluster`) — higher, but not the cited paper SiGMA |
+| **Anchor PATTERN SiGMA** | `paper_sigma_grit_attn_pattern_vn4` · **87.395±0.194%** |
+| **Anchor CLUSTER SiGMA** | `paper_bestmodel_v1_cluster_ht9bntg2` · **78.956±0.112%** |
+| **Already done** | CIFAR `ungated_attn` 79.754±0.339% · CIFAR `Hetero_MP` 79.262±0.405% |
+| **Watch** | `squeue -u $USER` · logs `logs_gnnplus/sigma_T5_gap_36912369_*.log` etc. |
 
 ---
 
@@ -503,6 +488,35 @@ bash bash_interface/cluster/submit_heterogeneity_powerful_gnns.sh
 | **CIFAR hetero** | `GATEDGCN×3,GCN` (one head swap) |
 | **Aggregate** | `python scripts/api_wanndb_query/aggregate_paper_table56.py --table 6mc` |
 
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑  TO RUN  ·  TU GCN vs SiGMA homo vs SiGMA hetero (150 jobs)         ║
+║  🎯  6 TU × {GCN, homo a2g4×2LR, hetero a2g4×2LR} × 5 seeds            ║
+║  📄  Paper_tu_sigma_homo_hetero.md                                       ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_tu_sigma_homo_hetero.sh
+# 👉 paste JOBID into Paper_tu_sigma_homo_hetero.md + checklist below
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *not submitted yet* |
+| **Tasks** | `1-150%8` |
+| **Docs** | [`Paper_tu_sigma_homo_hetero.md`](Paper_tu_sigma_homo_hetero.md) |
+| **W&B** | `tu_hh_<ds>_{GCN,SiGMA_homo,SiGMA_hetero}_{lr001,lr01}` |
+| **Ckpt + gates** | best-val `ckpt/` · SiGMA auto `gate_values_per_graph.pt` |
 
 ---
 
@@ -566,3 +580,4 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Table 6 1-MP peptides | ✅ | `32717625` |
 | Table 6 COCO relaunch | ✅ mweber `34070245`; H200 twin `34098527` | `34070245` / `34098527` |
 | ENZYMES ogpkubk9 sweep | 🛑 TO RUN | — |
+| TU GCN vs SiGMA homo vs hetero | 🛑 TO RUN (150-job) | — |
