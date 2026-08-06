@@ -87,8 +87,8 @@ Scripts:
 
 ```text
 ╔══════════════════════════════════════════════════════════════════╗
-║  🛑🛑🛑  TO RUN  ·  paste SLURM JOBID below after submit  🛑🛑🛑 ║
-║  6 TU × {GCN, SiGMA_homo×2LR, SiGMA_hetero×2LR} × 5 seeds = 150  ║
+║  ✅  SUBMITTED  ·  SLURM 37434534  ·  2026-08-05  ·  %8          ║
+║  6 TU × {GCN, SiGMA_homo×2LR, SiGMA_hetero×2LR} × 5 seeds = 150 ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
@@ -99,20 +99,45 @@ export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-bash bash_interface/cluster/submit_tu_sigma_homo_hetero.sh
+# ✅ already submitted — do not re-run unless re-launching
+# bash bash_interface/cluster/submit_tu_sigma_homo_hetero.sh
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM array** | 🛑 *paste JOBID here* |
-| **Tasks** | `1-150%8` (override with `TU_SIGMA_HH_ARRAY` / `TU_SIGMA_HH_PARALLEL`) |
+| **SLURM array** | ✅ **`37434534`** (main 150); 🛑 DD SiGMA retry — see below |
+| **Tasks** | `1-150%8` |
 | **Partition / mem / time** | `mweber_gpu` / 64GB / 96h |
-| **Logs** | `logs_gnnplus/tu_sigma_hh_<JOBID>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/tu_sigma_hh_37434534_<TASK>.log` |
 | **Checkpoints / stats** | `$GNNPLUS_OUT_DIR/tu_sigma_homo_hetero/<ds>_<variant>_<lr>_seed<s>/` |
 | **Best model** | `…/ckpt/` (best val epoch) |
 | **Per-graph gates** | `…/gate_values_per_graph.pt` (SiGMA only; `[N, L, H]` attn + gnn) |
 | **Meta** | `…/train_meta.txt` + `config_used.yaml` |
 | **W&B** | `tu_hh_<ds>_{GCN,SiGMA_homo,SiGMA_hetero}_{lr001,lr01}` |
+
+### DD SiGMA retry (batch 16 / 128GB)
+
+Prior `37434534` DD SiGMA: seed 0 finished, seeds 1–4 **failed** (likely OOM @ batch 64).
+GCN DD is fine (n=5). Relaunch SiGMA only:
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_tu_dd_sigma_retry.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *paste JOBID* |
+| **Tasks** | `1-20%4` (homo×2 LR + hetero×2 LR × 5 seeds) |
+| **batch / mem** | **16** / **128GB** |
+| **W&B** | `tu_hh_dd_{SiGMA_homo,SiGMA_hetero}_{lr001,lr01}_bs16` |
+| **Logs** | `logs_gnnplus/tu_dd_sigma_<JOBID>_<TASK>.log` |
+| **Scripts** | `submit_tu_dd_sigma_retry.sh` / `run_tu_dd_sigma_retry.sh` |
 
 ### Task map
 
@@ -164,7 +189,47 @@ python scripts/gate_viz/plot_per_graph_gates.py \
   --out_dir results/gate_viz/tu_hh_enzymes_hetero_lr001_seed2
 ```
 
-Offline re-dump (if `.pt` missing; same 1–150 task map; GCN slots no-op):
+### Pull dumps from cluster → plot locally
+
+Training already wrote `gate_values_per_graph.pt` next to each SiGMA `ckpt/`
+(best-val checkpoint). On the cluster, check:
+
+```bash
+ls $GNNPLUS_OUT_DIR/tu_sigma_homo_hetero/*/gate_values_per_graph.pt | wc -l
+# expect ~80 SiGMA dirs with dumps (DD mostly missing; triangles hetero lr01 maybe incomplete)
+```
+
+Rsync only the `.pt` files (small) to your laptop:
+
+```bash
+mkdir -p results/tu_sigma_homo_hetero
+rsync -avz --include='*/' --include='gate_values_per_graph.pt' --exclude='*' \
+  rpellegrinext@holylogin.rc.fas.harvard.edu:/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results/tu_sigma_homo_hetero/ \
+  results/tu_sigma_homo_hetero/
+```
+
+Batch-plot best-LR / seed 2 (shared order by last-layer GIN head for hetero):
+
+```bash
+python scripts/gate_viz/plot_tu_hh_gates_batch.py \
+  --root results/tu_sigma_homo_hetero \
+  --out_dir results/gate_viz/tu_hh \
+  --seeds 2 \
+  --prefer-lr best_from_table \
+  --color-by-class
+```
+
+Or plot **on the cluster** (no rsync):
+
+```bash
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+python scripts/gate_viz/plot_tu_hh_gates_batch.py \
+  --root $GNNPLUS_OUT_DIR/tu_sigma_homo_hetero \
+  --out_dir $GNNPLUS_OUT_DIR/gate_viz/tu_hh \
+  --seeds 2 --prefer-lr best_from_table --color-by-class
+```
+
+If a `.pt` is missing but `ckpt/` exists, re-dump (same 1–150 task map; GCN no-op):
 
 ```bash
 bash bash_interface/cluster/submit_dump_tu_sigma_homo_hetero_gates.sh
