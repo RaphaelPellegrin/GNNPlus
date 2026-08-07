@@ -22,6 +22,7 @@ No heterogeneity profiles — plain training only (5 seeds × each family/LR).
 | Family | Model | Heads | MP types |
 |--------|-------|-------|----------|
 | **GCN** | `custom_gnn` / `gcn` | — | single GCN stack |
+| **GIN / SAGE / GAT** | `custom_gnn` | — | single stack (same L12/H64 recipe) |
 | **SiGMA (homo)** | `hybrid_gnn` | **a2g4** | `GCN,GCN,GCN,GCN` |
 | **SiGMA (hetero)** | `hybrid_gnn` | **a2g4** | `GCN,GIN,SAGE,GAT` |
 
@@ -291,6 +292,19 @@ Best-LR mapping used: MUTAG/ENZYMES/PROTEINS/IMDB hetero → `lr001`; COLLAB het
 REDDIT provisional `lr001` (update when both LRs finish). Add `--variants SiGMA_homo,SiGMA_hetero`
 for both families. REDDIT dumps appear only after those SiGMA jobs finish.
 
+Per-panel independent ranking (each cell sorted by its own γ↓):
+
+```bash
+python scripts/gate_viz/plot_tu_hh_gates_batch.py \
+  --root results/tu_sigma_homo_hetero \
+  --out_dir results/gate_viz/tu_hh_hetero \
+  --datasets paper --variants SiGMA_hetero \
+  --seeds 2 --prefer-lr best_from_table --color-by-class \
+  --sort-mode per_panel
+```
+
+Filenames: `*_shared_order_*.png` vs `*_by_rank_*.png`.
+
 If a `.pt` is missing but `ckpt/` exists, re-dump (same 1–150 task map; GCN no-op):
 
 ```bash
@@ -334,20 +348,42 @@ done
 | NCI1 | | |
 | TRIANGLES | | |
 
-### Final table (mean±std test accuracy)
+### Final table (mean±std test accuracy %)
+
+Paper table (Lukas / PyG stats set). SiGMA LR = better of `{1e-3, 1e-2}` per family.
 
 | Dataset | GCN | SiGMA (homo) | SiGMA (hetero) |
 |---------|-----|--------------|----------------|
-| MUTAG | | | |
-| ENZYMES | | | |
-| PROTEINS | | | |
-| DD | | | |
-| NCI1 | | | |
-| TRIANGLES | | | |
+| MUTAG | 75.74±8.85 | 73.19±4.15 (1e-3) | **84.68±3.50** (1e-3) |
+| ENZYMES | 41.87±5.24 | 47.07±1.98 (1e-3) | **47.60±6.99** (1e-3) |
+| PROTEINS | 72.97±3.39 | 73.41±1.99 (1e-2) | **74.12±1.06** (1e-3) |
+| COLLAB | 76.14±0.92 | 73.97±0.88 (1e-2) | **77.25±0.95** (1e-2) |
+| IMDB-BINARY | 65.44±1.85 | 66.64±1.19 (1e-2) | **69.92±2.75** (1e-3) |
+| REDDIT-BINARY | 92.60±1.62 | 87.92±7.51 (1e-3) | **92.72±1.01** (1e-3) |
 
----
+Social job **`37574967`**: all 75 tasks finished (REDDIT SiGMA n=5 both LRs).
 
-## Notes
+LaTeX (hetero bold when ≥ GCN and ≥ homo):
+
+```latex
+REDDIT-BINARY & $92.60{\pm}1.62$ & $87.92{\pm}7.51$ & $\mathbf{92.72{\pm}1.01}$ \\
+```
+
+### Standalone MPGNN baselines (GIN / SAGE / GAT)
+
+Same recipe as GCN (`custom_gnn`, L12, H64, lr=`1e-3`, residual+FFN, mean pool).
+Paper-table datasets only (GCN already done).
+
+| | |
+|--|--|
+| **Submit** | `bash bash_interface/cluster/submit_tu_mpgnn_baselines.sh` |
+| **Tasks** | 6 ds × {GIN,SAGE,GAT} × 5 seeds = **90** |
+| **W&B** | `tu_hh_<ds>_{GIN,SAGE,GAT}_lr001` |
+| **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_homo_hetero/<ds>_{GIN,SAGE,GAT}_lr001_seed<s>/` |
+| **SLURM** | _(paste JOBID)_ |
+
+Configs: `configs/tu_sigma_homo_hetero/{gin,sage,gat}-anchor.yaml`
+(GAT via new `GNNPlus/layer/gat_conv_layer.py`, heads=1 like SiGMA MP head).
 
 - Edge encoder off (TU graphs here have no edge attrs; avoids LinearEdge crash).
 - Paper table focus (Lukas / PyG stats): **MUTAG, ENZYMES, PROTEINS, COLLAB, IMDB-BINARY, REDDIT-BINARY**. NCI1 / TRIANGLES / DD were exploratory; social extras launched via `submit_tu_sigma_social.sh`.

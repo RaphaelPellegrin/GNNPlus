@@ -523,7 +523,7 @@ git pull
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  ✅  SUBMITTED  ·  SLURM 37574967  ·  1-75%20                            ║
+║  ✅  DONE  ·  SLURM 37574967  ·  REDDIT SiGMA n=5 both LRs               ║
 ║  🎯  TU social COLLAB / IMDB-BINARY / REDDIT-BINARY                      ║
 ║  📄  Paper_tu_sigma_homo_hetero.md                                       ║
 ╚══════════════════════════════════════════════════════════════════════════╝
@@ -536,25 +536,52 @@ export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-# ✅ already submitted — do not re-run unless re-launching
+# ✅ finished — do not re-run unless re-launching
 # bash bash_interface/cluster/submit_tu_sigma_social.sh
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | ✅ **`37574967`** |
+| **SLURM** | ✅ **`37574967`** (done) |
 | **Tasks** | `1-75%20` · mem 128GB |
 | **Docs** | [`Paper_tu_sigma_homo_hetero.md`](Paper_tu_sigma_homo_hetero.md) |
 | **Batches** | COLLAB 32 · IMDB 64 · REDDIT 16 |
 | **W&B** | `tu_hh_{collab,imdb_binary,reddit_binary}_*` |
 | **Logs** | `logs_gnnplus/tu_sigma_soc_37574967_<TASK>.log` |
+| **REDDIT** | GCN 92.60±1.62 · homo 87.92±7.51 · **hetero 92.72±1.01** |
 
 ---
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  SiGMA baby/tiny budget fills (≤500k / 1M / 2M)           ║
-║  🎯  14 families × 5 seeds = 70  ·  %20  ·  Paper_sigma_budget.md        ║
+║  ⏳  READY  ·  TU standalone GIN / SAGE / GAT (paper table set)          ║
+║  📄  Paper_tu_sigma_homo_hetero.md                                       ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+bash bash_interface/cluster/submit_tu_mpgnn_baselines.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **Submit** | `bash_interface/cluster/submit_tu_mpgnn_baselines.sh` |
+| **Tasks** | `1-90%20` · 6 ds × {GIN,SAGE,GAT} × 5 seeds |
+| **W&B** | `tu_hh_<ds>_{GIN,SAGE,GAT}_lr001` |
+| **Recipe** | same as GCN (L12/H64/lr=1e-3) |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
+║  ✅  SUBMITTED  ·  SLURM 37600400  ·  1-70%20                            ║
+║  🎯  SiGMA baby/tiny budget fills (≤500k / 1M / 2M)                      ║
+║  📄  Paper_sigma_budget.md                                               ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -565,14 +592,17 @@ export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-bash bash_interface/cluster/submit_sigma_budget.sh
+# ✅ already submitted — do not re-run unless re-launching
+# bash bash_interface/cluster/submit_sigma_budget.sh
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *paste JOBID* |
-| **Tasks** | `1-70%20` |
+| **SLURM** | ✅ **`37600400`** |
+| **Tasks** | `1-70%20` · mem 128GB |
 | **Docs** | [`Paper_sigma_budget.md`](Paper_sigma_budget.md) |
+| **Logs** | `logs_gnnplus/sigma_budget_37600400_<TASK>.log` |
+| **W&B** | `paper_budget_<ds>_<b500k\|b1m\|b2m>` |
 
 ---
 
