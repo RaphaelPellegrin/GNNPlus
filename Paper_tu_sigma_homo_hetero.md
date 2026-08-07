@@ -127,17 +127,51 @@ export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-bash bash_interface/cluster/submit_tu_dd_sigma_retry.sh
+# ✅ already submitted — do not re-run unless re-launching
+# bash bash_interface/cluster/submit_tu_dd_sigma_retry.sh
+```
+
+```text
+╔══════════════════════════════════════════════════════════════════╗
+║  ✅  SUBMITTED  ·  SLURM 37557549  ·  2026-08-06  ·  1-20%4     ║
+║  DD SiGMA retry · batch=16 · mem=128GB · 20 jobs                 ║
+╚══════════════════════════════════════════════════════════════════╝
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | ✅ **`37557549`** |
+| **Tasks** | `1-20%4` (homo×2 LR + hetero×2 LR × 5 seeds) |
+| **batch / mem** | **16** / **128GB** |
+| **W&B** | `tu_hh_dd_{SiGMA_homo,SiGMA_hetero}_{lr001,lr01}_bs16` |
+| **Logs** | `logs_gnnplus/tu_dd_sigma_37557549_<TASK>.log` |
+| **Scripts** | `submit_tu_dd_sigma_retry.sh` / `run_tu_dd_sigma_retry.sh` |
+
+### NCI1 SiGMA retry (new LRs + longer train)
+
+Prior best: hetero `lr=1e-3` → **79.03±1.19** vs GCN **80.51±0.71**.
+Retry: LR ∈ `{5e-4, 2e-3}`, `max_epoch=2000`, `schedule_patience=100`, `%10` GPUs.
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_tu_nci1_sigma_retry.sh
 ```
 
 | Field | Value |
 |-------|-------|
 | **SLURM** | 🛑 *paste JOBID* |
-| **Tasks** | `1-20%4` (homo×2 LR + hetero×2 LR × 5 seeds) |
-| **batch / mem** | **16** / **128GB** |
-| **W&B** | `tu_hh_dd_{SiGMA_homo,SiGMA_hetero}_{lr001,lr01}_bs16` |
-| **Logs** | `logs_gnnplus/tu_dd_sigma_<JOBID>_<TASK>.log` |
-| **Scripts** | `submit_tu_dd_sigma_retry.sh` / `run_tu_dd_sigma_retry.sh` |
+| **Tasks** | `1-20%10` |
+| **LRs** | `5e-4`, `2e-3` |
+| **max_epoch / patience** | **2000** / **100** |
+| **W&B** | `tu_hh_nci1_{SiGMA_homo,SiGMA_hetero}_{lr5e4,lr2e3}_ep2000` |
+| **Logs** | `logs_gnnplus/tu_nci1_sigma_<JOBID>_<TASK>.log` |
+| **Scripts** | `submit_tu_nci1_sigma_retry.sh` / `run_tu_nci1_sigma_retry.sh` |
+| **Target** | beat GCN 80.51±0.71% |
 
 ### Task map
 
