@@ -566,7 +566,10 @@ def preformat_TUDataset(dataset_dir, name):
     """
     if name in ['DD', 'MUTAG', 'NCI1', 'ENZYMES', 'PROTEINS', 'TRIANGLES']:
         func = None
-    elif name.startswith('IMDB-') or name == "COLLAB":
+    elif name.startswith('IMDB-') or name in ('COLLAB', 'REDDIT-BINARY', 'REDDIT-MULTI-5K', 'REDDIT-MULTI-12K'):
+        # Social datasets often have no node features; use constant ones
+        # (PyG TUDataset docs: Constant / OneHotDegree).
+        # https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.datasets.TUDataset.html
         func = T.Constant()
     else:
         raise ValueError(f"Loading dataset '{name}' from "

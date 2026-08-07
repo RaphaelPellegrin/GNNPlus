@@ -173,6 +173,31 @@ bash bash_interface/cluster/submit_tu_nci1_sigma_retry.sh
 | **Scripts** | `submit_tu_nci1_sigma_retry.sh` / `run_tu_nci1_sigma_retry.sh` |
 | **Target** | beat GCN 80.51±0.71% |
 
+### TU social extras (COLLAB / IMDB-BINARY / REDDIT-BINARY)
+
+PyG [TUDataset](https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.datasets.TUDataset.html) stats-table set (Lukas): keep MUTAG/ENZYMES/PROTEINS; **drop NCI1/TRIANGLES/DD** from the paper table; add these three (0 node features → `Constant()`).
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_tu_sigma_social.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *paste JOBID* |
+| **Tasks** | `1-75%20` |
+| **Mem** | 128GB |
+| **Batches** | COLLAB 32 · IMDB 64 · REDDIT 16 |
+| **W&B** | `tu_hh_{collab,imdb_binary,reddit_binary}_{GCN,SiGMA_homo,SiGMA_hetero}_{lr001,lr01}` |
+| **Logs** | `logs_gnnplus/tu_sigma_soc_<JOBID>_<TASK>.log` |
+| **Scripts** | `submit_tu_sigma_social.sh` / `run_tu_sigma_social.sh` |
+| **Loader** | `REDDIT-BINARY` added to `preformat_TUDataset` (+ Constant) |
+
 ### Task map
 
 Per dataset block of 25 tasks (seeds 0–4):
@@ -322,5 +347,6 @@ done
 ## Notes
 
 - Edge encoder off (TU graphs here have no edge attrs; avoids LinearEdge crash).
-- IMDB / COLLAB not included (degree features / different loader path); add later if needed.
+- Paper table focus (Lukas / PyG stats): **MUTAG, ENZYMES, PROTEINS, COLLAB, IMDB-BINARY, REDDIT-BINARY**. NCI1 / TRIANGLES / DD were exploratory; social extras launched via `submit_tu_sigma_social.sh`.
+- IMDB / COLLAB / REDDIT use `Constant()` node features (no native node attrs).
 - Also listed in [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md).

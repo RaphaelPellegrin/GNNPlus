@@ -493,7 +493,7 @@ bash bash_interface/cluster/submit_heterogeneity_powerful_gnns.sh
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  TU GCN vs SiGMA homo vs SiGMA hetero (150 jobs)         ║
+║  ✅  SUBMITTED  ·  SLURM 37434534  ·  2026-08-05  ·  1-150%8            ║
 ║  🎯  6 TU × {GCN, homo a2g4×2LR, hetero a2g4×2LR} × 5 seeds            ║
 ║  📄  Paper_tu_sigma_homo_hetero.md                                       ║
 ╚══════════════════════════════════════════════════════════════════════════╝
@@ -506,17 +506,46 @@ export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-bash bash_interface/cluster/submit_tu_sigma_homo_hetero.sh
-# 👉 paste JOBID into Paper_tu_sigma_homo_hetero.md + checklist below
+# ✅ already submitted — do not re-run unless re-launching
+# bash bash_interface/cluster/submit_tu_sigma_homo_hetero.sh
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *not submitted yet* |
+| **SLURM** | ✅ **`37434534`** |
 | **Tasks** | `1-150%8` |
 | **Docs** | [`Paper_tu_sigma_homo_hetero.md`](Paper_tu_sigma_homo_hetero.md) |
 | **W&B** | `tu_hh_<ds>_{GCN,SiGMA_homo,SiGMA_hetero}_{lr001,lr01}` |
 | **Ckpt + gates** | best-val `ckpt/` · SiGMA auto `gate_values_per_graph.pt` |
+| **Logs** | `logs_gnnplus/tu_sigma_hh_37434534_<TASK>.log` |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑  TO RUN  ·  TU social (COLLAB / IMDB-BINARY / REDDIT-BINARY)         ║
+║  🎯  Lukas PyG TUDataset set · 3 ds × 5 variants × 5 seeds · %20        ║
+║  📄  Paper_tu_sigma_homo_hetero.md                                       ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_tu_sigma_social.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *paste JOBID* |
+| **Tasks** | `1-75%20` · mem 128GB |
+| **Docs** | [`Paper_tu_sigma_homo_hetero.md`](Paper_tu_sigma_homo_hetero.md) |
+| **Batches** | COLLAB 32 · IMDB 64 · REDDIT 16 |
+| **W&B** | `tu_hh_{collab,imdb_binary,reddit_binary}_*` |
 
 ---
 
@@ -580,4 +609,4 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Table 6 1-MP peptides | ✅ | `32717625` |
 | Table 6 COCO relaunch | ✅ mweber `34070245`; H200 twin `34098527` | `34070245` / `34098527` |
 | ENZYMES ogpkubk9 sweep | 🛑 TO RUN | — |
-| TU GCN vs SiGMA homo vs hetero | 🛑 TO RUN (150-job) | — |
+| TU GCN vs SiGMA homo vs hetero | ✅ | `37434534` |
