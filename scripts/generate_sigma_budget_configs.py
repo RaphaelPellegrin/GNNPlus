@@ -234,18 +234,21 @@ def main() -> None:
         )
     )
 
-    # --- MalNet ≤500k (main 549k a1g1 — slight shrink) ---
+    # --- MalNet ≤500k (main 549k a1g1 vcb1cuql — slight shrink) ---
+    # Paper run figmqani: node_encoder=False (LDP feats), layers_pre_mp=1,
+    # batchnorm=True, a1g1 GCNE H=110 d_h=64, graph_restricted, ep=150.
     cfg = _load("configs/gated_hybrid/malnet-hybrid-9h3jqzkm-anchor.yaml")
-    # Paper MalNet is vcb1cuql a1g1 GCNE H=110 d_h=64 (not 9h3jqzkm a0g2).
-    cfg["dataset"]["node_encoder"] = True
-    cfg["dataset"]["node_encoder_name"] = "LinearNode"
+    cfg["dataset"]["node_encoder"] = False
+    cfg["dataset"]["node_encoder_name"] = "Atom"
     gnn = cfg.setdefault("gnn", {})
-    gnn["layers_pre_mp"] = 0
-    gnn["batchnorm"] = False
+    gnn["layers_pre_mp"] = 1
+    gnn["batchnorm"] = True
     hy = gnn.setdefault("hybrid", {})
     hy["attn_mask"] = "graph_restricted"
     hy["gate"] = "elementwise"
     hy["norm"] = "layernorm"
+    hy["attn_dropout"] = 0.0
+    hy["mp_dropout"] = 0.0
     _set_hybrid(
         cfg,
         n_attn=1,
@@ -262,7 +265,8 @@ def main() -> None:
         _dump(
             "malnet-b500k-a1g1.yaml",
             cfg,
-            "MalNet-Tiny baby ≤500k from vcb1cuql a1g1 → H=96 d_h=56 L=8 GCNE.",
+            "MalNet-Tiny baby ≤500k from vcb1cuql a1g1 → H=96 d_h=56 L=8 GCNE "
+            "(node_encoder=False like paper).",
         )
     )
 

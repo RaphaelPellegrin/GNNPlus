@@ -20,8 +20,9 @@ dataset:
   task_type: classification
   transductive: false
   split_mode: standard
-  node_encoder: true
-  node_encoder_name: LinearNode
+  # Match paper vcb1cuql: LDP already provides node features → no node encoder.
+  node_encoder: false
+  node_encoder_name: Atom
   node_encoder_bn: true
   edge_encoder: true
   edge_encoder_name: DummyEdge
@@ -41,7 +42,7 @@ model:
 gnn:
   head: graph
   layers_mp: 8
-  layers_pre_mp: 0
+  layers_pre_mp: 1
   layers_post_mp: 1
   dim_inner: 96
   act: relu
@@ -49,7 +50,7 @@ gnn:
   agg: mean
   ffn: false
   residual: true
-  batchnorm: false
+  batchnorm: true
   hybrid:
     num_attn_heads: 1
     num_gnn_heads: 1
@@ -58,8 +59,8 @@ gnn:
     gate: elementwise
     norm: layernorm
     gnn_types: GCNE
-    attn_dropout: 0.1
-    mp_dropout: 0.05
+    attn_dropout: 0.0
+    mp_dropout: 0.0
     block_bn: false
     log_gate_stats: true
 optim:
