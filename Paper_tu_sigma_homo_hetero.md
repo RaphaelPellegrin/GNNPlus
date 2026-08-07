@@ -189,12 +189,12 @@ bash bash_interface/cluster/submit_tu_sigma_social.sh
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *paste JOBID* |
+| **SLURM** | ✅ **`37574967`** |
 | **Tasks** | `1-75%20` |
 | **Mem** | 128GB |
 | **Batches** | COLLAB 32 · IMDB 64 · REDDIT 16 |
 | **W&B** | `tu_hh_{collab,imdb_binary,reddit_binary}_{GCN,SiGMA_homo,SiGMA_hetero}_{lr001,lr01}` |
-| **Logs** | `logs_gnnplus/tu_sigma_soc_<JOBID>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/tu_sigma_soc_37574967_<TASK>.log` |
 | **Scripts** | `submit_tu_sigma_social.sh` / `run_tu_sigma_social.sh` |
 | **Loader** | `REDDIT-BINARY` added to `preformat_TUDataset` (+ Constant) |
 
@@ -267,26 +267,29 @@ rsync -avz --include='*/' --include='gate_values_per_graph.pt' --exclude='*' \
   results/tu_sigma_homo_hetero/
 ```
 
-Batch-plot best-LR / seed 2 (shared order by last-layer GIN head for hetero):
+Batch-plot **SiGMA hetero** for the paper table set (MUTAG…REDDIT), best LR,
+seed 2 — per-graph gates by head×layer (attn 2 + MP GCN/GIN/SAGE/GAT, L=12):
 
 ```bash
+# local after rsync
 python scripts/gate_viz/plot_tu_hh_gates_batch.py \
   --root results/tu_sigma_homo_hetero \
-  --out_dir results/gate_viz/tu_hh \
-  --seeds 2 \
-  --prefer-lr best_from_table \
-  --color-by-class
-```
+  --out_dir results/gate_viz/tu_hh_hetero \
+  --datasets paper --variants SiGMA_hetero \
+  --seeds 2 --prefer-lr best_from_table --color-by-class
 
-Or plot **on the cluster** (no rsync):
-
-```bash
+# cluster
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 python scripts/gate_viz/plot_tu_hh_gates_batch.py \
   --root $GNNPLUS_OUT_DIR/tu_sigma_homo_hetero \
-  --out_dir $GNNPLUS_OUT_DIR/gate_viz/tu_hh \
+  --out_dir $GNNPLUS_OUT_DIR/gate_viz/tu_hh_hetero \
+  --datasets paper --variants SiGMA_hetero \
   --seeds 2 --prefer-lr best_from_table --color-by-class
 ```
+
+Best-LR mapping used: MUTAG/ENZYMES/PROTEINS/IMDB hetero → `lr001`; COLLAB hetero → `lr01`;
+REDDIT provisional `lr001` (update when both LRs finish). Add `--variants SiGMA_homo,SiGMA_hetero`
+for both families. REDDIT dumps appear only after those SiGMA jobs finish.
 
 If a `.pt` is missing but `ckpt/` exists, re-dump (same 1–150 task map; GCN no-op):
 
