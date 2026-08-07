@@ -1,0 +1,81 @@
+# PascalVOC-SP b1m from j7ukyzdm a2g2 → a1g1, H=48, d_h=40, L=10.
+out_dir: results
+metric_best: f1
+num_workers: 6
+wandb:
+  use: false
+  project: GNNPlus
+  group: paper_budget_voc_b1m
+  tags:
+  - gnnplus
+  - hybrid_gnn
+  - sigma_budget
+  - paper_budget_voc_b1m
+  - voc
+  - b1m
+  - hybrid_a1g1
+dataset:
+  format: PyG-VOCSuperpixels
+  name: edge_wt_region_boundary
+  slic_compactness: 30
+  task: graph
+  task_type: classification
+  transductive: false
+  node_encoder: true
+  node_encoder_name: VOCNode+RWSE
+  node_encoder_bn: false
+  edge_encoder: true
+  edge_encoder_name: VOCEdge
+  edge_encoder_bn: false
+posenc_RWSE:
+  enable: true
+  kernel:
+    times_func: range(1,33)
+  model: Linear
+  dim_pe: 28
+  raw_norm_type: BatchNorm
+train:
+  mode: custom
+  batch_size: 8
+  eval_period: 1
+  ckpt_period: 100
+  eval_smoothing_metrics: true
+model:
+  type: hybrid_gnn
+  loss_fun: weighted_cross_entropy
+  graph_pooling: add
+gnn:
+  head: inductive_node
+  ffn: true
+  layers_pre_mp: 0
+  layers_mp: 10
+  layers_post_mp: 1
+  dim_inner: 48
+  act: gelu
+  residual: true
+  dropout: 0.1
+  agg: add
+  normalize_adj: false
+  hybrid:
+    num_attn_heads: 1
+    num_gnn_heads: 1
+    d_h: 40
+    attn_mask: full
+    gate: headwise
+    norm: rmsnorm
+    gnn_types: GATEDGCN
+    attn_dropout: 0.1
+    mp_dropout: 0.15
+    block_bn: false
+    residual: true
+    identity_proj: false
+    log_gate_stats: true
+optim:
+  clip_grad_norm: true
+  optimizer: adamW
+  weight_decay: 0.0
+  base_lr: 0.00030671340415785184
+  min_lr: 0.0
+  max_epoch: 200
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10

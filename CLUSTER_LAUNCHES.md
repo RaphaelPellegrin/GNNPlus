@@ -523,8 +523,8 @@ git pull
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  TU social (COLLAB / IMDB-BINARY / REDDIT-BINARY)         ║
-║  🎯  Lukas PyG TUDataset set · 3 ds × 5 variants × 5 seeds · %20        ║
+║  ✅  SUBMITTED  ·  SLURM 37574967  ·  1-75%20                            ║
+║  🎯  TU social COLLAB / IMDB-BINARY / REDDIT-BINARY                      ║
 ║  📄  Paper_tu_sigma_homo_hetero.md                                       ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
@@ -536,16 +536,43 @@ export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-bash bash_interface/cluster/submit_tu_sigma_social.sh
+# ✅ already submitted — do not re-run unless re-launching
+# bash bash_interface/cluster/submit_tu_sigma_social.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | ✅ **`37574967`** |
+| **Tasks** | `1-75%20` · mem 128GB |
+| **Docs** | [`Paper_tu_sigma_homo_hetero.md`](Paper_tu_sigma_homo_hetero.md) |
+| **Batches** | COLLAB 32 · IMDB 64 · REDDIT 16 |
+| **W&B** | `tu_hh_{collab,imdb_binary,reddit_binary}_*` |
+| **Logs** | `logs_gnnplus/tu_sigma_soc_37574967_<TASK>.log` |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑  TO RUN  ·  SiGMA baby/tiny budget fills (≤500k / 1M / 2M)           ║
+║  🎯  14 families × 5 seeds = 70  ·  %20  ·  Paper_sigma_budget.md        ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_sigma_budget.sh
 ```
 
 | Field | Value |
 |-------|-------|
 | **SLURM** | 🛑 *paste JOBID* |
-| **Tasks** | `1-75%20` · mem 128GB |
-| **Docs** | [`Paper_tu_sigma_homo_hetero.md`](Paper_tu_sigma_homo_hetero.md) |
-| **Batches** | COLLAB 32 · IMDB 64 · REDDIT 16 |
-| **W&B** | `tu_hh_{collab,imdb_binary,reddit_binary}_*` |
+| **Tasks** | `1-70%20` |
+| **Docs** | [`Paper_sigma_budget.md`](Paper_sigma_budget.md) |
 
 ---
 
