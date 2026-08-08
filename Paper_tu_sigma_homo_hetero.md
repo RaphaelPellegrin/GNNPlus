@@ -380,7 +380,7 @@ Paper-table datasets only (GCN already done).
 | **Tasks** | 6 ds × {GIN,SAGE,GAT} × 5 seeds = **90** |
 | **W&B** | `tu_hh_<ds>_{GIN,SAGE,GAT}_lr001` |
 | **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_homo_hetero/<ds>_{GIN,SAGE,GAT}_lr001_seed<s>/` |
-| **SLURM** | _(paste JOBID)_ |
+| **SLURM** | ✅ **`37649411`** (all 90 finished) |
 
 Configs: `configs/tu_sigma_homo_hetero/{gin,sage,gat}-anchor.yaml`
 (GAT via new `GNNPlus/layer/gat_conv_layer.py`, heads=1 like SiGMA MP head).
@@ -389,3 +389,81 @@ Configs: `configs/tu_sigma_homo_hetero/{gin,sage,gat}-anchor.yaml`
 - Paper table focus (Lukas / PyG stats): **MUTAG, ENZYMES, PROTEINS, COLLAB, IMDB-BINARY, REDDIT-BINARY**. NCI1 / TRIANGLES / DD were exploratory; social extras launched via `submit_tu_sigma_social.sh`.
 - IMDB / COLLAB / REDDIT use `Constant()` node features (no native node attrs).
 - Also listed in [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md).
+
+### COLLAB SiGMA-hetero LR fill (beat GIN)
+
+Standalone GIN on COLLAB is **78.40±0.90**; best SiGMA hetero so far is
+**77.25±0.95** at `lr=1e-2` (only `{1e-3, 1e-2}` were in the original social grid).
+Extra LRs elsewhere (e.g. NCI1 `5e-4`/`2e-3`) were **not** run on COLLAB.
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+bash bash_interface/cluster/submit_tu_collab_sigma_lr_fill.sh
+```
+
+| | |
+|--|--|
+| **Submit** | `bash_interface/cluster/submit_tu_collab_sigma_lr_fill.sh` |
+| **Tasks** | 3 LRs × 5 seeds = **15** |
+| **LRs** | `2e-3`, `5e-3`, `2e-2` |
+| **W&B** | `tu_hh_collab_SiGMA_hetero_{lr2e3,lr5e3,lr2e2}` |
+
+---
+
+## Param-matched relaunch (~1× GCN) + GPS
+
+Prior SiGMA a2g4 (`d_h=16`) was **~1.64–1.67×** GCN params. Relaunch keeps
+**a2g4 · L12 · H64** but sets **`d_h=4`** so SiGMA ≈ **1.02×** GCN. Also add a
+**GPS-style** baseline (this fork has no `GPSModel`): SiGMA **a1g1** =
+1 Transformer attn + 1 **GATEDGCN** MP (GraphGPS layer composition), `d_h=8`
+→ **~1.01×** GCN.
+
+| Model | Heads | Key knobs | Params (ENZYMES-scale) | vs GCN |
+|-------|-------|-----------|------------------------|--------|
+| GCN (existing) | — | L12 H64 | 258 118 | 1.00× |
+| SiGMA homo matched | a2g4 | `d_h=4`, GCN×4 | 262 702 | 1.02× |
+| SiGMA hetero matched | a2g4 | `d_h=4`, GCN,GIN,SAGE,GAT | 263 326 | 1.02× |
+| GPS-style | a1g1 | `d_h=8`, GATEDGCN | 260 926 | 1.01× |
+| SiGMA hetero (old table) | a2g4 | `d_h=16` | 430 798 | 1.67× |
+
+Does **not** re-run GCN / GIN / SAGE / GAT (reuse `tu_hh_*`). New W&B prefix
+`tu_1x_*` so results do not mix with the ~1.65× SiGMA runs.
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_tu_sigma_1x_gcn.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *paste JOBID after submit* |
+| **Submit** | `bash_interface/cluster/submit_tu_sigma_1x_gcn.sh` |
+| **Tasks** | `1-180%20` · 6 ds × {homo×2LR, hetero×2LR, GPS×2LR} × 5 seeds |
+| **Mem / time** | 128GB / 96h |
+| **Batches** | bio 64 · COLLAB 32 · IMDB 64 · REDDIT 16 |
+| **W&B** | `tu_1x_<ds>_{SiGMA_homo,SiGMA_hetero,GPS}_{lr001,lr01}` |
+| **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_1x_gcn/<ds>_<variant>_<lr>_seed<s>/` |
+| **Configs** | `sigma-{homo,hetero}-a2g4-matched-anchor.yaml`, `gps-a1g1-anchor.yaml` |
+| **Param check** | `python scripts/count_tu_model_params.py --cfg …` |
+
+Per-dataset task block (30 tasks, seeds 0–4):
+
+| Offset | Variant | LR |
+|--------|---------|-----|
+| 1–5 | SiGMA_homo matched | 0.001 |
+| 6–10 | SiGMA_homo matched | 0.01 |
+| 11–15 | SiGMA_hetero matched | 0.001 |
+| 16–20 | SiGMA_hetero matched | 0.01 |
+| 21–25 | GPS a1g1 | 0.001 |
+| 26–30 | GPS a1g1 | 0.01 |
+
+Dataset order: MUTAG → ENZYMES → PROTEINS → COLLAB → IMDB-BINARY → REDDIT-BINARY.

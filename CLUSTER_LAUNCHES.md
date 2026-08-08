@@ -554,7 +554,8 @@ git pull
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  ⏳  READY  ·  TU standalone GIN / SAGE / GAT (paper table set)          ║
+║  ✅  SUBMITTED  ·  SLURM 37649411  ·  1-90%20                            ║
+║  🎯  TU standalone GIN / SAGE / GAT (paper table set)                    ║
 ║  📄  Paper_tu_sigma_homo_hetero.md                                       ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
@@ -565,15 +566,51 @@ export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
 export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
-bash bash_interface/cluster/submit_tu_mpgnn_baselines.sh
+
+# ✅ already submitted — do not re-run unless re-launching
+# bash bash_interface/cluster/submit_tu_mpgnn_baselines.sh
 ```
 
 | Field | Value |
 |-------|-------|
+| **SLURM** | ✅ **`37649411`** |
 | **Submit** | `bash_interface/cluster/submit_tu_mpgnn_baselines.sh` |
 | **Tasks** | `1-90%20` · 6 ds × {GIN,SAGE,GAT} × 5 seeds |
 | **W&B** | `tu_hh_<ds>_{GIN,SAGE,GAT}_lr001` |
+| **Logs** | `logs_gnnplus/tu_mpgnn_37649411_<TASK>.log` |
 | **Recipe** | same as GCN (L12/H64/lr=1e-3) |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑  READY  ·  TU SiGMA ~1× GCN + GPS-style a1g1                         ║
+║  🎯  6 ds × {homo×2LR, hetero×2LR, GPS×2LR} × 5 seeds = 180 @ %20      ║
+║  📄  Paper_tu_sigma_homo_hetero.md                                       ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_tu_sigma_1x_gcn.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *paste after submit* |
+| **Submit** | `bash_interface/cluster/submit_tu_sigma_1x_gcn.sh` |
+| **Tasks** | `1-180%20` · mem 128GB |
+| **SiGMA** | a2g4 · L12 · H64 · **`d_h=4`** (~1.02× GCN; was ~1.65× at `d_h=16`) |
+| **GPS** | a1g1 · GATEDGCN+Transformer · `d_h=8` (~1.01× GCN) |
+| **W&B** | `tu_1x_<ds>_{SiGMA_homo,SiGMA_hetero,GPS}_{lr001,lr01}` |
+| **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_1x_gcn/` |
+| **Docs** | [`Paper_tu_sigma_homo_hetero.md`](Paper_tu_sigma_homo_hetero.md) |
+| **Logs** | `logs_gnnplus/tu_1x_gcn_<JOBID>_<TASK>.log` |
 
 ---
 
