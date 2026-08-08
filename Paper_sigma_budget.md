@@ -23,9 +23,9 @@ Entity/project: `weber-geoml-harvard-university/GNNPlus`
 | Family | Budget | Arch shrink | Config | W&B group |
 |--------|--------|-------------|--------|-----------|
 | mnist_b500k | ≤500k | a2g2→a1g1, H48 dh32 | `budget/mnist-b500k-a1g1.yaml` | `paper_budget_mnist_b500k` |
-| cifar10_b500k | ≤500k | a8g4→a1g1, H35 dh64 | `budget/cifar10-b500k-a1g1.yaml` | `paper_budget_cifar10_b500k` |
-| cifar10_b1m | ≤1M | a1g1 H48 dh96 | `budget/cifar10-b1m-a1g1.yaml` | `paper_budget_cifar10_b1m` |
-| cifar10_b2m | ≤2M | a1g2 H56 dh96 | `budget/cifar10-b2m-a1g2.yaml` | `paper_budget_cifar10_b2m` |
+| cifar10_b500k | ≤500k | a1g1 **H66 dh52** (was H35/dh64→541k) | `budget/cifar10-b500k-a1g1.yaml` | `paper_budget_cifar10_b500k_fit` |
+| cifar10_b1m | ≤1M | a1g1 **H86 dh76** (was H48/dh96→1.18M) | `budget/cifar10-b1m-a1g1.yaml` | `paper_budget_cifar10_b1m_fit` |
+| cifar10_b2m | ≤2M | a1g2 **H82 dh84** (was H56/dh96→2.24M) | `budget/cifar10-b2m-a1g2.yaml` | `paper_budget_cifar10_b2m_fit` |
 | pattern_b500k | ≤500k | a2g2→a1g1 GRIT | `budget/pattern-b500k-a1g1-grit.yaml` | `paper_budget_pattern_b500k` |
 | pattern_b1m | ≤1M | a1g1 GRIT H64 | `budget/pattern-b1m-a1g1-grit.yaml` | `paper_budget_pattern_b1m` |
 | cluster_b500k | ≤500k | a1g1 H40 dh32 | `budget/cluster-b500k-a1g1.yaml` | `paper_budget_cluster_b500k` |
@@ -56,11 +56,11 @@ bash bash_interface/cluster/submit_sigma_budget.sh
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *paste JOBID* |
+| **SLURM** | ✅ **`37600400`** |
 | **Tasks** | `1-70%20` |
 | **Scripts** | `submit_sigma_budget.sh` / `run_sigma_budget.sh` |
 | **Generator** | `scripts/generate_sigma_budget_configs.py` |
-| **Logs** | `logs_gnnplus/sigma_budget_<JOBID>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/sigma_budget_37600400_<TASK>.log` |
 | **Out** | `$GNNPLUS_OUT_DIR/sigma_budget/<fam>_seed<s>/` |
 
 ### After runs
@@ -73,3 +73,33 @@ bash bash_interface/cluster/submit_sigma_budget.sh
 
 - First epoch logs `params` to W&B — if a family lands over budget, shrink `dim_inner`/`d_h` and re-array that block only.
 - CIFAR baby still uses `max_epoch=400` (slow); VOC/COCO use 128GB mem.
+
+### CIFAR overshoot fix (params fit)
+
+First CIFAR budget launch (`37600400` / groups `paper_budget_cifar10_b*`) finished but **overshot**:
+541k / 1.18M / 2.24M. Recounted L=10 GATEDGCN a1g1/a1g2 widths and relaunch with
+new W&B groups `*_fit`.
+
+| Budget | Arch | H / d_h | Local param count |
+|--------|------|---------|-------------------|
+| ≤500k | a1g1 | 66 / 52 | ~498 774 |
+| ≤1M | a1g1 | 86 / 76 | ~998 854 |
+| ≤2M | a1g2 | 82 / 84 | ~1 997 748 |
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_cifar_budget_fit.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *paste JOBID after submit* |
+| **Tasks** | `1-15%15` · 3 × 5 seeds |
+| **Scripts** | `submit_cifar_budget_fit.sh` / `run_cifar_budget_fit.sh` |
+| **W&B** | `paper_budget_cifar10_b{500k,1m,2m}_fit` |
+| **Out** | `$GNNPLUS_OUT_DIR/sigma_budget/cifar10_b*_fit_seed<s>/` |

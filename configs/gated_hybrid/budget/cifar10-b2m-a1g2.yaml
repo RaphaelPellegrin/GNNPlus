@@ -1,18 +1,20 @@
-# CIFAR10 b2m from ulij45a2 a8g4 → a1g2, H=56, d_h=96.
+# CIFAR10 ≤2M from ulij45a2 a8g4 → a1g2.
+# Prior H=56/d_h=96 was 2.24M (over). Recounted fit: H=82, d_h=84, L=10 → ~1.998M.
 out_dir: results
 metric_best: accuracy
 wandb:
   use: false
   project: GNNPlus
-  group: paper_budget_cifar10_b2m
+  group: paper_budget_cifar10_b2m_fit
   tags:
   - gnnplus
   - hybrid_gnn
   - sigma_budget
-  - paper_budget_cifar10_b2m
+  - paper_budget_cifar10_b2m_fit
   - cifar10
   - b2m
   - hybrid_a1g2
+  - params_fit
 dataset:
   format: PyG-GNNBenchmarkDataset
   name: CIFAR10
@@ -47,7 +49,7 @@ gnn:
   layers_pre_mp: 0
   layers_mp: 10
   layers_post_mp: 1
-  dim_inner: 56
+  dim_inner: 82
   act: relu
   residual: true
   dropout: 0.15
@@ -55,7 +57,7 @@ gnn:
   hybrid:
     num_attn_heads: 1
     num_gnn_heads: 2
-    d_h: 96
+    d_h: 84
     attn_mask: full
     gate: headwise
     norm: layernorm

@@ -584,8 +584,8 @@ git pull
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  READY  ·  TU SiGMA ~1× GCN + GPS-style a1g1                         ║
-║  🎯  6 ds × {homo×2LR, hetero×2LR, GPS×2LR} × 5 seeds = 180 @ %20      ║
+║  ✅  SUBMITTED  ·  SLURM 37724579  ·  1-180%20                           ║
+║  🎯  TU SiGMA ~1× GCN + GPS-style a1g1                                   ║
 ║  📄  Paper_tu_sigma_homo_hetero.md                                       ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
@@ -597,12 +597,13 @@ export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-bash bash_interface/cluster/submit_tu_sigma_1x_gcn.sh
+# ✅ already submitted — do not re-run unless re-launching
+# bash bash_interface/cluster/submit_tu_sigma_1x_gcn.sh
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *paste after submit* |
+| **SLURM** | ✅ **`37724579`** |
 | **Submit** | `bash_interface/cluster/submit_tu_sigma_1x_gcn.sh` |
 | **Tasks** | `1-180%20` · mem 128GB |
 | **SiGMA** | a2g4 · L12 · H64 · **`d_h=4`** (~1.02× GCN; was ~1.65× at `d_h=16`) |
@@ -610,7 +611,7 @@ bash bash_interface/cluster/submit_tu_sigma_1x_gcn.sh
 | **W&B** | `tu_1x_<ds>_{SiGMA_homo,SiGMA_hetero,GPS}_{lr001,lr01}` |
 | **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_1x_gcn/` |
 | **Docs** | [`Paper_tu_sigma_homo_hetero.md`](Paper_tu_sigma_homo_hetero.md) |
-| **Logs** | `logs_gnnplus/tu_1x_gcn_<JOBID>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/tu_1x_gcn_37724579_<TASK>.log` |
 
 ---
 
@@ -640,6 +641,34 @@ git pull
 | **Docs** | [`Paper_sigma_budget.md`](Paper_sigma_budget.md) |
 | **Logs** | `logs_gnnplus/sigma_budget_37600400_<TASK>.log` |
 | **W&B** | `paper_budget_<ds>_<b500k\|b1m\|b2m>` |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑  READY  ·  CIFAR10 budget re-fit (params actually under cap)         ║
+║  🎯  3 × 5 seeds = 15 @ %15 · Paper_sigma_budget.md                      ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_cifar_budget_fit.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *paste after submit* |
+| **Submit** | `bash_interface/cluster/submit_cifar_budget_fit.sh` |
+| **Tasks** | `1-15%15` |
+| **Fits** | ≤500k ~498.8k · ≤1M ~998.9k · ≤2M ~1.998M |
+| **W&B** | `paper_budget_cifar10_b{500k,1m,2m}_fit` |
+| **Docs** | [`Paper_sigma_budget.md`](Paper_sigma_budget.md) |
 
 ---
 

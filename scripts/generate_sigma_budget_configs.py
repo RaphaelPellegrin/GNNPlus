@@ -86,10 +86,11 @@ def main() -> None:
     )
 
     # --- CIFAR ≤500k / ≤1M / ≤2M (main 27.8M a8g4 d_h=256) ---
+    # Widths recounted to fit budgets (prior H35/dh64, H48/dh96, H56/dh96 overshot).
     for budget, n_attn, n_gnn, d_h, h, l, tag in (
-        ("b500k", 1, 1, 64, 35, 10, "a1g1"),
-        ("b1m", 1, 1, 96, 48, 10, "a1g1"),
-        ("b2m", 1, 2, 96, 56, 10, "a1g2"),
+        ("b500k", 1, 1, 52, 66, 10, "a1g1"),  # ~498.8k
+        ("b1m", 1, 1, 76, 86, 10, "a1g1"),  # ~998.9k
+        ("b2m", 1, 2, 84, 82, 10, "a1g2"),  # ~1.998M
     ):
         cfg = _load("configs/gated_hybrid/cifar10-hybrid-ulij45a2-anchor.yaml")
         types = "GATEDGCN" if n_gnn == 1 else "GATEDGCN,GATEDGCN"
@@ -102,12 +103,19 @@ def main() -> None:
             dim_inner=h,
             layers_mp=l,
         )
-        _retag(cfg, f"paper_budget_cifar10_{budget}", "cifar10", budget, f"hybrid_{tag}")
+        _retag(
+            cfg,
+            f"paper_budget_cifar10_{budget}_fit",
+            "cifar10",
+            budget,
+            f"hybrid_{tag}",
+            "params_fit",
+        )
         written.append(
             _dump(
                 f"cifar10-{budget}-{tag}.yaml",
                 cfg,
-                f"CIFAR10 {budget} from ulij45a2 a8g4 → {tag}, H={h}, d_h={d_h}.",
+                f"CIFAR10 {budget} from ulij45a2 a8g4 → {tag}, H={h}, d_h={d_h} (params fit).",
             )
         )
 
