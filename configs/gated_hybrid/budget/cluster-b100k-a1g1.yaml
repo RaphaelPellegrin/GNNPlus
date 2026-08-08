@@ -1,0 +1,77 @@
+# CLUSTER ~100k a1g1 GATEDGCN H=56 d_h=16 L=10 (~100.0k).
+out_dir: results
+metric_best: accuracy-SBM
+wandb:
+  use: false
+  project: GNNPlus
+  tags:
+  - gnnplus
+  - hybrid_gnn
+  - sigma_budget
+  - b100k
+  - paper_budget_cluster_b100k
+  - cluster
+  - hybrid_a1g1
+  group: paper_budget_cluster_b100k
+dataset:
+  format: PyG-GNNBenchmarkDataset
+  name: CLUSTER
+  task: graph
+  task_type: classification
+  transductive: false
+  split_mode: standard
+  add_virtual_nodes: false
+  num_virtual_nodes: 0
+  node_encoder: true
+  node_encoder_name: LinearNode+RWSE
+  node_encoder_bn: false
+  edge_encoder: true
+  edge_encoder_name: DummyEdge
+  edge_encoder_bn: false
+posenc_RWSE:
+  enable: true
+  kernel:
+    times_func: range(1,21)
+  model: Linear
+  raw_norm_type: BatchNorm
+train:
+  mode: custom
+  batch_size: 16
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: hybrid_gnn
+  loss_fun: weighted_cross_entropy
+  edge_decoding: dot
+gnn:
+  head: inductive_node
+  layers_mp: 10
+  layers_pre_mp: 0
+  layers_post_mp: 3
+  dim_inner: 56
+  act: relu
+  dropout: 0.2
+  agg: mean
+  ffn: false
+  residual: true
+  hybrid:
+    num_attn_heads: 1
+    num_gnn_heads: 1
+    d_h: 16
+    attn_mask: full
+    gate: headwise
+    norm: layernorm
+    gnn_types: GATEDGCN
+    attn_dropout: 0.1
+    mp_dropout: 0.2
+    block_bn: false
+    log_gate_stats: true
+optim:
+  clip_grad_norm: true
+  optimizer: adamW
+  weight_decay: 1.0e-05
+  base_lr: 0.001492
+  min_lr: 0.0
+  max_epoch: 100
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 5

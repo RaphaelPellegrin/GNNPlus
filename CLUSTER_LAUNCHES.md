@@ -646,8 +646,9 @@ git pull
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  READY  ·  CIFAR10 budget re-fit (params actually under cap)         ║
-║  🎯  3 × 5 seeds = 15 @ %15 · Paper_sigma_budget.md                      ║
+║  ✅  SUBMITTED  ·  SLURM 37727415  ·  1-15%15                            ║
+║  🎯  CIFAR10 budget re-fit (params actually under cap)                   ║
+║  📄  Paper_sigma_budget.md                                               ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
@@ -658,16 +659,46 @@ export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-bash bash_interface/cluster/submit_cifar_budget_fit.sh
+# ✅ already submitted — do not re-run unless re-launching
+# bash bash_interface/cluster/submit_cifar_budget_fit.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | ✅ **`37727415`** |
+| **Submit** | `bash_interface/cluster/submit_cifar_budget_fit.sh` |
+| **Tasks** | `1-15%15` |
+| **Fits** | ≤500k ~498.8k · ≤1M ~998.9k · ≤2M ~1.998M |
+| **W&B** | `paper_budget_cifar10_b{500k,1m,2m}_fit` |
+| **Docs** | [`Paper_sigma_budget.md`](Paper_sigma_budget.md) |
+| **Logs** | `logs_gnnplus/cifar_budget_fit_37727415_<TASK>.log` |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑  READY  ·  SiGMA ∼100k budget row (7 ds × 5 seeds = 35)              ║
+║  🎯  ZINC MNIST PATTERN CLUSTER Pep-f Pep-s VOC · all ≤100k              ║
+║  📄  Paper_sigma_budget.md                                               ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_sigma_budget_100k.sh
 ```
 
 | Field | Value |
 |-------|-------|
 | **SLURM** | 🛑 *paste after submit* |
-| **Submit** | `bash_interface/cluster/submit_cifar_budget_fit.sh` |
-| **Tasks** | `1-15%15` |
-| **Fits** | ≤500k ~498.8k · ≤1M ~998.9k · ≤2M ~1.998M |
-| **W&B** | `paper_budget_cifar10_b{500k,1m,2m}_fit` |
+| **Submit** | `bash_interface/cluster/submit_sigma_budget_100k.sh` |
+| **Tasks** | `1-35%20` · mem 128GB |
+| **W&B** | `paper_budget_<ds>_b100k` |
 | **Docs** | [`Paper_sigma_budget.md`](Paper_sigma_budget.md) |
 
 ---

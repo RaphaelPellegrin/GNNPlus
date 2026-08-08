@@ -93,13 +93,54 @@ export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-bash bash_interface/cluster/submit_cifar_budget_fit.sh
+# ✅ already submitted — do not re-run unless re-launching
+# bash bash_interface/cluster/submit_cifar_budget_fit.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | ✅ **`37727415`** (`1-15%15`) |
+| **Tasks** | `1-15%15` · 3 × 5 seeds |
+| **Scripts** | `submit_cifar_budget_fit.sh` / `run_cifar_budget_fit.sh` |
+| **W&B** | `paper_budget_cifar10_b{500k,1m,2m}_fit` |
+| **Out** | `$GNNPLUS_OUT_DIR/sigma_budget/cifar10_b*_fit_seed<s>/` |
+| **Logs** | `logs_gnnplus/cifar_budget_fit_37727415_<TASK>.log` |
+
+---
+
+## ∼100k budget row (colleague table)
+
+New table budgets: **∼100k / ∼500k / ∼1M**. Existing babies mostly cover ∼500k / ∼1M;
+the **∼100k** row needs dedicated shrinks (all recounted ≤100k, a1g1).
+
+| Family | Arch | H / d_h / L | Local params | W&B group |
+|--------|------|-------------|--------------|-----------|
+| ZINC | a1g1 GINE | 38 / 12 / 10 | 99 915 | `paper_budget_zinc_b100k` |
+| MNIST | a1g1 GATEDGCN | 28 / 26 / 6 | 99 966 | `paper_budget_mnist_b100k` |
+| PATTERN | a1g1 GCNE+GRIT | 48 / 20 / 4 | 99 969 | `paper_budget_pattern_b100k` |
+| CLUSTER | a1g1 GATEDGCN | 56 / 16 / 10 | 99 994 | `paper_budget_cluster_b100k` |
+| Pep-func | a1g1 GINE | 36 / 36 / 6 | 99 998 | `paper_budget_peptides_func_b100k` |
+| Pep-struct | a1g1 GINE | 44 / 44 / 4 | 99 887 | `paper_budget_peptides_struct_b100k` |
+| VOC | a1g1 GATEDGCN | 40 / 8 / 10 | 99 929 | `paper_budget_voc_b100k` |
+
+**7 × 5 seeds = 35 jobs.**
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_sigma_budget_100k.sh
 ```
 
 | Field | Value |
 |-------|-------|
 | **SLURM** | 🛑 *paste JOBID after submit* |
-| **Tasks** | `1-15%15` · 3 × 5 seeds |
-| **Scripts** | `submit_cifar_budget_fit.sh` / `run_cifar_budget_fit.sh` |
-| **W&B** | `paper_budget_cifar10_b{500k,1m,2m}_fit` |
-| **Out** | `$GNNPLUS_OUT_DIR/sigma_budget/cifar10_b*_fit_seed<s>/` |
+| **Tasks** | `1-35%20` |
+| **Scripts** | `submit_sigma_budget_100k.sh` / `run_sigma_budget_100k.sh` |
+| **Configs** | `configs/gated_hybrid/budget/*-b100k-*.yaml` |
+| **Out** | `$GNNPLUS_OUT_DIR/sigma_budget/<fam>_b100k_seed<s>/` |
+
+Note: the MNIST `98.54±0.15` currently pasted into the ∼100k LaTeX row is from the **∼201k** baby (`paper_budget_mnist_b500k`) — replace after this campaign finishes.
