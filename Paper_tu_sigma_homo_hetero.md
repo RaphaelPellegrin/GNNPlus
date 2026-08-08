@@ -305,6 +305,65 @@ python scripts/gate_viz/plot_tu_hh_gates_batch.py \
 
 Filenames: `*_shared_order_*.png` vs `*_by_rank_*.png`.
 
+### Per-node gates (mean + band, colored graphs)
+
+Training dumps are **graph-mean** only. For node-level γ (within-graph bands and
+node-colored drawings), re-dump with edges from a checkpoint:
+
+```bash
+# cluster — do NOT run dump python on login (GLIBC / wrong env).
+# Use the SLURM dump script (sources common_env.sh on a GPU node).
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+# pull latest submit script first (exports GATE_DUMP_LEVEL)
+
+# MUTAG SiGMA_hetero lr001 seed2 → array task 18
+GATE_DUMP_LEVEL=both TU_SIGMA_HH_DUMP_ARRAY=18 \
+  bash bash_interface/cluster/submit_dump_tu_sigma_homo_hetero_gates.sh
+
+# writes under $GNNPLUS_OUT_DIR/.../mutag_SiGMA_hetero_lr001_seed2/:
+#   gate_values_per_graph.pt + gate_values_per_node.pt (incl. edge_index)
+# log: logs_gnnplus/tu_hh_gdump_<JOB>_18.log
+```
+
+Rsync node dumps (still small):
+
+```bash
+rsync -avz --include='*/' --include='gate_values_per_node.pt' --exclude='*' \
+  rpellegrinext@holylogin.rc.fas.harvard.edu:/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results/tu_sigma_homo_hetero/ \
+  results/tu_sigma_homo_hetero/
+```
+
+Plot into the same paper figure folder as the graph-mean grids:
+
+```bash
+# single run
+python scripts/gate_viz/plot_per_node_gates.py \
+  --pt-node results/tu_sigma_homo_hetero/mutag_SiGMA_hetero_lr001_seed2/gate_values_per_node.pt \
+  --out_dir results/gate_viz/tu_hh_hetero/mutag_SiGMA_hetero_lr001_seed2 \
+  --color-by-class \
+  --band p10_p90 \
+  --sort-head 1 \
+  --draw-head 1 \
+  --n-draw 8
+
+# batch (paper hetero, best LR, seed 2) — needs gate_values_per_node.pt present
+python scripts/gate_viz/plot_tu_hh_gates_batch.py \
+  --root results/tu_sigma_homo_hetero \
+  --out_dir results/gate_viz/tu_hh_hetero \
+  --datasets paper --variants SiGMA_hetero \
+  --seeds 2 --prefer-lr best_from_table --color-by-class \
+  --level node
+```
+
+Outputs (alongside existing `*_by_rank_by_class.png`):
+
+| File | Contents |
+|------|----------|
+| `*_gates_{attn,gnn}_nodeband_shared_order_by_class.png` | Graph-mean γ + within-graph node percentile band, shared rank |
+| `*_gates_gnn_L{k}_{GIN}_node_graphs.png` | Top/bottom ranked graphs, nodes colored by γ |
+
+Band modes: `p10_p90` (default), `p25_p75`, `minmax`, `std`.
+
 If a `.pt` is missing but `ckpt/` exists, re-dump (same 1–150 task map; GCN no-op):
 
 ```bash
@@ -440,12 +499,13 @@ export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-bash bash_interface/cluster/submit_tu_sigma_1x_gcn.sh
+# ✅ already submitted — do not re-run unless re-launching
+# bash bash_interface/cluster/submit_tu_sigma_1x_gcn.sh
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *paste JOBID after submit* |
+| **SLURM** | ✅ **`37724579`** (`1-180%20`) |
 | **Submit** | `bash_interface/cluster/submit_tu_sigma_1x_gcn.sh` |
 | **Tasks** | `1-180%20` · 6 ds × {homo×2LR, hetero×2LR, GPS×2LR} × 5 seeds |
 | **Mem / time** | 128GB / 96h |

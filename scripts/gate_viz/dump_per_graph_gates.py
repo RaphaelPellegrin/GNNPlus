@@ -12,10 +12,13 @@ yaml), rebuilds the model, loads the latest (or chosen) checkpoint, and saves:
     - ``attn`` / ``gnn``: FloatTensor ``[N, L, H]`` — per-node γ
     - ``batch``: LongTensor ``[N]`` global graph index (matches graph dump order)
     - ``ptr``: LongTensor ``[G+1]`` CSR offsets into the node tensors
+    - ``edge_index``: LongTensor ``[2, E]`` (node ids in the concatenated space)
+    - ``edge_batch`` / ``edge_ptr``: edge → graph CSR (for drawings)
     - ``y``, ``split`` at graph level; ``meta``
 
   Split one graph ``g`` with::
-    attn[g] = payload['attn'][payload['ptr'][g] : payload['ptr'][g + 1]]
+    attn_nodes = payload['attn'][payload['ptr'][g] : payload['ptr'][g + 1]]
+    edges = payload['edge_index'][:, payload['edge_ptr'][g] : payload['edge_ptr'][g + 1]]
 
 Example:
   python scripts/gate_viz/dump_per_graph_gates.py \\
@@ -141,10 +144,13 @@ def _collect_loader_gates(
     attn_n_parts: List[torch.Tensor] = []
     gnn_n_parts: List[torch.Tensor] = []
     batch_parts: List[torch.Tensor] = []
+    edge_parts: List[torch.Tensor] = []
+    edge_batch_parts: List[torch.Tensor] = []
     y_parts: List[torch.Tensor] = []
     split_parts: List[torch.Tensor] = []
     have_y = True
     graph_offset = 0
+    node_offset = 0
 
     was_training = model.training
     model.eval()
@@ -152,6 +158,9 @@ def _collect_loader_gates(
         with torch.no_grad():
             for batch in loader:
                 batch = batch.to(device)
+                # Topology before encode (node ids local to this mini-batch).
+                ei_local = batch.edge_index.detach().cpu().long()
+                n_nodes_batch = int(batch.num_nodes)
                 out = core.collect_per_graph_gates(batch)
                 attn_g_parts.append(out['attn'])
                 gnn_g_parts.append(out['gnn'])
@@ -166,7 +175,14 @@ def _collect_loader_gates(
                 if want_node:
                     attn_n_parts.append(out['attn_node'])
                     gnn_n_parts.append(out['gnn_node'])
-                    batch_parts.append(out['batch'].long() + graph_offset)
+                    batch_local = out['batch'].long()
+                    batch_parts.append(batch_local + graph_offset)
+                    # Remap edges to the concatenated node index space.
+                    edge_parts.append(ei_local + int(node_offset))
+                    edge_batch_parts.append(
+                        batch_local[ei_local[0]].long() + graph_offset
+                    )
+                    node_offset += n_nodes_batch
                 graph_offset += n_graphs
     finally:
         if was_training:
@@ -192,12 +208,28 @@ def _collect_loader_gates(
             result['batch'] = batch_ids
             result['ptr'] = _ptr_from_batch(batch_ids, graph_offset)
             result['num_nodes'] = int(batch_ids.numel())
+            if edge_parts:
+                edge_index = torch.cat(edge_parts, dim=1)
+                edge_batch = torch.cat(edge_batch_parts, dim=0)
+                result['edge_index'] = edge_index
+                result['edge_batch'] = edge_batch
+                result['edge_ptr'] = _ptr_from_batch(edge_batch, graph_offset)
+                result['num_edges'] = int(edge_index.size(1))
+            else:
+                result['edge_index'] = torch.zeros(2, 0, dtype=torch.long)
+                result['edge_batch'] = torch.zeros(0, dtype=torch.long)
+                result['edge_ptr'] = torch.zeros(1, dtype=torch.long)
+                result['num_edges'] = 0
         else:
             result['attn_node'] = empty3
             result['gnn_node'] = empty3
             result['batch'] = torch.zeros(0, dtype=torch.long)
             result['ptr'] = torch.zeros(1, dtype=torch.long)
             result['num_nodes'] = 0
+            result['edge_index'] = torch.zeros(2, 0, dtype=torch.long)
+            result['edge_batch'] = torch.zeros(0, dtype=torch.long)
+            result['edge_ptr'] = torch.zeros(1, dtype=torch.long)
+            result['num_edges'] = 0
     return result
 
 
@@ -252,10 +284,13 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     attn_n_all: List[torch.Tensor] = []
     gnn_n_all: List[torch.Tensor] = []
     batch_all: List[torch.Tensor] = []
+    edge_all: List[torch.Tensor] = []
+    edge_batch_all: List[torch.Tensor] = []
     y_all: List[torch.Tensor] = []
     split_all: List[torch.Tensor] = []
     have_y = True
     graph_offset = 0
+    node_offset = 0
 
     for name in wanted:
         loader = loader_by_name[name]
@@ -292,6 +327,11 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
             attn_n_all.append(part['attn_node'])
             gnn_n_all.append(part['gnn_node'])
             batch_all.append(part['batch'] + graph_offset)
+            n_nodes_part = int(part.get('num_nodes', 0))
+            if 'edge_index' in part and part['edge_index'].numel() > 0:
+                edge_all.append(part['edge_index'] + int(node_offset))
+                edge_batch_all.append(part['edge_batch'] + graph_offset)
+            node_offset += n_nodes_part
         graph_offset += int(part['num_graphs'])
 
     meta: Dict[str, Any] = {
@@ -352,15 +392,27 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
             attn_n = torch.zeros(0, 0, 0)
             gnn_n = torch.zeros(0, 0, 0)
             num_graphs = 0
+        if edge_all:
+            edge_index = torch.cat(edge_all, dim=1)
+            edge_batch = torch.cat(edge_batch_all, dim=0)
+            edge_ptr = _ptr_from_batch(edge_batch, num_graphs)
+        else:
+            edge_index = torch.zeros(2, 0, dtype=torch.long)
+            edge_batch = torch.zeros(0, dtype=torch.long)
+            edge_ptr = torch.zeros(num_graphs + 1, dtype=torch.long)
         node_payload: Dict[str, Any] = {
             'attn': attn_n,
             'gnn': gnn_n,
             'batch': batch_ids,
             'ptr': ptr,
+            'edge_index': edge_index,
+            'edge_batch': edge_batch,
+            'edge_ptr': edge_ptr,
             'split': split_cat,
             'y': y_cat,
             'num_graphs': num_graphs,
             'num_nodes': int(batch_ids.numel()),
+            'num_edges': int(edge_index.size(1)),
             'meta': meta,
         }
         out_node = dump_args.out_node or osp.join(
@@ -368,12 +420,13 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         )
         torch.save(node_payload, out_node)
         logging.info(
-            'Wrote %s (attn%s gnn%s batch%s ptr%s)',
+            'Wrote %s (attn%s gnn%s batch%s ptr%s edges=%d)',
             out_node,
             tuple(node_payload['attn'].shape),
             tuple(node_payload['gnn'].shape),
             tuple(node_payload['batch'].shape),
             tuple(node_payload['ptr'].shape),
+            int(node_payload['num_edges']),
         )
 
 

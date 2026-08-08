@@ -1,12 +1,20 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Offline re-dump of per-graph SiGMA gates for TU homo/hetero runs.
+# Offline re-dump of SiGMA gates for TU homo/hetero runs.
 #
 # Same task map as run_tu_sigma_homo_hetero.sh (150 tasks). GCN tasks no-op.
 # Use after training if gate_values_per_graph.pt is missing, or to re-dump.
 #
+# Env:
+#   GATE_DUMP_LEVEL=graph|node|both   (default: graph)
+#   GATE_DUMP_EPOCH=-1                (default: latest ckpt)
+#
+# Node dumps (bands + drawings) need level=both|node and latest dump script
+# (writes edge_index into gate_values_per_node.pt).
+#
 # Submit:
 #   bash bash_interface/cluster/submit_dump_tu_sigma_homo_hetero_gates.sh
+#   GATE_DUMP_LEVEL=both bash bash_interface/cluster/submit_dump_tu_sigma_homo_hetero_gates.sh
 # =============================================================================
 
 #SBATCH --job-name=tu_hh_gdump
@@ -30,6 +38,7 @@ task_id=${SLURM_ARRAY_TASK_ID:-1}
 num_seeds="${TU_SIGMA_HH_NUM_SEEDS:-5}"
 seed_offset="${TU_SIGMA_HH_SEED_OFFSET:-0}"
 epoch="${GATE_DUMP_EPOCH:--1}"
+level="${GATE_DUMP_LEVEL:-graph}"
 
 datasets=(mutag enzymes proteins dd nci1 triangles)
 dataset_names=(MUTAG ENZYMES PROTEINS DD NCI1 TRIANGLES)
@@ -107,6 +116,7 @@ ls -lh "${run_dir}/ckpt/" | tail -n 5 || true
 exec python scripts/gate_viz/dump_per_graph_gates.py \
     --run_dir "${run_dir}" \
     --epoch "${epoch}" \
+    --level "${level}" \
     --out "${out_pt}" \
     --cfg "${cfg}" \
     seed "${seed}" \

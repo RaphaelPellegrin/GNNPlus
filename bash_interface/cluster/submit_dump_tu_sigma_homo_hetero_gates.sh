@@ -24,6 +24,7 @@ PARTITION="${TU_SIGMA_HH_DUMP_PARTITION:-mweber_gpu}"
 MEM="${TU_SIGMA_HH_DUMP_MEM:-32GB}"
 TIME="${TU_SIGMA_HH_DUMP_TIME:-02:00:00}"
 EPOCH="${GATE_DUMP_EPOCH:--1}"
+LEVEL="${GATE_DUMP_LEVEL:-graph}"
 
 if [ -z "${GNNPLUS_OUT_DIR:-}" ]; then
     export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
@@ -39,7 +40,7 @@ job_id="$(
         --time="${TIME}" \
         --gpus=1 \
         --output="logs_gnnplus/tu_hh_gdump_%A_%a.log" \
-        --export=ALL,ENV_NAME=gnnplus,TU_SIGMA_HH_NUM_SEEDS="${NUM_SEEDS}",TU_SIGMA_HH_NUM_VARIANTS="${NUM_VARIANTS}",TU_SIGMA_HH_NUM_TASKS="${NUM_TASKS}",GATE_DUMP_EPOCH="${EPOCH}",GNNPLUS_DATASET_DIR="${GNNPLUS_DATASET_DIR:-}",GNNPLUS_OUT_DIR="${GNNPLUS_OUT_DIR}" \
+        --export=ALL,ENV_NAME=gnnplus,TU_SIGMA_HH_NUM_SEEDS="${NUM_SEEDS}",TU_SIGMA_HH_NUM_VARIANTS="${NUM_VARIANTS}",TU_SIGMA_HH_NUM_TASKS="${NUM_TASKS}",GATE_DUMP_EPOCH="${EPOCH}",GATE_DUMP_LEVEL="${LEVEL}",GNNPLUS_DATASET_DIR="${GNNPLUS_DATASET_DIR:-}",GNNPLUS_OUT_DIR="${GNNPLUS_OUT_DIR}" \
         bash_interface/cluster/run_dump_tu_sigma_homo_hetero_gates.sh
 )"
 
@@ -47,10 +48,15 @@ cat <<EOF
 
 === TU homo/hetero gate re-dump submitted ===
   ARRAY JOBID:   ${job_id}
-  Tasks:         ${ARRAY_SPEC}  (GCN slots no-op; SiGMA → gate_values_per_graph.pt)
+  Tasks:         ${ARRAY_SPEC}  (GCN slots no-op; SiGMA → .pt dumps)
+  Level:         ${LEVEL}  (graph | node | both)
   Epoch:         ${EPOCH} (-1 = latest / best-val ckpt)
-  Out pattern:   \$GNNPLUS_OUT_DIR/tu_sigma_homo_hetero/<ds>_<variant>_<lr>_seed<s>/gate_values_per_graph.pt
+  Out pattern:   \$GNNPLUS_OUT_DIR/tu_sigma_homo_hetero/<ds>_<variant>_<lr>_seed<s>/gate_values_per_{graph,node}.pt
   Logs:          logs_gnnplus/tu_hh_gdump_${job_id}_<TASK>.log
   Docs:          Paper_tu_sigma_homo_hetero.md
+
+  MUTAG SiGMA_hetero lr001 seed2 only:
+    GATE_DUMP_LEVEL=both TU_SIGMA_HH_DUMP_ARRAY=18 \\
+      bash bash_interface/cluster/submit_dump_tu_sigma_homo_hetero_gates.sh
 
 EOF

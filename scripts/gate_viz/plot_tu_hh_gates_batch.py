@@ -118,10 +118,45 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         help="Pass --color-by-class to plot_per_graph_gates.py.",
     )
     parser.add_argument(
+        "--sort-mode",
+        type=str,
+        choices=("shared", "per_panel"),
+        default="shared",
+        help="shared: one graph order for all panels; per_panel: sort each cell.",
+    )
+    parser.add_argument(
         "--sort-head",
         type=int,
         default=1,
         help="Shared-order head index (1=GIN for hetero GCN,GIN,SAGE,GAT).",
+    )
+    parser.add_argument(
+        "--level",
+        type=str,
+        choices=("graph", "node", "both"),
+        default="graph",
+        help=(
+            "Which dumps to plot: graph (gate_values_per_graph.pt), "
+            "node (gate_values_per_node.pt mean+band + drawings), or both."
+        ),
+    )
+    parser.add_argument(
+        "--band",
+        type=str,
+        default="p10_p90",
+        choices=("p10_p90", "p25_p75", "minmax", "std"),
+        help="Node-band mode for plot_per_node_gates.py (default: p10_p90).",
+    )
+    parser.add_argument(
+        "--n-draw",
+        type=int,
+        default=8,
+        help="Graphs to draw for node-colored plots (default: 8).",
+    )
+    parser.add_argument(
+        "--skip-draw",
+        action="store_true",
+        help="Skip network drawings when plotting node dumps.",
     )
     parser.add_argument(
         "--dry-run",
@@ -169,54 +204,59 @@ def _lrs_for(ds: str, variant: str, prefer: str) -> list[str]:
 
 
 def _iter_targets(
-    root: Path,
     datasets: Sequence[str],
     variants: Sequence[str],
     seeds: Iterable[int],
     prefer_lr: str,
+    pt_name: str,
 ) -> list[tuple[Path, Path]]:
-    """Return (pt_path, out_subdir) pairs to attempt."""
-    del root  # existence checked by caller
+    """Return (relative pt_path, out_subdir) pairs to attempt."""
     out: list[tuple[Path, Path]] = []
     for ds in datasets:
         for variant in variants:
             for lr in _lrs_for(ds, variant, prefer_lr):
                 for seed in seeds:
                     run_dir_name = f"{ds}_{variant}_{lr}_seed{seed}"
-                    pt = Path(run_dir_name) / "gate_values_per_graph.pt"
+                    pt = Path(run_dir_name) / pt_name
                     out.append((pt, Path(run_dir_name)))
     return out
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
-    """Discover dumps and invoke plot_per_graph_gates.py for each."""
-    args = _parse_args(argv)
-    root = Path(args.root).expanduser().resolve()
-    out_root = Path(args.out_dir).expanduser().resolve()
-    seeds = _seeds(args.seeds)
-    datasets = _datasets(args.datasets)
-    variants = _variants(args.variants)
+def _run_graph_plots(
+    *,
+    root: Path,
+    out_root: Path,
+    datasets: Sequence[str],
+    variants: Sequence[str],
+    seeds: Sequence[int],
+    prefer_lr: str,
+    sort_mode: str,
+    sort_head: int,
+    color_by_class: bool,
+    dry_run: bool,
+) -> tuple[int, int, int]:
+    """Plot graph-level dumps; return ``(n_ok, n_fail, n_missing)``."""
     plot_script = Path(__file__).resolve().parent / "plot_per_graph_gates.py"
     if not plot_script.is_file():
         logging.error("Missing %s", plot_script)
-        return 1
+        return 0, 0, 0
 
-    rel_targets = _iter_targets(root, datasets, variants, seeds, args.prefer_lr)
+    rel_targets = _iter_targets(
+        datasets, variants, seeds, prefer_lr, "gate_values_per_graph.pt"
+    )
     targets = [(root / pt, sub) for pt, sub in rel_targets]
     found = [(pt, sub) for pt, sub in targets if pt.is_file()]
     missing = [(pt, sub) for pt, sub in targets if not pt.is_file()]
-
-    logging.info("Root: %s", root)
-    logging.info("Found %d / %d gate dumps", len(found), len(targets))
+    logging.info("Graph dumps: found %d / %d", len(found), len(targets))
     for pt, _ in missing:
         logging.warning("Missing: %s", pt)
-
-    if args.dry_run:
+    if dry_run:
         for pt, sub in found:
-            logging.info("Would plot %s → %s", pt, out_root / sub)
-        return 0
+            logging.info("Would plot graph %s → %s", pt, out_root / sub)
+        return len(found), 0, len(missing)
 
     n_ok = 0
+    n_fail = 0
     for pt, sub in found:
         out_dir = out_root / sub
         cmd = [
@@ -227,25 +267,163 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "--out_dir",
             str(out_dir),
             "--sort-mode",
-            "shared",
+            str(sort_mode),
             "--sort-branch",
             "gnn",
             "--sort-layer",
             "-1",
             "--sort-head",
-            str(int(args.sort_head)),
+            str(int(sort_head)),
         ]
-        if args.color_by_class:
+        if color_by_class:
             cmd.append("--color-by-class")
-        logging.info("Plotting %s", pt)
+        logging.info("Plotting graph %s", pt)
         proc = subprocess.run(cmd, check=False)
         if proc.returncode == 0:
             n_ok += 1
         else:
+            n_fail += 1
             logging.error("Plot failed (%s): %s", proc.returncode, pt)
+    return n_ok, n_fail, len(missing)
 
-    logging.info("Done: %d plots ok, %d missing dumps", n_ok, len(missing))
-    return 0 if n_ok == len(found) else 1
+
+def _run_node_plots(
+    *,
+    root: Path,
+    out_root: Path,
+    datasets: Sequence[str],
+    variants: Sequence[str],
+    seeds: Sequence[int],
+    prefer_lr: str,
+    sort_head: int,
+    color_by_class: bool,
+    band: str,
+    n_draw: int,
+    skip_draw: bool,
+    dry_run: bool,
+) -> tuple[int, int, int]:
+    """Plot node-level dumps; return ``(n_ok, n_fail, n_missing)``."""
+    plot_script = Path(__file__).resolve().parent / "plot_per_node_gates.py"
+    if not plot_script.is_file():
+        logging.error("Missing %s", plot_script)
+        return 0, 0, 0
+
+    rel_targets = _iter_targets(
+        datasets, variants, seeds, prefer_lr, "gate_values_per_node.pt"
+    )
+    targets = [(root / pt, sub) for pt, sub in rel_targets]
+    found = [(pt, sub) for pt, sub in targets if pt.is_file()]
+    missing = [(pt, sub) for pt, sub in targets if not pt.is_file()]
+    logging.info("Node dumps: found %d / %d", len(found), len(targets))
+    for pt, _ in missing:
+        logging.warning("Missing: %s", pt)
+    if dry_run:
+        for pt, sub in found:
+            logging.info("Would plot node %s → %s", pt, out_root / sub)
+        return len(found), 0, len(missing)
+
+    n_ok = 0
+    n_fail = 0
+    for pt, sub in found:
+        out_dir = out_root / sub
+        cmd = [
+            sys.executable,
+            str(plot_script),
+            "--pt-node",
+            str(pt),
+            "--out_dir",
+            str(out_dir),
+            "--band",
+            str(band),
+            "--sort-branch",
+            "gnn",
+            "--sort-layer",
+            "-1",
+            "--sort-head",
+            str(int(sort_head)),
+            "--draw-branch",
+            "gnn",
+            "--draw-layer",
+            "-1",
+            "--draw-head",
+            str(int(sort_head)),
+            "--n-draw",
+            str(int(n_draw)),
+        ]
+        if color_by_class:
+            cmd.append("--color-by-class")
+        if skip_draw:
+            cmd.append("--skip-draw")
+        logging.info("Plotting node %s", pt)
+        proc = subprocess.run(cmd, check=False)
+        if proc.returncode == 0:
+            n_ok += 1
+        else:
+            n_fail += 1
+            logging.error("Plot failed (%s): %s", proc.returncode, pt)
+    return n_ok, n_fail, len(missing)
+
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    """Discover dumps and invoke graph / node plot scripts."""
+    args = _parse_args(argv)
+    root = Path(args.root).expanduser().resolve()
+    out_root = Path(args.out_dir).expanduser().resolve()
+    seeds = _seeds(args.seeds)
+    datasets = _datasets(args.datasets)
+    variants = _variants(args.variants)
+    level = str(args.level)
+
+    logging.info("Root: %s", root)
+    n_ok = 0
+    n_fail = 0
+    n_missing = 0
+
+    if level in ("graph", "both"):
+        ok, fail, miss = _run_graph_plots(
+            root=root,
+            out_root=out_root,
+            datasets=datasets,
+            variants=variants,
+            seeds=seeds,
+            prefer_lr=str(args.prefer_lr),
+            sort_mode=str(args.sort_mode),
+            sort_head=int(args.sort_head),
+            color_by_class=bool(args.color_by_class),
+            dry_run=bool(args.dry_run),
+        )
+        n_ok += ok
+        n_fail += fail
+        n_missing += miss
+
+    if level in ("node", "both"):
+        ok, fail, miss = _run_node_plots(
+            root=root,
+            out_root=out_root,
+            datasets=datasets,
+            variants=variants,
+            seeds=seeds,
+            prefer_lr=str(args.prefer_lr),
+            sort_head=int(args.sort_head),
+            color_by_class=bool(args.color_by_class),
+            band=str(args.band),
+            n_draw=int(args.n_draw),
+            skip_draw=bool(args.skip_draw),
+            dry_run=bool(args.dry_run),
+        )
+        n_ok += ok
+        n_fail += fail
+        n_missing += miss
+
+    logging.info(
+        "Done: %d plots ok, %d failed, %d missing dumps",
+        n_ok,
+        n_fail,
+        n_missing,
+    )
+    if args.dry_run:
+        return 0
+    return 0 if n_fail == 0 and n_ok > 0 else 1
 
 
 if __name__ == "__main__":
