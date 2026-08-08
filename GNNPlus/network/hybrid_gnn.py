@@ -251,18 +251,22 @@ class HybridGNN(torch.nn.Module):
         return all_stats
 
     def collect_per_graph_gates(self, batch: Batch) -> Dict[str, Any]:
-        """Per-graph mean gate γ for each layer and head (no prediction head).
+        """Per-graph and per-node gate γ for each layer and head (no head).
 
-        For headwise gates, each node has a scalar γ; this averages over nodes
-        within each graph. For elementwise gates, averages over nodes and the
-        ``d_h`` feature dim.
+        For headwise gates, each node has a scalar γ; the per-graph tensor
+        averages over nodes within each graph. For elementwise gates, both
+        levels first average over the ``d_h`` feature dim.
 
         Returns:
             Dict with:
-              ``attn``: ``FloatTensor [G, L, Na]``
+              ``attn``: ``FloatTensor [G, L, Na]`` (mean over nodes)
               ``gnn``: ``FloatTensor [G, L, Ng]``
+              ``attn_node``: ``FloatTensor [N, L, Na]`` (per-node γ)
+              ``gnn_node``: ``FloatTensor [N, L, Ng]``
+              ``batch``: ``LongTensor [N]`` local graph id in this mini-batch
               ``y``: graph labels when present (``LongTensor [G]`` or None)
               ``num_graphs``: int
+              ``num_nodes``: int
         """
         (
             x,
@@ -275,10 +279,13 @@ class HybridGNN(torch.nn.Module):
             _edge_attr,
         ) = self._encode_batch(batch)
         graph_ids = batch.batch
+        num_nodes = int(x.size(0))
         num_graphs = int(graph_ids.max().item()) + 1 if graph_ids.numel() else 0
 
-        attn_layers: List[torch.Tensor] = []
-        gnn_layers: List[torch.Tensor] = []
+        attn_graph_layers: List[torch.Tensor] = []
+        gnn_graph_layers: List[torch.Tensor] = []
+        attn_node_layers: List[torch.Tensor] = []
+        gnn_node_layers: List[torch.Tensor] = []
         for layer_idx, layer in enumerate(self.layers):
             layer_out = layer(
                 x,
@@ -298,14 +305,20 @@ class HybridGNN(torch.nn.Module):
                 layer_aux.get('gate_values', {}),
             )
 
-            def _heads_to_graph(heads: List[torch.Tensor]) -> torch.Tensor:
-                """Stack per-head per-graph means into ``[G, H]``."""
+            def _heads_to_node_and_graph(
+                heads: List[torch.Tensor],
+            ) -> Tuple[torch.Tensor, torch.Tensor]:
+                """Return ``(node_gates [N, H], graph_means [G, H])``."""
                 if not heads:
-                    return torch.zeros(num_graphs, 0, device=x.device)
-                cols: List[torch.Tensor] = []
+                    empty_n = torch.zeros(num_nodes, 0, device=x.device)
+                    empty_g = torch.zeros(num_graphs, 0, device=x.device)
+                    return empty_n, empty_g
+                node_cols: List[torch.Tensor] = []
+                graph_cols: List[torch.Tensor] = []
                 for gamma in heads:
                     # [N, 1] or [N, d_h] -> [N] mean over feature dims.
                     node_gate = gamma.detach().float().mean(dim=-1)
+                    node_cols.append(node_gate)
                     graph_gate = scatter(
                         node_gate,
                         graph_ids,
@@ -313,23 +326,37 @@ class HybridGNN(torch.nn.Module):
                         dim_size=num_graphs,
                         reduce='mean',
                     )
-                    cols.append(graph_gate)
-                return torch.stack(cols, dim=-1)
+                    graph_cols.append(graph_gate)
+                return torch.stack(node_cols, dim=-1), torch.stack(graph_cols, dim=-1)
 
-            attn_layers.append(_heads_to_graph(gate_values.get('attn', [])))
-            gnn_layers.append(_heads_to_graph(gate_values.get('gnn', [])))
+            attn_n, attn_g = _heads_to_node_and_graph(gate_values.get('attn', []))
+            gnn_n, gnn_g = _heads_to_node_and_graph(gate_values.get('gnn', []))
+            attn_node_layers.append(attn_n)
+            gnn_node_layers.append(gnn_n)
+            attn_graph_layers.append(attn_g)
+            gnn_graph_layers.append(gnn_g)
             if self.ffn_blocks is not None:
                 x = self.ffn_blocks[layer_idx](x)
 
         attn = (
-            torch.stack(attn_layers, dim=1)
-            if attn_layers
+            torch.stack(attn_graph_layers, dim=1)
+            if attn_graph_layers
             else torch.zeros(num_graphs, 0, 0)
         )
         gnn = (
-            torch.stack(gnn_layers, dim=1)
-            if gnn_layers
+            torch.stack(gnn_graph_layers, dim=1)
+            if gnn_graph_layers
             else torch.zeros(num_graphs, 0, 0)
+        )
+        attn_node = (
+            torch.stack(attn_node_layers, dim=1)
+            if attn_node_layers
+            else torch.zeros(num_nodes, 0, 0)
+        )
+        gnn_node = (
+            torch.stack(gnn_node_layers, dim=1)
+            if gnn_node_layers
+            else torch.zeros(num_nodes, 0, 0)
         )
         y: Optional[torch.Tensor] = None
         if hasattr(batch, 'y') and batch.y is not None:
@@ -339,14 +366,17 @@ class HybridGNN(torch.nn.Module):
             elif y_t.numel() == num_graphs:
                 y = y_t.view(num_graphs)
             else:
-                # Node-level labels: take first label per graph is undefined —
-                # leave None for graph-level dump safety.
+                # Node-level labels: leave None for graph-level dump safety.
                 y = None
         return {
             'attn': attn.cpu(),
             'gnn': gnn.cpu(),
+            'attn_node': attn_node.cpu(),
+            'gnn_node': gnn_node.cpu(),
+            'batch': graph_ids.detach().cpu().long(),
             'y': None if y is None else y.detach().cpu(),
             'num_graphs': num_graphs,
+            'num_nodes': num_nodes,
         }
 
     def forward(self, batch: Batch) -> Batch:

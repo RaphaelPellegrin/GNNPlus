@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
-"""Dump per-graph / per-head SiGMA gate values from a GraphGym checkpoint.
+"""Dump SiGMA gate values from a GraphGym checkpoint.
 
 Given a training ``run_dir`` (contains ``ckpt/`` and was created with the same
 yaml), rebuilds the model, loads the latest (or chosen) checkpoint, and saves:
 
-  ``gate_values_per_graph.pt`` with keys:
-    - ``attn``: FloatTensor ``[N_graphs, L, Na]`` (train+val+test concat order)
-    - ``gnn``:  FloatTensor ``[N_graphs, L, Ng]``
-    - ``y``:    labels when available
-    - ``split``: LongTensor with 0=train, 1=val, 2=test
-    - ``meta``: dict (cfg paths, epoch, seed, …)
+  Graph-level (default ``gate_values_per_graph.pt``):
+    - ``attn`` / ``gnn``: FloatTensor ``[G, L, H]`` — mean γ over nodes
+    - ``y``, ``split``, ``meta``
+
+  Node-level (``gate_values_per_node.pt`` when ``--level node|both``):
+    - ``attn`` / ``gnn``: FloatTensor ``[N, L, H]`` — per-node γ
+    - ``batch``: LongTensor ``[N]`` global graph index (matches graph dump order)
+    - ``ptr``: LongTensor ``[G+1]`` CSR offsets into the node tensors
+    - ``y``, ``split`` at graph level; ``meta``
+
+  Split one graph ``g`` with::
+    attn[g] = payload['attn'][payload['ptr'][g] : payload['ptr'][g + 1]]
 
 Example:
   python scripts/gate_viz/dump_per_graph_gates.py \\
-    --run_dir results/gate_viz_enzymes_ogpkubk9_plateau_seed2 \\
-    --cfg configs/gated_hybrid/enzymes-hybrid-ogpkubk9-a4g4-plateau-anchor.yaml
+    --run_dir results/.../mutag_SiGMA_hetero_lr001_seed2 \\
+    --level both \\
+    --cfg configs/tu_sigma_homo_hetero/sigma-hetero-a2g4-anchor.yaml
 """
 
 from __future__ import annotations
@@ -24,7 +31,7 @@ import logging
 import os.path as osp
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence
 
 import torch
 from torch_geometric.graphgym.checkpoint import get_ckpt_epochs, load_ckpt
@@ -47,7 +54,7 @@ from GNNPlus.hybrid_gate_tracking import _unwrap_model
 def _parse_dump_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     """Parse CLI for gate dump (keeps GraphGym ``--cfg`` via remaining argv)."""
     parser = argparse.ArgumentParser(
-        description='Dump per-graph SiGMA gates from a checkpoint.',
+        description='Dump per-graph / per-node SiGMA gates from a checkpoint.',
     )
     parser.add_argument(
         '--run_dir',
@@ -59,13 +66,26 @@ def _parse_dump_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace
         '--epoch',
         type=int,
         default=-1,
-        help='Checkpoint epoch to load (-1 = latest).',
+        help='Checkpoint epoch to load (-1 = latest / best depending on ckpt).',
     )
     parser.add_argument(
         '--out',
         type=str,
         default='',
-        help='Output .pt path (default: <run_dir>/gate_values_per_graph.pt).',
+        help='Graph-level .pt path (default: <run_dir>/gate_values_per_graph.pt).',
+    )
+    parser.add_argument(
+        '--out-node',
+        type=str,
+        default='',
+        help='Node-level .pt path (default: <run_dir>/gate_values_per_node.pt).',
+    )
+    parser.add_argument(
+        '--level',
+        type=str,
+        default='graph',
+        choices=('graph', 'node', 'both'),
+        help='Dump graph means, packed per-node gates, or both (default: graph).',
     )
     parser.add_argument(
         '--splits',
@@ -93,24 +113,38 @@ def _pick_epoch(run_dir: str, epoch: int) -> int:
     return int(epoch)
 
 
+def _ptr_from_batch(batch_ids: torch.Tensor, num_graphs: int) -> torch.Tensor:
+    """Build CSR ``ptr`` of length ``num_graphs + 1`` from node→graph ids."""
+    counts = torch.bincount(batch_ids, minlength=num_graphs)
+    ptr = torch.zeros(num_graphs + 1, dtype=torch.long)
+    ptr[1:] = torch.cumsum(counts, dim=0)
+    return ptr
+
+
 def _collect_loader_gates(
     model: torch.nn.Module,
     loader: Any,
     split_id: int,
     device: torch.device,
-) -> Tuple[torch.Tensor, torch.Tensor, Optional[torch.Tensor], torch.Tensor]:
-    """Run ``collect_per_graph_gates`` over a loader; concat batch results."""
+    *,
+    want_node: bool,
+) -> Dict[str, Any]:
+    """Run ``collect_per_graph_gates`` over a loader; concat with global ids."""
     core = _unwrap_model(model)
     if not hasattr(core, 'collect_per_graph_gates'):
         raise TypeError(
             f'Model {type(core).__name__} has no collect_per_graph_gates'
         )
 
-    attn_parts: List[torch.Tensor] = []
-    gnn_parts: List[torch.Tensor] = []
+    attn_g_parts: List[torch.Tensor] = []
+    gnn_g_parts: List[torch.Tensor] = []
+    attn_n_parts: List[torch.Tensor] = []
+    gnn_n_parts: List[torch.Tensor] = []
+    batch_parts: List[torch.Tensor] = []
     y_parts: List[torch.Tensor] = []
     split_parts: List[torch.Tensor] = []
     have_y = True
+    graph_offset = 0
 
     was_training = model.training
     model.eval()
@@ -119,42 +153,62 @@ def _collect_loader_gates(
             for batch in loader:
                 batch = batch.to(device)
                 out = core.collect_per_graph_gates(batch)
-                attn_parts.append(out['attn'])
-                gnn_parts.append(out['gnn'])
-                n = int(out['num_graphs'])
+                attn_g_parts.append(out['attn'])
+                gnn_g_parts.append(out['gnn'])
+                n_graphs = int(out['num_graphs'])
                 split_parts.append(
-                    torch.full((n,), split_id, dtype=torch.long)
+                    torch.full((n_graphs,), split_id, dtype=torch.long)
                 )
                 if out['y'] is None:
                     have_y = False
                 else:
                     y_parts.append(out['y'])
+                if want_node:
+                    attn_n_parts.append(out['attn_node'])
+                    gnn_n_parts.append(out['gnn_node'])
+                    batch_parts.append(out['batch'].long() + graph_offset)
+                graph_offset += n_graphs
     finally:
         if was_training:
             model.train()
 
-    if not attn_parts:
-        empty = torch.zeros(0, 0, 0)
-        return empty, empty, None, torch.zeros(0, dtype=torch.long)
-
-    attn = torch.cat(attn_parts, dim=0)
-    gnn = torch.cat(gnn_parts, dim=0)
-    split = torch.cat(split_parts, dim=0)
-    y: Optional[torch.Tensor] = torch.cat(y_parts, dim=0) if have_y and y_parts else None
-    return attn, gnn, y, split
+    empty3 = torch.zeros(0, 0, 0)
+    result: Dict[str, Any] = {
+        'attn': torch.cat(attn_g_parts, dim=0) if attn_g_parts else empty3,
+        'gnn': torch.cat(gnn_g_parts, dim=0) if gnn_g_parts else empty3,
+        'split': (
+            torch.cat(split_parts, dim=0)
+            if split_parts
+            else torch.zeros(0, dtype=torch.long)
+        ),
+        'y': torch.cat(y_parts, dim=0) if have_y and y_parts else None,
+        'num_graphs': graph_offset,
+    }
+    if want_node:
+        if batch_parts:
+            batch_ids = torch.cat(batch_parts, dim=0)
+            result['attn_node'] = torch.cat(attn_n_parts, dim=0)
+            result['gnn_node'] = torch.cat(gnn_n_parts, dim=0)
+            result['batch'] = batch_ids
+            result['ptr'] = _ptr_from_batch(batch_ids, graph_offset)
+            result['num_nodes'] = int(batch_ids.numel())
+        else:
+            result['attn_node'] = empty3
+            result['gnn_node'] = empty3
+            result['batch'] = torch.zeros(0, dtype=torch.long)
+            result['ptr'] = torch.zeros(1, dtype=torch.long)
+            result['num_nodes'] = 0
+    return result
 
 
 def main(argv: Optional[Sequence[str]] = None) -> None:
-    """Load cfg + ckpt and write per-graph gate tensors."""
+    """Load cfg + ckpt and write per-graph / per-node gate tensors."""
     dump_args = _parse_dump_args(argv)
-    # GraphGym expects sys.argv-style: script --cfg path [opts...]
-    # Rebuild argv for parse_args / load_cfg.
     gg_argv = list(dump_args._remaining)
     if '--cfg' not in gg_argv and '-cfg' not in gg_argv:
         raise SystemExit(
             'Pass GraphGym --cfg <yaml> (same config used for training).'
         )
-    # Temporarily set argv for GraphGym parse_args.
     old_argv = sys.argv
     sys.argv = [old_argv[0], *gg_argv]
     try:
@@ -174,7 +228,6 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     loaders = create_loader()
     model = create_model()
     epoch = _pick_epoch(run_dir, int(dump_args.epoch))
-    # load_ckpt restores weights into ``model``; optimizer/scheduler unused.
     loaded = load_ckpt(model, optimizer=None, scheduler=None, epoch=epoch)
     logging.info('Loaded checkpoint epoch=%s (start_epoch=%s)', epoch, loaded)
 
@@ -184,70 +237,146 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         if name not in name_to_id:
             raise ValueError(f'Unknown split {name!r}; use train,val,test')
 
-    # GraphGym create_loader order: train, val, test.
     loader_by_name = {
         'train': loaders[0] if len(loaders) > 0 else None,
         'val': loaders[1] if len(loaders) > 1 else None,
         'test': loaders[2] if len(loaders) > 2 else None,
     }
 
-    attn_all: List[torch.Tensor] = []
-    gnn_all: List[torch.Tensor] = []
+    level = str(dump_args.level)
+    want_graph = level in ('graph', 'both')
+    want_node = level in ('node', 'both')
+
+    attn_g_all: List[torch.Tensor] = []
+    gnn_g_all: List[torch.Tensor] = []
+    attn_n_all: List[torch.Tensor] = []
+    gnn_n_all: List[torch.Tensor] = []
+    batch_all: List[torch.Tensor] = []
     y_all: List[torch.Tensor] = []
     split_all: List[torch.Tensor] = []
     have_y = True
+    graph_offset = 0
 
     for name in wanted:
         loader = loader_by_name[name]
         if loader is None:
             logging.warning('Split %s missing; skipping.', name)
             continue
-        attn, gnn, y, split = _collect_loader_gates(
-            model, loader, name_to_id[name], device
+        part = _collect_loader_gates(
+            model,
+            loader,
+            name_to_id[name],
+            device,
+            want_node=want_node,
         )
         logging.info(
-            'Split %s: %d graphs, attn%s gnn%s',
+            'Split %s: %d graphs%s, attn_g%s gnn_g%s',
             name,
-            attn.size(0),
-            tuple(attn.shape),
-            tuple(gnn.shape),
+            int(part['num_graphs']),
+            (
+                f", {int(part.get('num_nodes', 0))} nodes"
+                if want_node
+                else ''
+            ),
+            tuple(part['attn'].shape),
+            tuple(part['gnn'].shape),
         )
-        attn_all.append(attn)
-        gnn_all.append(gnn)
-        split_all.append(split)
-        if y is None:
+        attn_g_all.append(part['attn'])
+        gnn_g_all.append(part['gnn'])
+        split_all.append(part['split'])
+        if part['y'] is None:
             have_y = False
         else:
-            y_all.append(y)
+            y_all.append(part['y'])
+        if want_node:
+            attn_n_all.append(part['attn_node'])
+            gnn_n_all.append(part['gnn_node'])
+            batch_all.append(part['batch'] + graph_offset)
+        graph_offset += int(part['num_graphs'])
 
-    payload: Dict[str, Any] = {
-        'attn': torch.cat(attn_all, dim=0) if attn_all else torch.zeros(0, 0, 0),
-        'gnn': torch.cat(gnn_all, dim=0) if gnn_all else torch.zeros(0, 0, 0),
-        'split': torch.cat(split_all, dim=0) if split_all else torch.zeros(0),
-        'y': torch.cat(y_all, dim=0) if have_y and y_all else None,
-        'meta': {
-            'run_dir': run_dir,
-            'epoch': epoch,
-            'seed': int(cfg.seed),
-            'dataset': str(cfg.dataset.name),
-            'num_attn_heads': int(cfg.gnn.hybrid.num_attn_heads),
-            'num_gnn_heads': int(cfg.gnn.hybrid.num_gnn_heads),
-            'layers_mp': int(cfg.gnn.layers_mp),
-            'gate': str(cfg.gnn.hybrid.gate),
-            'gnn_types': str(cfg.gnn.hybrid.gnn_types),
-            'splits': wanted,
-        },
+    meta: Dict[str, Any] = {
+        'run_dir': run_dir,
+        'epoch': epoch,
+        'seed': int(cfg.seed),
+        'dataset': str(cfg.dataset.name),
+        'num_attn_heads': int(cfg.gnn.hybrid.num_attn_heads),
+        'num_gnn_heads': int(cfg.gnn.hybrid.num_gnn_heads),
+        'layers_mp': int(cfg.gnn.layers_mp),
+        'gate': str(cfg.gnn.hybrid.gate),
+        'gnn_types': str(cfg.gnn.hybrid.gnn_types),
+        'splits': wanted,
+        'level': level,
+        'aggregation_graph': 'mean_over_nodes',
     }
-    out_path = dump_args.out or osp.join(run_dir, 'gate_values_per_graph.pt')
-    torch.save(payload, out_path)
-    logging.info(
-        'Wrote %s (attn%s gnn%s)',
-        out_path,
-        tuple(payload['attn'].shape),
-        tuple(payload['gnn'].shape),
+
+    y_cat: Optional[torch.Tensor] = (
+        torch.cat(y_all, dim=0) if have_y and y_all else None
     )
+    split_cat = (
+        torch.cat(split_all, dim=0)
+        if split_all
+        else torch.zeros(0, dtype=torch.long)
+    )
+
+    if want_graph:
+        graph_payload: Dict[str, Any] = {
+            'attn': (
+                torch.cat(attn_g_all, dim=0) if attn_g_all else torch.zeros(0, 0, 0)
+            ),
+            'gnn': (
+                torch.cat(gnn_g_all, dim=0) if gnn_g_all else torch.zeros(0, 0, 0)
+            ),
+            'split': split_cat,
+            'y': y_cat,
+            'meta': meta,
+        }
+        out_path = dump_args.out or osp.join(run_dir, 'gate_values_per_graph.pt')
+        torch.save(graph_payload, out_path)
+        logging.info(
+            'Wrote %s (attn%s gnn%s)',
+            out_path,
+            tuple(graph_payload['attn'].shape),
+            tuple(graph_payload['gnn'].shape),
+        )
+
+    if want_node:
+        if batch_all:
+            batch_ids = torch.cat(batch_all, dim=0)
+            num_graphs = graph_offset
+            ptr = _ptr_from_batch(batch_ids, num_graphs)
+            attn_n = torch.cat(attn_n_all, dim=0)
+            gnn_n = torch.cat(gnn_n_all, dim=0)
+        else:
+            batch_ids = torch.zeros(0, dtype=torch.long)
+            ptr = torch.zeros(1, dtype=torch.long)
+            attn_n = torch.zeros(0, 0, 0)
+            gnn_n = torch.zeros(0, 0, 0)
+            num_graphs = 0
+        node_payload: Dict[str, Any] = {
+            'attn': attn_n,
+            'gnn': gnn_n,
+            'batch': batch_ids,
+            'ptr': ptr,
+            'split': split_cat,
+            'y': y_cat,
+            'num_graphs': num_graphs,
+            'num_nodes': int(batch_ids.numel()),
+            'meta': meta,
+        }
+        out_node = dump_args.out_node or osp.join(
+            run_dir, 'gate_values_per_node.pt'
+        )
+        torch.save(node_payload, out_node)
+        logging.info(
+            'Wrote %s (attn%s gnn%s batch%s ptr%s)',
+            out_node,
+            tuple(node_payload['attn'].shape),
+            tuple(node_payload['gnn'].shape),
+            tuple(node_payload['batch'].shape),
+            tuple(node_payload['ptr'].shape),
+        )
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    logging.basicConfig(level=logging.INFO)
     main()
