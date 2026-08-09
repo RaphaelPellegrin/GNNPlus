@@ -8,14 +8,23 @@ Requires ``gate_values_per_node.pt`` from::
 1) Ranked profiles (same layout as ``plot_per_graph_gates.py``):
    for each graph, plot graph-mean γ and a band over node γ (percentiles).
 
-2) Graph drawings: selected graphs with nodes colored by γ at one (L, head).
+2) Graph drawings: nodes colored by γ at one (L, head), selected by
+   mean extremes and/or highest within-graph variance.
+
+3) Dirichlet energy of the **gate field** γ on each graph (needs edges)::
+
+     Dir(γ) = ½ mean_{(i,j)∈E} (γ_i − γ_j)²
+
+   This is layer×head specific (same γ used for coloring). It is *not* the
+   embedding Dirichlet logged in training (``batch.x`` after the forward).
 
 Example::
 
   python scripts/gate_viz/plot_per_node_gates.py \\
     --pt-node path/to/gate_values_per_node.pt \\
     --out_dir results/gate_viz/tu_hh_hetero/mutag_SiGMA_hetero_lr001_seed2 \\
-    --color-by-class
+    --color-by-class \\
+    --draw-select mean_extremes,high_var
 """
 
 from __future__ import annotations
@@ -24,7 +33,7 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Optional, Sequence, Tuple
+from typing import Mapping, Optional, Sequence, Tuple
 
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -116,13 +125,28 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         "--n-draw",
         type=int,
         default=8,
-        help="Number of graphs to draw (half top / half bottom by rank).",
+        help="Number of graphs to draw per selection mode (default: 8).",
+    )
+    parser.add_argument(
+        "--draw-select",
+        type=str,
+        default="mean_extremes,high_var",
+        help=(
+            "Comma-separated drawing selectors: "
+            "mean_extremes (top/bottom mean γ), high_var (largest within-graph "
+            "std of γ). Default: both."
+        ),
     )
     parser.add_argument("--dpi", type=int, default=150, help="PNG dpi.")
     parser.add_argument(
         "--skip-draw",
         action="store_true",
-        help="Only write mean+band profile grids (no network drawings).",
+        help="Only write mean+band / Dirichlet grids (no network drawings).",
+    )
+    parser.add_argument(
+        "--skip-dirichlet",
+        action="store_true",
+        help="Skip Dirichlet-energy ranked grids.",
     )
     return parser.parse_args(argv)
 
@@ -309,14 +333,32 @@ def plot_branch_bands(
     logging.info("Wrote %s", out_path)
 
 
-def _select_draw_indices(order: np.ndarray, n_draw: int) -> list[int]:
+def _parse_draw_select(spec: str) -> list[str]:
+    """Parse ``--draw-select`` into unique mode names."""
+    allowed = {"mean_extremes", "high_var"}
+    out: list[str] = []
+    for part in spec.split(","):
+        mode = part.strip().lower()
+        if not mode:
+            continue
+        if mode not in allowed:
+            raise ValueError(
+                f"Unknown draw-select {mode!r}; expected subset of {sorted(allowed)}"
+            )
+        if mode not in out:
+            out.append(mode)
+    if not out:
+        raise ValueError("--draw-select produced an empty list")
+    return out
+
+
+def _select_mean_extreme_indices(order: np.ndarray, n_draw: int) -> list[int]:
     """Take half top-ranked and half bottom-ranked graph ids."""
     n_draw = max(2, int(n_draw))
     n_top = n_draw // 2
     n_bot = n_draw - n_top
     top = [int(g) for g in order[:n_top]]
     bot = [int(g) for g in order[-n_bot:]]
-    # Preserve order, drop duplicates if tiny dataset.
     seen: set[int] = set()
     out: list[int] = []
     for g in top + bot:
@@ -324,6 +366,230 @@ def _select_draw_indices(order: np.ndarray, n_draw: int) -> list[int]:
             seen.add(g)
             out.append(g)
     return out
+
+
+def _per_graph_std(
+    node_vals: np.ndarray,
+    ptr: np.ndarray,
+    n_graphs: int,
+    layer: int,
+    head: int,
+) -> np.ndarray:
+    """Within-graph std of node γ at ``(layer, head)`` → ``[G]``."""
+    out = np.zeros(n_graphs, dtype=np.float64)
+    for g in range(n_graphs):
+        a, b = int(ptr[g]), int(ptr[g + 1])
+        col = node_vals[a:b, layer, head]
+        out[g] = float(col.std()) if col.size > 1 else 0.0
+    return out
+
+
+def _select_high_var_indices(stds: np.ndarray, n_draw: int) -> list[int]:
+    """Graph ids with largest within-graph gate std (ties broken by id)."""
+    n_draw = max(1, min(int(n_draw), int(stds.size)))
+    order = np.argsort(-stds, kind="stable")
+    return [int(g) for g in order[:n_draw]]
+
+
+def _local_undirected_edges(
+    edge_index: np.ndarray,
+    edge_ptr: np.ndarray,
+    ptr: np.ndarray,
+    graph_id: int,
+) -> np.ndarray:
+    """Return unique undirected local edges ``[2, E_u]`` for one graph."""
+    n0, n1 = int(ptr[graph_id]), int(ptr[graph_id + 1])
+    e0, e1 = int(edge_ptr[graph_id]), int(edge_ptr[graph_id + 1])
+    ei = edge_index[:, e0:e1].astype(np.int64, copy=True) - n0
+    n_g = n1 - n0
+    pairs: set[tuple[int, int]] = set()
+    for u, v in ei.T:
+        ui, vi = int(u), int(v)
+        if ui == vi or ui < 0 or vi < 0 or ui >= n_g or vi >= n_g:
+            continue
+        pairs.add((ui, vi) if ui < vi else (vi, ui))
+    if not pairs:
+        return np.zeros((2, 0), dtype=np.int64)
+    arr = np.asarray(sorted(pairs), dtype=np.int64).T
+    return arr
+
+
+def gate_dirichlet_energy(gates: np.ndarray, edge_index_local: np.ndarray) -> float:
+    """Dirichlet energy of a scalar gate field on one graph.
+
+    Uses undirected edges and
+    ``E = (1 / 2) * mean_{(i,j)∈E} (γ_i − γ_j)²``.
+
+    This is **layer/head-specific**: pass γ at a fixed ``(L, head)``.
+    High E ⇒ neighboring nodes disagree on the gate (rough field).
+    """
+    if gates.size == 0 or edge_index_local.size == 0:
+        return 0.0
+    src = edge_index_local[0]
+    dst = edge_index_local[1]
+    diff = gates[src].astype(np.float64) - gates[dst].astype(np.float64)
+    return float(0.5 * np.mean(np.square(diff)))
+
+
+def _per_graph_dirichlet(
+    node_vals: np.ndarray,
+    ptr: np.ndarray,
+    edge_index: np.ndarray,
+    edge_ptr: np.ndarray,
+    n_graphs: int,
+    layer: int,
+    head: int,
+) -> np.ndarray:
+    """Per-graph gate Dirichlet energy at ``(layer, head)`` → ``[G]``."""
+    out = np.zeros(n_graphs, dtype=np.float64)
+    for g in range(n_graphs):
+        a, b = int(ptr[g]), int(ptr[g + 1])
+        gates = node_vals[a:b, layer, head]
+        ei = _local_undirected_edges(edge_index, edge_ptr, ptr, g)
+        out[g] = gate_dirichlet_energy(gates, ei)
+    return out
+
+
+def _dirichlet_tensor(
+    node_vals: np.ndarray,
+    ptr: np.ndarray,
+    edge_index: np.ndarray,
+    edge_ptr: np.ndarray,
+    n_graphs: int,
+) -> np.ndarray:
+    """Dirichlet energy for every graph×layer×head → ``[G, L, H]``."""
+    n_layers, n_heads = int(node_vals.shape[1]), int(node_vals.shape[2])
+    out = np.zeros((n_graphs, n_layers, n_heads), dtype=np.float64)
+    for layer in range(n_layers):
+        for head in range(n_heads):
+            out[:, layer, head] = _per_graph_dirichlet(
+                node_vals, ptr, edge_index, edge_ptr, n_graphs, layer, head
+            )
+    return out
+
+
+def plot_branch_dirichlet(
+    dirichlet: np.ndarray,
+    *,
+    kind: str,
+    head_names: Sequence[str],
+    labels: Optional[np.ndarray],
+    color_by_class: bool,
+    order: np.ndarray,
+    sort_key_label: str,
+    title: str,
+    out_path: Path,
+    dpi: int,
+    ref_branch: Optional[str],
+    ref_layer: Optional[int],
+    ref_head: Optional[int],
+) -> None:
+    """Write ``L × H`` grid of per-graph gate Dirichlet energy vs shared rank."""
+    n_graphs, n_layers, n_heads = dirichlet.shape
+    fig_w = max(3.2 * n_heads, 10.0)
+    fig_h = max(2.2 * n_layers, 8.0)
+    fig, axes = plt.subplots(
+        n_layers,
+        n_heads,
+        figsize=(fig_w, fig_h),
+        sharex=True,
+        sharey=True,
+        squeeze=False,
+    )
+
+    use_class = bool(color_by_class and labels is not None)
+    unique_classes: list[int] = []
+    colors: list[str] = []
+    if use_class:
+        assert labels is not None
+        unique_classes = sorted(int(c) for c in np.unique(labels))
+        colors = _class_colors(len(unique_classes))
+
+    ranks = np.arange(n_graphs)
+    xlabel = f"Rank ({sort_key_label})"
+    ymax = float(np.nanmax(dirichlet)) if dirichlet.size else 1.0
+    ymax = max(ymax * 1.05, 1e-6)
+
+    for layer in range(n_layers):
+        for head in range(n_heads):
+            ax = axes[layer, head]
+            vals = dirichlet[order, layer, head]
+            if use_class:
+                assert labels is not None
+                y_lab = labels[order]
+                for ci, cls in enumerate(unique_classes):
+                    mask = y_lab == cls
+                    ax.scatter(
+                        ranks[mask],
+                        vals[mask],
+                        s=12,
+                        alpha=0.85,
+                        c=colors[ci],
+                        edgecolors="none",
+                        zorder=3,
+                        label=f"c{cls}" if layer == 0 and head == 0 else None,
+                    )
+            else:
+                ax.scatter(
+                    ranks,
+                    vals,
+                    s=10,
+                    alpha=0.75,
+                    c="#4C72B0",
+                    edgecolors="none",
+                    zorder=3,
+                )
+            if (
+                ref_branch == kind
+                and ref_layer == layer
+                and ref_head == head
+            ):
+                for spine in ax.spines.values():
+                    spine.set_color("#C44E52")
+                    spine.set_linewidth(1.5)
+            ax.set_ylim(-0.02 * ymax, ymax)
+            ax.grid(True, alpha=0.3, linestyle="--")
+            if layer == 0:
+                ax.set_title(head_names[head], fontsize=10, fontweight="bold")
+            if head == 0:
+                ax.set_ylabel(f"L{layer}\nDir(γ)", fontsize=9)
+            if layer == n_layers - 1:
+                ax.set_xlabel(xlabel, fontsize=7)
+            ax.text(
+                0.98,
+                0.95,
+                f"μ={float(vals.mean()):.3f}",
+                transform=ax.transAxes,
+                ha="right",
+                va="top",
+                fontsize=7,
+                color="#333333",
+                bbox={
+                    "boxstyle": "round,pad=0.15",
+                    "facecolor": "white",
+                    "alpha": 0.7,
+                    "edgecolor": "none",
+                },
+            )
+
+    fig.suptitle(title, fontsize=12, fontweight="bold", y=1.0)
+    fig.tight_layout(rect=(0.0, 0.0, 1.0, 0.955))
+    handles, legend_labels = axes[0, 0].get_legend_handles_labels()
+    if handles:
+        fig.legend(
+            handles,
+            legend_labels,
+            loc="lower right",
+            bbox_to_anchor=(0.995, 0.96),
+            ncol=min(6, len(legend_labels)),
+            fontsize=9,
+            framealpha=0.95,
+            borderaxespad=0.0,
+        )
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=dpi, bbox_inches="tight")
+    plt.close(fig)
+    logging.info("Wrote %s", out_path)
 
 
 def plot_colored_graphs(
@@ -341,6 +607,7 @@ def plot_colored_graphs(
     title: str,
     out_path: Path,
     dpi: int,
+    subtitle_metrics: Optional[Mapping[int, str]] = None,
 ) -> None:
     """Draw selected graphs with nodes colored by gate γ."""
     n = len(graph_ids)
@@ -349,7 +616,7 @@ def plot_colored_graphs(
     fig, axes = plt.subplots(
         nrows,
         ncols,
-        figsize=(3.2 * ncols, 3.0 * nrows),
+        figsize=(3.4 * ncols, 3.1 * nrows),
         squeeze=False,
     )
     cmap = colormaps["viridis"]
@@ -358,17 +625,13 @@ def plot_colored_graphs(
     for i, g in enumerate(graph_ids):
         ax = axes[i // ncols, i % ncols]
         n0, n1 = int(ptr[g]), int(ptr[g + 1])
-        e0, e1 = int(edge_ptr[g]), int(edge_ptr[g + 1])
         gates = node_vals[n0:n1, layer, head]
-        ei = edge_index[:, e0:e1].copy()
-        # Localize node ids to 0..n_g-1
-        ei -= n0
+        ei = _local_undirected_edges(edge_index, edge_ptr, ptr, g)
         n_g = n1 - n0
         G = nx.Graph()
         G.add_nodes_from(range(n_g))
         for u, v in ei.T:
-            if 0 <= int(u) < n_g and 0 <= int(v) < n_g and int(u) != int(v):
-                G.add_edge(int(u), int(v))
+            G.add_edge(int(u), int(v))
         if n_g == 0:
             ax.axis("off")
             continue
@@ -385,9 +648,16 @@ def plot_colored_graphs(
             edgecolors="#222222",
         )
         cls = int(labels[g]) if labels is not None else -1
+        std = float(gates.std()) if gates.size > 1 else 0.0
+        extra = ""
+        if subtitle_metrics is not None and g in subtitle_metrics:
+            extra = f" · {subtitle_metrics[g]}"
         ax.set_title(
-            f"g{g}" + (f" · c{cls}" if cls >= 0 else "") + f" · μ={float(gates.mean()):.2f}",
-            fontsize=9,
+            f"g{g}"
+            + (f" · c{cls}" if cls >= 0 else "")
+            + f" · mean={float(gates.mean()):.2f} σ={std:.2f}"
+            + extra,
+            fontsize=8,
         )
         ax.axis("off")
 
@@ -427,8 +697,6 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
 
     meta = dict(payload.get("meta") or {})
     dataset = str(meta.get("dataset", "dataset"))
-    epoch = meta.get("epoch", "?")
-    seed = meta.get("seed", "?")
 
     attn_g = _graph_means_from_nodes(attn_n, ptr, n_graphs)
     gnn_g = _graph_means_from_nodes(gnn_n, ptr, n_graphs)
@@ -503,44 +771,103 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         ref_head=ref_head,
     )
 
+    has_edges = "edge_index" in payload and "edge_ptr" in payload
+    edge_index: Optional[np.ndarray] = None
+    edge_ptr: Optional[np.ndarray] = None
+    if has_edges:
+        edge_index = payload["edge_index"].detach().cpu().long().numpy()
+        edge_ptr = payload["edge_ptr"].detach().cpu().long().numpy()
+
+    if not args.skip_dirichlet:
+        if not has_edges:
+            logging.warning(
+                "No edge_index/edge_ptr in dump — cannot compute Dirichlet energy."
+            )
+        else:
+            assert edge_index is not None and edge_ptr is not None
+            dir_base = (
+                f"Gate Dirichlet energy Dir(γ)=½ mean_e (γ_i−γ_j)² | {dataset} | "
+                f"SiGMA · {n_graphs} graphs · order by {sort_key_label}"
+            )
+            for kind, node_arr, names in (
+                ("attn", attn_n, attn_names),
+                ("gnn", gnn_n, gnn_names),
+            ):
+                dire = _dirichlet_tensor(
+                    node_arr, ptr, edge_index, edge_ptr, n_graphs
+                )
+                plot_branch_dirichlet(
+                    dire,
+                    kind=kind,
+                    head_names=names,
+                    labels=labels,
+                    color_by_class=args.color_by_class,
+                    order=order,
+                    sort_key_label=sort_key_label,
+                    title=f"{dir_base} · {'attention' if kind == 'attn' else 'MP heads'}",
+                    out_path=out_dir
+                    / (
+                        f"{dataset.lower()}_gates_{kind}_dirichlet_shared_order"
+                        f"{class_suffix}.png"
+                    ),
+                    dpi=int(args.dpi),
+                    ref_branch=ref_branch,
+                    ref_layer=ref_layer,
+                    ref_head=ref_head,
+                )
+
     if not args.skip_draw:
-        if "edge_index" not in payload or "edge_ptr" not in payload:
+        if not has_edges:
             logging.warning(
                 "No edge_index/edge_ptr in dump — re-run dump with latest "
                 "scripts/gate_viz/dump_per_graph_gates.py to enable drawings."
             )
         else:
-            edge_index = payload["edge_index"].detach().cpu().long().numpy()
-            edge_ptr = payload["edge_ptr"].detach().cpu().long().numpy()
+            assert edge_index is not None and edge_ptr is not None
             draw_branch = str(args.draw_branch)
             vals = gnn_n if draw_branch == "gnn" else attn_n
             draw_names = gnn_names if draw_branch == "gnn" else attn_names
             d_layer = resolve_sort_layer(int(vals.shape[1]), int(args.draw_layer))
             d_head = int(args.draw_head)
             head_name = draw_names[d_head]
-            draw_ids = _select_draw_indices(order, int(args.n_draw))
-            plot_colored_graphs(
-                node_vals=vals,
-                ptr=ptr,
-                edge_index=edge_index,
-                edge_ptr=edge_ptr,
-                graph_ids=draw_ids,
-                labels=labels,
-                layer=d_layer,
-                head=d_head,
-                head_name=head_name,
-                branch=draw_branch,
-                title=(
-                    f"Nodes colored by γ | {dataset} · L{d_layer} {head_name} · "
-                    f"ep{epoch} seed{seed} · top/bottom by {sort_key_label}"
-                ),
-                out_path=out_dir
-                / (
-                    f"{dataset.lower()}_gates_{draw_branch}_L{d_layer}_"
-                    f"{head_name}_node_graphs.png"
-                ),
-                dpi=int(args.dpi),
-            )
+            stds = _per_graph_std(vals, ptr, n_graphs, d_layer, d_head)
+
+            for mode in _parse_draw_select(str(args.draw_select)):
+                if mode == "mean_extremes":
+                    draw_ids = _select_mean_extreme_indices(order, int(args.n_draw))
+                    sel_tag = f"top/bottom by {sort_key_label}"
+                    fname = (
+                        f"{dataset.lower()}_gates_{draw_branch}_L{d_layer}_"
+                        f"{head_name}_node_graphs.png"
+                    )
+                elif mode == "high_var":
+                    draw_ids = _select_high_var_indices(stds, int(args.n_draw))
+                    sel_tag = f"highest within-graph σ(γ) at L{d_layer} {head_name}"
+                    fname = (
+                        f"{dataset.lower()}_gates_{draw_branch}_L{d_layer}_"
+                        f"{head_name}_node_graphs_high_var.png"
+                    )
+                else:
+                    raise RuntimeError(f"Unhandled draw mode {mode!r}")
+
+                plot_colored_graphs(
+                    node_vals=vals,
+                    ptr=ptr,
+                    edge_index=edge_index,
+                    edge_ptr=edge_ptr,
+                    graph_ids=draw_ids,
+                    labels=labels,
+                    layer=d_layer,
+                    head=d_head,
+                    head_name=head_name,
+                    branch=draw_branch,
+                    title=(
+                        f"Nodes colored by γ | {dataset} · L{d_layer} {head_name} · "
+                        f"{sel_tag}"
+                    ),
+                    out_path=out_dir / fname,
+                    dpi=int(args.dpi),
+                )
 
     logging.info("Done → %s", out_dir)
 
