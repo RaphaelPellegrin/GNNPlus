@@ -379,6 +379,82 @@ class HybridGNN(torch.nn.Module):
             'num_nodes': num_nodes,
         }
 
+    def collect_attention_maps(self, batch: Batch) -> Dict[str, Any]:
+        """Collect dense within-graph attention maps and value norms (vanilla attn).
+
+        Runs a forward through all hybrid layers with ``return_attn_weights=True``.
+        Keys match Heterogeneity_Profile attention bundles:
+        ``attention['layer{i}_attn{h}']`` → ``FloatTensor [N, N]`` (row-softmax),
+        ``value_norms['layer{i}_attn{h}']`` → ``FloatTensor [N]`` (‖v_j‖₂).
+
+        GRIT sparse heads do not contribute maps (empty entries).
+        """
+        (
+            x,
+            batch,
+            edge_index_attn,
+            edge_attr_attn,
+            edge_index_mp,
+            edge_attr_mp,
+            _edge_index,
+            _edge_attr,
+        ) = self._encode_batch(batch)
+        attention: Dict[str, torch.Tensor] = {}
+        value_norms: Dict[str, torch.Tensor] = {}
+        gate_means: Dict[str, float] = {}
+        for layer_idx, layer in enumerate(self.layers):
+            layer_out = layer(
+                x,
+                edge_index_mp,
+                batch.batch,
+                edge_attr_mp,
+                edge_index_attn=edge_index_attn,
+                edge_attr_attn=edge_attr_attn,
+                edge_index_mp=edge_index_mp,
+                edge_attr_mp=edge_attr_mp,
+                return_gate_stats=True,
+                return_attn_weights=True,
+            )
+            assert isinstance(layer_out, tuple)
+            x, layer_aux = layer_out
+            weights = cast(
+                List[torch.Tensor],
+                layer_aux.get('attn_weights', []),
+            )
+            vnorms = cast(
+                List[torch.Tensor],
+                layer_aux.get('value_norms', []),
+            )
+            gates = cast(
+                Dict[str, List[torch.Tensor]],
+                layer_aux.get('gate_values', {}),
+            )
+            for h, w in enumerate(weights):
+                key = f'layer{layer_idx}_attn{h}'
+                attention[key] = w.detach().cpu().float()
+                if h < len(vnorms):
+                    value_norms[key] = vnorms[h].detach().cpu().float()
+                attn_gates = gates.get('attn', [])
+                if h < len(attn_gates):
+                    gate_means[key] = float(attn_gates[h].detach().float().mean().item())
+            if self.ffn_blocks is not None:
+                x = self.ffn_blocks[layer_idx](x)
+
+        edge_index = getattr(batch, 'edge_index', None)
+        if edge_index is None:
+            edge_index = edge_index_mp
+        return {
+            'attention': attention,
+            'value_norms': value_norms,
+            'gate_means': gate_means,
+            'edge_index': edge_index.detach().cpu().long(),
+            'batch': batch.batch.detach().cpu().long(),
+            'num_nodes': int(x.size(0)),
+            'y': None
+            if not hasattr(batch, 'y') or batch.y is None
+            else batch.y.detach().cpu(),
+        }
+
     def forward(self, batch: Batch) -> Batch:
         """Run encoder, hybrid blocks, optional FFN, and prediction head."""
         (

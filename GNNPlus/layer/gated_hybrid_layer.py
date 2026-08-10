@@ -845,6 +845,7 @@ class GatedHybridGraphLayer(nn.Module):
         attn_outputs: List[Tensor] = []
         attn_gate_vals: List[Tensor] = []
         attn_weights_list: List[Tensor] = []
+        value_norm_list: List[Tensor] = []
 
         if self.attn_type == "grit":
             for grit_head in self.grit_attn_heads:
@@ -881,6 +882,8 @@ class GatedHybridGraphLayer(nn.Module):
                 weights = F.softmax(scores, dim=-1)
                 if return_attn_weights:
                     attn_weights_list.append(weights.detach().clone())
+                    # Per-key ||v_j||_2 for NOP vs broadcast sink diagnostics.
+                    value_norm_list.append(v.detach().float().norm(dim=-1))
                 weights = F.dropout(weights, p=self.attn_dropout, training=self.training)
 
                 raw = weights @ v
@@ -956,5 +959,6 @@ class GatedHybridGraphLayer(nn.Module):
             aux["gate_values"] = gate_values
         if return_attn_weights:
             aux["attn_weights"] = attn_weights_list
+            aux["value_norms"] = value_norm_list
 
         return out, aux

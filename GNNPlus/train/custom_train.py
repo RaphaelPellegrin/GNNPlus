@@ -20,6 +20,10 @@ from GNNPlus.hybrid_gate_tracking import (
     hybrid_gate_logging_enabled,
     publish_gate_stats_to_wandb,
 )
+from GNNPlus.attention_sink_tracking import (
+    attention_sink_logging_enabled,
+    maybe_log_attention_sinks_to_wandb,
+)
 
 
 def _parse_wandb_tags() -> list[str]:
@@ -179,6 +183,9 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
         if hybrid_gate_logging_enabled():
             wandb.define_metric('train/epoch')
             wandb.define_metric('gates/*', step_metric='train/epoch')
+        if attention_sink_logging_enabled():
+            wandb.define_metric('train/epoch')
+            wandb.define_metric('attn_sinks/*', step_metric='train/epoch')
 
     num_splits = len(loggers)
     split_names = ['val', 'test']
@@ -215,6 +222,7 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
             gate_log = build_hybrid_gate_wandb_log(model, loaders[0])
             run.log(wandb_log, step=cur_epoch)
             publish_gate_stats_to_wandb(run, gate_log, cur_epoch)
+            maybe_log_attention_sinks_to_wandb(run, model, loaders[0], cur_epoch)
 
         # Log current best stats on eval epoch.
         if is_eval_epoch(cur_epoch):

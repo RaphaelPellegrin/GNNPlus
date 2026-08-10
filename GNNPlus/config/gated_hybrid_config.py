@@ -29,6 +29,13 @@ def gated_hybrid_cfg(cfg: CN) -> None:
     # Gate uses a separate Linear (Level-1 style), not split(W_hg · x).
     cfg.gnn.hybrid.identity_proj = False
     cfg.gnn.hybrid.log_gate_stats = True  # W&B gates/layer*/attn_* (headwise + elementwise)
+    # Attention-sink panels (Fesser-style): sparse epochs → PNG + W&B Images.
+    cfg.gnn.hybrid.log_attention_sinks = False
+    cfg.gnn.hybrid.attention_sink_every = 50  # also logs epoch 0 and last
+    cfg.gnn.hybrid.attention_sink_tau = 1.5
+    cfg.gnn.hybrid.attention_sink_epsilon = 0.3
+    cfg.gnn.hybrid.attention_sink_max_nodes = 512  # dense N×N safety
+    cfg.gnn.hybrid.attention_sink_save_pt = True  # keep batch .pt next to PNGs
     # Attention head backend: dense QK (vanilla) or sparse GRIT units (grit).
     cfg.gnn.hybrid.attn_type = 'vanilla'  # vanilla | grit
     cfg.gnn.hybrid.grit = CN()
