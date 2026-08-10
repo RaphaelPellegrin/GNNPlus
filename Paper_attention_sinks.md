@@ -2,7 +2,24 @@
 
 Paper: [arXiv:2606.08105](https://arxiv.org/pdf/2606.08105) (Fesser et al.) — NOP vs broadcast sinks; gating ≈ NOP intervention; registers ≈ broadcast.
 
-Goal: show AS evidence on **ungated** graph attention (SiGMA / GPS), with gated contrast + ‖v_sink‖ diagnostics.
+Goal: **(1) find AS** in ungated graph transformers; **(2) study which node traits** sinks prefer; gated contrast + ‖v‖ for NOP vs broadcast.
+
+---
+
+## Research plan (locked)
+
+### Phase A — Existence (order-free)
+Over many graphs × layers × heads: \(\max\alpha\) vs \(1/n\), τ·μ sink rate, ε-sink rate, exemplar stripes (degree-sort **display only**).  
+Primary: **ungated attn**. Contrast: **gated**.
+
+### Phase B — Localization (pre-specified traits)
+degree, PageRank, eigenvector, closeness, clustering, k-core:
+- rank of argmax-α node (is sink = top hub?)
+- Spearman \(\rho(\alpha, c)\) within graph, mean over graphs  
+Offline: HP figures `17`–`25` from `plot_attention_sinks_aggregate.py`.
+
+### Phase C — Mechanism (Fesser)
+\(\|v_{\mathrm{sink}}\|/\mathrm{mean}\|v\|\): ≪1 NOP vs ~1 broadcast. Optional later: virtual nodes.
 
 ---
 
@@ -10,12 +27,40 @@ Goal: show AS evidence on **ungated** graph attention (SiGMA / GPS), with gated 
 
 | Step | Status | Notes |
 |------|--------|-------|
-| Code: dense attn dump + ‖v‖ | ✅ | `collect_attention_maps`, `dump_attention_maps.py` |
-| Code: train-time W&B sink PNGs | ✅ | `attention_sink_tracking.py` (sparse epochs) |
-| Code: offline aggregate plots | ✅ | Heterogeneity_Profile `plot_attention_sinks_aggregate.py` |
-| Cluster train MUTAG+ENZYMES | ⏳ smoke | JOB **37966868** · tasks 1–2 SiGMA OK path; **3–4 GPS failed** (MUTAG raw `edge_attr` dim≠`d_model` in GATEDGCN). Fix: `_edge_features_to_dh` ignore mismatch → zeros. Resubmit GPS after pull. |
-| Rsync + paper figures | ⏳ | after jobs finish |
+| Code: dump + ‖v‖ + W&B panels | ✅ | existence (Phase A) mid-train |
+| Code: offline + centrality | ✅ | Phase B aggregate plotter |
+| MUTAG SiGMA (gated/ungated) | ✅ | JOB 37966868 · W&B `ibm24bvj` / `tqe7n2j4` |
+| MUTAG GPS | ✅ | JOB **37969759** · W&B `jj98ytzn` / `h7ut8lsp` |
+| ENZYMES + paper TU scale-up | ⏳ | scripts expanded to 6 ds; submit GPS ungated first |
+| Full-dataset dump → Phase B figs | ✅ MUTAG | ENZYMES/COLLAB/… after train |
 | Paper write-up | ⏳ | |
+
+### First MUTAG findings (ep999 train batch, strongest head)
+
+| Run | Head | mean α / uniform | sink = max-deg hub? | mean deg-rank of sink | vnr |
+|-----|------|------------------|---------------------|------------------------|-----|
+| **GPS ungated** | L0 h0 | **~4.9×** | **0%** | **~15** (leaves) | ~1.05 |
+| GPS gated | L0 h0 | ~5.2× | 0% | ~15 (leaves) | ~1.05 |
+| SiGMA ungated | L2 h0 | ~4.0× | 4% | ~9 | ~1.15 |
+| SiGMA gated | L4 h1 | ~3.9× | 7% | ~8 | ~1.21 |
+
+**Takeaway (batch):** clear AS (τ·μ on argmax, α ≫ 1/n). GPS L0 sinks looked like **low-degree periphery**. ‖v‖ ratio ~1 → not classic NOP.
+
+Plots: `results/tu_attention_sinks/sink_graph_plots/` · W&B panels: `results/tu_attention_sinks/wandb_panels/`
+
+### Dataset-wide MUTAG (Phase B — all 188 graphs)
+
+Dumped via `dump_attention_maps.py` (CPU `map_location`) from **best-val ckpts** (not ep999): GPS ungated **ep65**, GPS gated **ep68**, SiGMA ungated **ep11**, SiGMA gated **ep156**.  
+HP aggregate: `Heterogeneity_Profile/visualizations/attention_sinks/mutag_{GPS,SiGMA}_{un,}gated_full/` (figs **17–25**, `records.csv`, `summary_layer_head.txt`).
+
+| Run (ckpt) | Strong AS heads (rate≥0.5) | On those heads: hub% / deg≤2 / ρ(α,deg) | L0 specifically |
+|------------|----------------------------|------------------------------------------|-----------------|
+| **GPS ungated ep65** | **L0H0 only** (rate=1.00, max_ratio≈3.8×) | **0% / 100% / −0.63** | periphery confirmed |
+| GPS gated ep68 | 5 heads; L0 still leaves; L4 strong AS | mixed (L0: 0%/100%/−0.50; L4: hub%≈15, ρ=+0.34) | L0 periphery; later layers not |
+| SiGMA ungated ep11 | L1H0, L3H1 | **hub-leaning** (~11% hub, deg≈3.0, ρ≈+0.69) | L0 flat (no AS) |
+| SiGMA gated ep156 | 7 heads | mixed (L1H0: deg≈1.8, ρ≈−0.37; L0H1: ρ≈+0.61) | not a clean periphery story |
+
+**Verdict:** “periphery sinks” **holds dataset-wide for GPS ungated L0** (all 188 graphs: mean sink degree **1.06**, never the max-degree hub, Spearman ρ(α, degree/PageRank) ≈ **−0.64**). It is **not** a universal claim across layers or SiGMA — strong SiGMA sinks lean **higher** degree/PageRank. Mid-depth GPS layers rarely sink (τ-rate ≪ 0.5) and, when they do, track centrality more.
 
 ---
 
@@ -122,70 +167,74 @@ git status
 
 ## Cluster (after push + Duo)
 
+Paper TU set (6): MUTAG · ENZYMES · PROTEINS · COLLAB · IMDB-BINARY · REDDIT-BINARY  
+(4 variants × 6 = **24** tasks). COLLAB uses `lr=0.01`; others `0.001`.
+
 ```bash
 source ~/.gnnplus_env
 export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
 export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-git pull
+# if scripts not pushed yet: scp run/submit from laptop
 
-# Full 8 jobs (MUTAG+ENZYMES × 4 variants). W&B sink PNGs every 50 epochs.
-bash bash_interface/cluster/submit_tu_attention_sinks.sh
+# Cheapest ×uniform vs |V| test — GPS ungated on all 6 ds:
+AS_ARRAY=4,8,12,16,20,24 AS_PARALLEL=6 \
+  bash bash_interface/cluster/submit_tu_attention_sinks.sh
 
-# MUTAG-only smoke (tasks 1–4), denser panels every 25 epochs:
-AS_ARRAY=1-4 AS_PARALLEL=4 AS_SINK_EVERY=25 \
+# Skip MUTAG (done), all 4 variants on remaining 5 ds:
+AS_ARRAY=5-24 AS_PARALLEL=10 \
   bash bash_interface/cluster/submit_tu_attention_sinks.sh
 ```
 
-Record JOBID here: `37966868` (MUTAG smoke tasks 1–4, 2026-08-09)
+Record JOBIDs:
+- `37966868` — MUTAG smoke 1–4 (2026-08-09)
+- `37969759` — MUTAG GPS 3–4 retry
+- **`37971764`** — GPS ungated × 6 paper TU (tasks 4,8,12,16,20,24) · 2026-08-09
+- **`37971765`** — ENZYMES variants 5–7 (SiGMA gated/ungated + GPS gated)
 
-Task map for this array:
-| Task | Variant |
-|------|---------|
-| 1 | `mutag_SiGMA_hetero_gated_lr001_seed2` |
-| 2 | `mutag_SiGMA_hetero_ungated_attn_lr001_seed2` |
-| 3 | `mutag_GPS_gated_lr001_seed2` |
-| 4 | `mutag_GPS_ungated_attn_lr001_seed2` |
+Task map: `ds×4 + variant` with ds order  
+`mutag, enzymes, proteins, collab, imdb_binary, reddit_binary` · variants 0..3 as before.  
+GPS ungated = **4,8,12,16,20,24**.
 
-ENZYMES (tasks 5–8): submit later with `AS_ARRAY=5-8` or full `1-8`.
+**Hypothesis note (MUTAG L0 within-ds):** α **falls** with \(n\) (corr ≈ −0.59) so ×uniform only weakly rises (corr ≈ +0.24). Cross-dataset (ENZYMES/COLLAB/REDDIT) is needed to see if larger graphs give bigger multiples.
 
 Monitor:
 ```bash
-squeue -j 37966868
-tail -f logs_gnnplus/tu_attn_sinks_37966868_2.log   # ungated SiGMA
+squeue -u $USER | grep tu_attn
 ```
-W&B: groups `tu_as_mutag_*`
+W&B: groups `tu_as_<ds>_*`
 
 ---
 
-## After train — rsync + offline aggregate (optional)
+## After train — rsync + offline aggregate
 
 ```bash
 rsync -avz --progress \
   fasrc:/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results/tu_attention_sinks/ \
   results/tu_attention_sinks/
-
-# Offline multi-batch aggregate (Heterogeneity_Profile):
-cd ../Heterogeneity_Profile
-PYTHONPATH=src python scripts/plots/plot_attention_sinks_aggregate.py \
-  --input-dir ../GNNPlus/results/tu_attention_sinks/mutag_SiGMA_hetero_ungated_attn_lr001_seed2/attention_sinks \
-  --output-dir visualizations/attention_sinks/mutag_ungated_attn \
-  --tau 1.5 --epsilon 0.3
 ```
 
-If mid-train `.pt` files are nested under `epXXXX/`, point `--input-dir` at the run’s `attention_sinks/` tree or flatten; end-of-run dump via `AS_DUMP_ATTN=1` / `dump_attention_maps.py` writes flat `attention_matrices/`.
+# Full dump from best ckpt (local CPU OK — dump uses map_location=cpu):
+# (see earlier MUTAG GPS example; swap run_dir / dataset.name)
+
+# HP centrality panels 17–25:
+# cd ../Heterogeneity_Profile && PYTHONPATH=src python scripts/plots/plot_attention_sinks_aggregate.py ...
+
+Done locally for all 4 MUTAG variants → `visualizations/attention_sinks/mutag_{GPS,SiGMA}_{un,}gated_full/`.
 
 ---
 
 ## Paper figure checklist
 
-- [ ] Ungated SiGMA: vertical stripes (degree-sorted exemplars)
-- [ ] Sink-rate L×H heatmap
-- [ ] Sink centrality (hub vs leaf) — offline aggregate
-- [ ] ‖v_sink‖ / mean‖v‖ (NOP vs broadcast)
-- [ ] Gated contrast (same arch)
-- [ ] GPS ungated (+ gated)
+- [x] Ungated SiGMA: vertical stripes (degree-sorted exemplars) — fig 16 in HP outs
+- [x] Sink-rate L×H heatmap — HP figs 01–03 family
+- [x] Sink centrality (hub vs leaf) — offline aggregate figs **17–25** (MUTAG full)
+- [ ] ‖v_sink‖ / mean‖v‖ (NOP vs broadcast) — mid-train only so far
+- [x] Gated contrast (same arch)
+- [x] GPS ungated (+ gated)
 - [ ] Epoch evolution panels from W&B (ep0 / ep50 / … / last)
+- [ ] ENZYMES / COLLAB / paper-TU GPS ungated + α vs \(n\) across datasets
+- [ ] ENZYMES full dump + aggregate
 
 ---
 
@@ -194,3 +243,5 @@ If mid-train `.pt` files are nested under `epXXXX/`, point `--input-dir` at the 
 - **No position-0:** PyG index is arbitrary; panels sort by **degree**.
 - **Variable |V|:** dense attn only within-graph; truncate batch to `attention_sink_max_nodes`.
 - **Gating:** Fesser: gating targets NOP. Ungated attn is required to *see* AS; gated runs are the intervention contrast.
+- **REDDIT:** full `.pt` dump skipped unless `AS_DUMP_REDDIT=1`; rely on W&B mid-train panels (max_nodes=512).
+

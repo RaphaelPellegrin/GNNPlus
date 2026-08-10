@@ -35,7 +35,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
 import torch
-from torch_geometric.graphgym.checkpoint import get_ckpt_epochs, load_ckpt
+from torch_geometric.graphgym.checkpoint import (
+    MODEL_STATE,
+    get_ckpt_epoch,
+    get_ckpt_epochs,
+    get_ckpt_path,
+)
 from torch_geometric.graphgym.cmd_args import parse_args
 from torch_geometric.graphgym.config import cfg, load_cfg, set_cfg
 from torch_geometric.graphgym.loader import create_loader
@@ -92,13 +97,34 @@ def _parse_dump_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace
 
 
 def _pick_epoch(run_dir: str, epoch: int) -> int:
-    """Resolve checkpoint epoch (-1 → latest available)."""
+    """Resolve checkpoint epoch (-1 → latest available under ``cfg.run_dir``)."""
     if epoch >= 0:
         return epoch
-    epochs = get_ckpt_epochs(run_dir)
+    # GraphGym reads epochs from ``cfg.run_dir`` (must be set by caller).
+    epochs = list(get_ckpt_epochs())
     if not epochs:
         raise FileNotFoundError(f"No checkpoints under {run_dir}/ckpt/")
     return int(max(epochs))
+
+
+def _load_ckpt_cpu(model: torch.nn.Module, epoch: int) -> int:
+    """Load GraphGym checkpoint with CPU ``map_location`` (cluster CUDA ckpts).
+
+    Args:
+        model: Model whose ``state_dict`` will be updated.
+        epoch: Resolved checkpoint epoch index.
+
+    Returns:
+        ``epoch + 1`` (GraphGym convention for ``start_epoch``), matching
+        ``load_ckpt``.
+    """
+    ep = get_ckpt_epoch(epoch)
+    path = get_ckpt_path(ep)
+    if not osp.exists(path):
+        raise FileNotFoundError(f"Checkpoint not found: {path}")
+    ckpt = torch.load(path, map_location=torch.device("cpu"), weights_only=False)
+    model.load_state_dict(ckpt[MODEL_STATE])
+    return int(ep) + 1
 
 
 def main(argv: Optional[Sequence[str]] = None) -> None:
@@ -134,7 +160,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         )
 
     epoch = _pick_epoch(run_dir, int(dump_args.epoch))
-    loaded = load_ckpt(model, optimizer=None, scheduler=None, epoch=epoch)
+    loaded = _load_ckpt_cpu(model, epoch)
     logging.info("Loaded checkpoint epoch=%s (start_epoch=%s)", epoch, loaded)
     model.eval()
 
