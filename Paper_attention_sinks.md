@@ -13,7 +13,7 @@ Goal: show AS evidence on **ungated** graph attention (SiGMA / GPS), with gated 
 | Code: dense attn dump + ‖v‖ | ✅ | `collect_attention_maps`, `dump_attention_maps.py` |
 | Code: train-time W&B sink PNGs | ✅ | `attention_sink_tracking.py` (sparse epochs) |
 | Code: offline aggregate plots | ✅ | Heterogeneity_Profile `plot_attention_sinks_aggregate.py` |
-| Cluster train MUTAG+ENZYMES | ⏳ | submit below after push |
+| Cluster train MUTAG+ENZYMES | ⏳ smoke | JOB **37966868** · tasks 1–2 SiGMA OK path; **3–4 GPS failed** (MUTAG raw `edge_attr` dim≠`d_model` in GATEDGCN). Fix: `_edge_features_to_dh` ignore mismatch → zeros. Resubmit GPS after pull. |
 | Rsync + paper figures | ⏳ | after jobs finish |
 | Paper write-up | ⏳ | |
 
@@ -137,7 +137,24 @@ AS_ARRAY=1-4 AS_PARALLEL=4 AS_SINK_EVERY=25 \
   bash bash_interface/cluster/submit_tu_attention_sinks.sh
 ```
 
-Record JOBID here: `________________`
+Record JOBID here: `37966868` (MUTAG smoke tasks 1–4, 2026-08-09)
+
+Task map for this array:
+| Task | Variant |
+|------|---------|
+| 1 | `mutag_SiGMA_hetero_gated_lr001_seed2` |
+| 2 | `mutag_SiGMA_hetero_ungated_attn_lr001_seed2` |
+| 3 | `mutag_GPS_gated_lr001_seed2` |
+| 4 | `mutag_GPS_ungated_attn_lr001_seed2` |
+
+ENZYMES (tasks 5–8): submit later with `AS_ARRAY=5-8` or full `1-8`.
+
+Monitor:
+```bash
+squeue -j 37966868
+tail -f logs_gnnplus/tu_attn_sinks_37966868_2.log   # ungated SiGMA
+```
+W&B: groups `tu_as_mutag_*`
 
 ---
 

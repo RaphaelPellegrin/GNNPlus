@@ -55,6 +55,40 @@ def _build_gin_conv(in_dim: int, out_dim: int) -> GINConv:
     )
 
 
+def _edge_features_to_dh(
+    edge_attr: Optional[Tensor],
+    edge_index: Tensor,
+    d_h: int,
+    edge_proj: nn.Linear,
+    *,
+    device: torch.device,
+    dtype: torch.dtype,
+) -> Tensor:
+    """Map ``edge_attr`` to ``[E, d_h]`` for edge-aware MP heads.
+
+    Accepts:
+    - ``None`` → zeros
+    - last dim ``== d_h`` → pass through
+    - last dim ``== edge_proj.in_features`` (usually ``d_model``) → linear
+    - otherwise (e.g. MUTAG raw bond feats with ``edge_encoder: False``) → zeros
+
+    The last case avoids ``mat1/mat2`` shape errors when TU datasets ship
+    low-dim ``edge_attr`` but the head was built for encoded ``d_model`` edges.
+    """
+    num_e = int(edge_index.size(1))
+    if edge_attr is None:
+        return torch.zeros((num_e, d_h), device=device, dtype=dtype)
+    feat = edge_attr.float()
+    if feat.dim() == 1:
+        feat = feat.unsqueeze(-1)
+    in_f = int(feat.size(-1))
+    if in_f == d_h:
+        return feat.to(device=device, dtype=dtype)
+    if in_f == int(edge_proj.in_features):
+        return edge_proj(feat).to(dtype=dtype)
+    return torch.zeros((num_e, d_h), device=device, dtype=dtype)
+
+
 from GNNPlus.layer.gcn_conv_layer_e import GCNConvLayer, GCNConvWithEdges
 from GNNPlus.layer.gatedgcn_layer import GatedGCNLayer
 from GNNPlus.layer.grit_attn_head import _GRITAttnHead
@@ -105,12 +139,10 @@ class _GCNEHybridMPHead(nn.Module):
         edge_attr: Optional[Tensor] = None,
     ) -> Tensor:
         """Run gcne-style message passing at hidden width ``d_h``."""
-        num_e = edge_index.size(1)
         dev, dt = x_h.device, x_h.dtype
-        if edge_attr is None:
-            eh = torch.zeros((num_e, self.d_h), device=dev, dtype=dt)
-        else:
-            eh = self.edge_proj(edge_attr.float()).to(dtype=dt)
+        eh = _edge_features_to_dh(
+            edge_attr, edge_index, self.d_h, self.edge_proj, device=dev, dtype=dt
+        )
         out = self.conv(x_h, edge_index, eh)
         return F.dropout(out, p=self._gnn_dropout, training=self.training)
 
@@ -147,16 +179,10 @@ class _GCNEConvLayerHybridMPHead(nn.Module):
         edge_attr: Optional[Tensor] = None,
     ) -> Tensor:
         """Run full gcne layer at ``d_h`` with Bond/edge features projected to ``d_h``."""
-        num_e = edge_index.size(1)
         dev, dt = x_h.device, x_h.dtype
-        if edge_attr is None:
-            eh = torch.zeros((num_e, self.d_h), device=dev, dtype=dt)
-        else:
-            feat = edge_attr.float()
-            if feat.size(-1) == self.d_h:
-                eh = feat.to(dtype=dt)
-            else:
-                eh = self.edge_proj(feat).to(dtype=dt)
+        eh = _edge_features_to_dh(
+            edge_attr, edge_index, self.d_h, self.edge_proj, device=dev, dtype=dt
+        )
         batch = _EdgeHybridBatch(x_h, edge_index, eh)
         out = self.layer(batch)
         result = out.x
@@ -267,16 +293,10 @@ class _GatedGCNHybridMPHead(nn.Module):
         edge_attr: Optional[Tensor] = None,
     ) -> Tensor:
         """Run GatedGCN+ message passing at ``d_h`` with encoded edge features."""
-        num_e = edge_index.size(1)
         dev, dt = x_h.device, x_h.dtype
-        if edge_attr is None:
-            eh = torch.zeros((num_e, self.d_h), device=dev, dtype=dt)
-        else:
-            feat = edge_attr.float()
-            if feat.size(-1) == self.d_h:
-                eh = feat.to(dtype=dt)
-            else:
-                eh = self.edge_proj(feat).to(dtype=dt)
+        eh = _edge_features_to_dh(
+            edge_attr, edge_index, self.d_h, self.edge_proj, device=dev, dtype=dt
+        )
         batch = _EdgeHybridBatch(x_h, edge_index, eh)
         out = self.layer(batch)
         result = out.x
