@@ -25,6 +25,18 @@ import networkx as nx
 import numpy as np
 import torch
 
+import sys
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from GNNPlus.attention_sink_tracking import (
+    classify_sink_mechanism,
+    mean_row_cosine,
+    stable_rank,
+)
+
 
 def _parse_args() -> argparse.Namespace:
     """Parse CLI."""
@@ -116,12 +128,18 @@ def main() -> None:
     edge_index = payload["edge_index"]
     batch = payload["batch"]
     value_norms: Dict[str, torch.Tensor] = payload.get("value_norms", {})
+    head_outputs: Dict[str, torch.Tensor] = payload.get("head_outputs", {})
 
     key = args.key.strip() or _pick_key(attention, batch)
     A_full = attention[key].detach().cpu().float().numpy()
     vn_full = (
         value_norms[key].detach().cpu().float().numpy()
         if key in value_norms
+        else None
+    )
+    av_full = (
+        head_outputs[key].detach().cpu().float().numpy()
+        if key in head_outputs
         else None
     )
 
@@ -147,6 +165,15 @@ def main() -> None:
         if vn_full is not None:
             vn = vn_full[start : start + n]
             vnr = float(vn[sink] / (vn.mean() + 1e-8))
+        sr = float("nan")
+        rc = float("nan")
+        if av_full is not None:
+            av = av_full[start : start + n]
+            sr = stable_rank(av)
+            rc = mean_row_cosine(av)
+        mech = classify_sink_mechanism(
+            vnorm_ratio=vnr, av_stable_rank=sr, row_cosine=rc
+        )
         rec = {
             "graph": gi,
             "n": n,
@@ -160,6 +187,9 @@ def main() -> None:
             "is_hub": deg_rank == 0,
             "tau_sink": is_tau,
             "vnorm_ratio": vnr,
+            "av_stable_rank": sr,
+            "av_row_cosine": rc,
+            "mechanism": mech,
         }
         records.append(rec)
 
@@ -177,10 +207,10 @@ def main() -> None:
                 G, pos, ax=ax, node_color=node_colors, node_size=sizes, linewidths=0.5, edgecolors="k"
             )
             ax.set_title(
-                f"g{gi} n={n} sink={sink}\n"
-                f"α={alpha[sink]:.2f} ({alpha[sink]/uniform:.1f}×unif) "
-                f"deg_rank={deg_rank}",
-                fontsize=8,
+                f"g{gi} n={n} sink={sink} [{mech}]\n"
+                f"α={alpha[sink]:.2f} ({alpha[sink]/uniform:.1f}×) "
+                f"vnr={vnr:.2f} sr={sr:.2f}",
+                fontsize=7,
             )
             ax.axis("off")
 
@@ -200,6 +230,10 @@ def main() -> None:
     mean_ratio = float(np.mean([r["ratio_vs_uniform"] for r in records]))
     mean_deg_rank = float(np.mean([r["deg_rank"] for r in records]))
     mean_vnr = float(np.nanmean([r["vnorm_ratio"] for r in records]))
+    mean_sr = float(np.nanmean([r["av_stable_rank"] for r in records]))
+    mean_rc = float(np.nanmean([r["av_row_cosine"] for r in records]))
+    frac_bc = float(np.mean([r["mechanism"] == "broadcast" for r in records]))
+    frac_nop = float(np.mean([r["mechanism"] == "nop" for r in records]))
 
     summary_path = out_dir / f"sink_commonality_{key}.txt"
     lines = [
@@ -210,7 +244,11 @@ def main() -> None:
         f"mean_degree_rank_of_sink={mean_deg_rank:.2f}  (0=hub)",
         f"frac_tau_mu_sink_on_argmax={tau_frac:.3f}",
         f"mean_max_alpha_over_uniform={mean_ratio:.2f}x",
-        f"mean_sink_vnorm_ratio={mean_vnr:.3f}",
+        f"mean_sink_vnorm_ratio={mean_vnr:.3f}  (NOP≪1)",
+        f"mean_av_stable_rank={mean_sr:.3f}  (broadcast~1)",
+        f"mean_av_row_cosine={mean_rc:.3f}  (broadcast⇒high)",
+        f"frac_mechanism_nop={frac_nop:.3f}",
+        f"frac_mechanism_broadcast={frac_bc:.3f}",
         "",
         "per-graph:",
     ]
@@ -218,7 +256,9 @@ def main() -> None:
         lines.append(
             f"  g{r['graph']}: n={r['n']} sink={r['sink']} α={r['max_alpha']:.3f} "
             f"({r['ratio_vs_uniform']:.1f}×) deg={r['deg']:.0f}/{r['deg_mean']:.1f} "
-            f"rank={r['deg_rank']} hub={r['is_hub']} tau={r['tau_sink']} vnr={r['vnorm_ratio']:.2f}"
+            f"rank={r['deg_rank']} hub={r['is_hub']} tau={r['tau_sink']} "
+            f"vnr={r['vnorm_ratio']:.2f} sr={r['av_stable_rank']:.2f} "
+            f"cos={r['av_row_cosine']:.2f} mech={r['mechanism']}"
         )
     summary_path.write_text("\n".join(lines) + "\n")
     print("\n".join(lines))

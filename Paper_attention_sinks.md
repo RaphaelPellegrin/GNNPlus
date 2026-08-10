@@ -19,7 +19,12 @@ degree, PageRank, eigenvector, closeness, clustering, k-core:
 Offline: HP figures `17`–`25` from `plot_attention_sinks_aggregate.py`.
 
 ### Phase C — Mechanism (Fesser)
-\(\|v_{\mathrm{sink}}\|/\mathrm{mean}\|v\|\): ≪1 NOP vs ~1 broadcast. Optional later: virtual nodes.
+- ``‖v_sink‖ / mean‖v‖``: ≪1 ⇒ **NOP**; ~1 ⇒ not NOP
+- ``stable_rank(AV)`` + mean row-cosine of ``AV``: ~1 + high cosine ⇒ **broadcast**
+- Saved in mid-train ``attention_batch_ep*.pt`` and full dumps: ``value_norms``, ``head_outputs`` (``AV``), ``attn_gates``
+- Offline: ``scripts/attention_sinks/summarize_nop_broadcast.py``
+- Optional later: virtual nodes / registers
+
 
 ---
 
@@ -93,7 +98,10 @@ Not every epoch (too heavy).
 | `attn_sinks/panel_sink_rate_LxH` | τ·μ sink present (0/1) heatmap |
 | `attn_sinks/panel_max_alpha_LxH` | max column-mean α |
 | `attn_sinks/panel_sink_vnorm_ratio_LxH` | ‖v_sink‖ / mean‖v‖ (NOP ≪ 1, broadcast ~ 1) |
-| `attn_sinks/*` scalars | mean sink rate, max α, vnorm ratio, per L/h |
+| `attn_sinks/panel_av_stable_rank_LxH` | stable_rank(AV) (~1 ⇒ broadcast) |
+| `attn_sinks/panel_av_row_cosine_LxH` | mean row-cosine of AV (broadcast ⇒ high) |
+| `attn_sinks/panel_mechanism_LxH` | heuristic 0=NOP / 0.5=amb / 1=broadcast |
+| `attn_sinks/*` scalars | sink rate, max α, vnorm, stable_rank, row_cos, mech fracs |
 
 Also on disk: `<run_dir>/attention_sinks/epXXXX/*.png` + `attention_batch_epXXXX.pt`.
 
@@ -229,7 +237,7 @@ Done locally for all 4 MUTAG variants → `visualizations/attention_sinks/mutag_
 - [x] Ungated SiGMA: vertical stripes (degree-sorted exemplars) — fig 16 in HP outs
 - [x] Sink-rate L×H heatmap — HP figs 01–03 family
 - [x] Sink centrality (hub vs leaf) — offline aggregate figs **17–25** (MUTAG full)
-- [ ] ‖v_sink‖ / mean‖v‖ (NOP vs broadcast) — mid-train only so far
+- [x] ‖v_sink‖ / mean‖v‖ + stable_rank(AV) + row-cosine (NOP vs broadcast) — logged + dumped
 - [x] Gated contrast (same arch)
 - [x] GPS ungated (+ gated)
 - [ ] Epoch evolution panels from W&B (ep0 / ep50 / … / last)

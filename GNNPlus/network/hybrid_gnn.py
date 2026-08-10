@@ -380,12 +380,16 @@ class HybridGNN(torch.nn.Module):
         }
 
     def collect_attention_maps(self, batch: Batch) -> Dict[str, Any]:
-        """Collect dense within-graph attention maps and value norms (vanilla attn).
+        """Collect dense within-graph attention maps and Fesser diagnostics.
 
         Runs a forward through all hybrid layers with ``return_attn_weights=True``.
         Keys match Heterogeneity_Profile attention bundles:
-        ``attention['layer{i}_attn{h}']`` → ``FloatTensor [N, N]`` (row-softmax),
-        ``value_norms['layer{i}_attn{h}']`` → ``FloatTensor [N]`` (‖v_j‖₂).
+
+        - ``attention['layer{i}_attn{h}']`` → ``FloatTensor [N, N]`` (row-softmax)
+        - ``value_norms[...]`` → ``FloatTensor [N]`` (‖v_j‖₂; NOP ≪ mean)
+        - ``head_outputs[...]`` → ``FloatTensor [N, d_h]`` (clean ``A V`` pre-gate;
+          stable rank ≈ 1 supports broadcast)
+        - ``attn_gates[...]`` → ``FloatTensor [N]`` (sigmoid γ, or ones if ungated)
 
         GRIT sparse heads do not contribute maps (empty entries).
         """
@@ -401,6 +405,8 @@ class HybridGNN(torch.nn.Module):
         ) = self._encode_batch(batch)
         attention: Dict[str, torch.Tensor] = {}
         value_norms: Dict[str, torch.Tensor] = {}
+        head_outputs: Dict[str, torch.Tensor] = {}
+        attn_gates: Dict[str, torch.Tensor] = {}
         gate_means: Dict[str, float] = {}
         for layer_idx, layer in enumerate(self.layers):
             layer_out = layer(
@@ -425,6 +431,10 @@ class HybridGNN(torch.nn.Module):
                 List[torch.Tensor],
                 layer_aux.get('value_norms', []),
             )
+            head_outs = cast(
+                List[torch.Tensor],
+                layer_aux.get('attn_head_outputs', []),
+            )
             gates = cast(
                 Dict[str, List[torch.Tensor]],
                 layer_aux.get('gate_values', {}),
@@ -434,9 +444,15 @@ class HybridGNN(torch.nn.Module):
                 attention[key] = w.detach().cpu().float()
                 if h < len(vnorms):
                     value_norms[key] = vnorms[h].detach().cpu().float()
-                attn_gates = gates.get('attn', [])
-                if h < len(attn_gates):
-                    gate_means[key] = float(attn_gates[h].detach().float().mean().item())
+                if h < len(head_outs):
+                    head_outputs[key] = head_outs[h].detach().cpu().float()
+                attn_gate_list = gates.get('attn', [])
+                if h < len(attn_gate_list):
+                    g = attn_gate_list[h].detach().cpu().float()
+                    if g.dim() > 1:
+                        g = g.mean(dim=-1)
+                    attn_gates[key] = g
+                    gate_means[key] = float(g.mean().item())
             if self.ffn_blocks is not None:
                 x = self.ffn_blocks[layer_idx](x)
 
@@ -446,6 +462,8 @@ class HybridGNN(torch.nn.Module):
         return {
             'attention': attention,
             'value_norms': value_norms,
+            'head_outputs': head_outputs,
+            'attn_gates': attn_gates,
             'gate_means': gate_means,
             'edge_index': edge_index.detach().cpu().long(),
             'batch': batch.batch.detach().cpu().long(),

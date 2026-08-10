@@ -7,12 +7,18 @@ Writes Heterogeneity_Profile-compatible ``.pt`` bundles::
       "epoch": int,
       "attention": {"layer{L}_attn{H}": FloatTensor[N, N], ...},
       "value_norms": {"layer{L}_attn{H}": FloatTensor[N], ...},  # ‖v_j‖₂
+      "head_outputs": {"layer{L}_attn{H}": FloatTensor[N, d_h], ...},  # A V
+      "attn_gates": {"layer{L}_attn{H}": FloatTensor[N], ...},  # γ
       "gate_means": {"layer{L}_attn{H}": float, ...},
       "edge_index": LongTensor[2, E],
       "batch": LongTensor[N],
       "num_nodes": int,
       "meta": {...},
     }
+
+Fesser NOP vs broadcast: ``value_norms`` (NOP ≪ mean) and ``head_outputs``
+(stable_rank≈1 + high row-cosine ⇒ broadcast). See
+``summarize_nop_broadcast.py``.
 
 Use small ``--batch_size`` (default 8) so dense ``N×N`` stays tractable.
 MUTAG / ENZYMES are good; COLLAB / REDDIT are not.
@@ -223,6 +229,8 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
                         "batch_index": bi,
                         "attention": payload["attention"],
                         "value_norms": payload["value_norms"],
+                        "head_outputs": payload.get("head_outputs", {}),
+                        "attn_gates": payload.get("attn_gates", {}),
                         "gate_means": payload["gate_means"],
                         "edge_index": payload["edge_index"],
                         "batch": payload["batch"],

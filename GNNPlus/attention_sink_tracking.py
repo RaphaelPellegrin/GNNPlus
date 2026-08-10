@@ -111,6 +111,87 @@ def _tau_sink_mask(A: np.ndarray, tau: float) -> np.ndarray:
     return a_hat > (tau * mu)
 
 
+def stable_rank(matrix: np.ndarray) -> float:
+    """Stable rank ``‖M‖_F² / ‖M‖₂²`` (≈1 ⇒ near rank-1 / broadcast-like).
+
+    Args:
+        matrix: 2D array, typically head write ``AV`` with shape ``[n, d_h]``.
+
+    Returns:
+        Stable rank in ``[0, min(n, d)]``, or ``nan`` if empty / degenerate.
+    """
+    if matrix.ndim != 2 or matrix.size == 0:
+        return float("nan")
+    # Economy SVD; for tiny d_h this is cheap.
+    singular = np.linalg.svd(matrix, compute_uv=False)
+    s2 = singular.astype(np.float64) ** 2
+    peak = float(s2.max()) if s2.size else 0.0
+    if peak <= 0.0:
+        return 0.0
+    return float(s2.sum() / peak)
+
+
+def mean_row_cosine(matrix: np.ndarray) -> float:
+    """Mean cosine of each row of ``M`` to the mean row (broadcast ⇒ high).
+
+    Args:
+        matrix: ``[n, d]`` head outputs.
+
+    Returns:
+        Mean cosine in ``[-1, 1]``, or ``nan`` if undefined.
+    """
+    if matrix.ndim != 2 or matrix.shape[0] < 2 or matrix.shape[1] < 1:
+        return float("nan")
+    mean_row = matrix.mean(axis=0)
+    mean_norm = float(np.linalg.norm(mean_row))
+    if mean_norm <= 1e-12:
+        return float("nan")
+    cosines: List[float] = []
+    for row in matrix:
+        rn = float(np.linalg.norm(row))
+        if rn <= 1e-12:
+            continue
+        cosines.append(float(np.dot(row, mean_row) / (rn * mean_norm)))
+    if not cosines:
+        return float("nan")
+    return float(np.mean(cosines))
+
+
+def classify_sink_mechanism(
+    *,
+    vnorm_ratio: float,
+    av_stable_rank: float,
+    row_cosine: float,
+    nop_vnorm_thresh: float = 0.25,
+    broadcast_rank_thresh: float = 1.5,
+    broadcast_cosine_thresh: float = 0.85,
+) -> str:
+    """Heuristic NOP / broadcast / ambiguous label (Fesser-style).
+
+    Args:
+        vnorm_ratio: ``‖v_sink‖ / mean‖v‖``.
+        av_stable_rank: Stable rank of ``AV``.
+        row_cosine: Mean row-cosine of ``AV``.
+        nop_vnorm_thresh: Ratio below this ⇒ NOP-leaning.
+        broadcast_rank_thresh: Stable rank below this ⇒ rank-1-ish.
+        broadcast_cosine_thresh: Row cosine above this ⇒ shared write.
+
+    Returns:
+        One of ``nop``, ``broadcast``, ``ambiguous``.
+    """
+    nop_like = (not math.isnan(vnorm_ratio)) and vnorm_ratio < nop_vnorm_thresh
+    broadcast_like = (
+        (not math.isnan(av_stable_rank) and av_stable_rank <= broadcast_rank_thresh)
+        and (not math.isnan(row_cosine) and row_cosine >= broadcast_cosine_thresh)
+        and (math.isnan(vnorm_ratio) or vnorm_ratio >= nop_vnorm_thresh)
+    )
+    if nop_like and not broadcast_like:
+        return "nop"
+    if broadcast_like and not nop_like:
+        return "broadcast"
+    return "ambiguous"
+
+
 def _stride_imshow(arr: np.ndarray, max_side: int = 256) -> np.ndarray:
     """Downsample a square matrix for display."""
     h, w = arr.shape
@@ -135,6 +216,8 @@ def _build_panels_for_batch(
     epsilon: float,
     out_dir: Path,
     epoch: int,
+    head_outputs: Optional[Mapping[str, torch.Tensor]] = None,
+    attn_gates: Optional[Mapping[str, torch.Tensor]] = None,
 ) -> Tuple[Dict[str, Any], Dict[str, float]]:
     """Create PNG panels + scalar summaries for one mini-batch.
 
@@ -142,6 +225,8 @@ def _build_panels_for_batch(
         ``(wandb_images_dict, scalar_metrics)``. Image values are file paths
         (caller wraps as ``wandb.Image``).
     """
+    head_outputs = head_outputs or {}
+    attn_gates = attn_gates or {}
     start, end = _first_graph_slice(batch_ids)
     n_g = end - start
     order = _degree_order(edge_index, n_g, start)
@@ -162,7 +247,10 @@ def _build_panels_for_batch(
     sink_rate = np.full((len(layers), n_heads), np.nan, dtype=np.float64)
     max_alpha = np.full_like(sink_rate, np.nan)
     sink_vnorm_ratio = np.full_like(sink_rate, np.nan)
-    mean_gate = np.full_like(sink_rate, np.nan)
+    av_stable_rank = np.full_like(sink_rate, np.nan)
+    av_row_cosine = np.full_like(sink_rate, np.nan)
+    sink_gate = np.full_like(sink_rate, np.nan)
+    mech_code = np.full_like(sink_rate, np.nan)  # 0 nop, 1 broadcast, 0.5 amb
 
     # --- per head heatmaps (first graph, degree-sorted) ---
     fig_h, axes = plt.subplots(
@@ -185,10 +273,31 @@ def _build_panels_for_batch(
             sink_rate[li, head] = float(sink_m.any())
             max_alpha[li, head] = float(alpha.max()) if alpha.size else float("nan")
             sink_j = int(alpha.argmax()) if alpha.size else 0
+            vnr = float("nan")
             if key in value_norms:
                 vn = value_norms[key].detach().cpu().float().numpy()[start:end][order]
                 mean_vn = float(vn.mean()) + 1e-8
-                sink_vnorm_ratio[li, head] = float(vn[sink_j] / mean_vn)
+                vnr = float(vn[sink_j] / mean_vn)
+                sink_vnorm_ratio[li, head] = vnr
+            sr = float("nan")
+            rc = float("nan")
+            if key in head_outputs:
+                av = head_outputs[key].detach().cpu().float().numpy()[start:end][order]
+                sr = stable_rank(av)
+                rc = mean_row_cosine(av)
+                av_stable_rank[li, head] = sr
+                av_row_cosine[li, head] = rc
+            if key in attn_gates:
+                g = attn_gates[key].detach().cpu().float().numpy()[start:end][order]
+                sink_gate[li, head] = float(g[sink_j])
+            label = classify_sink_mechanism(
+                vnorm_ratio=vnr, av_stable_rank=sr, row_cosine=rc
+            )
+            mech_code[li, head] = {
+                "nop": 0.0,
+                "broadcast": 1.0,
+                "ambiguous": 0.5,
+            }[label]
             vis = _stride_imshow(A)
             ax.imshow(vis, cmap="viridis", aspect="auto", interpolation="nearest")
             ax.axvline(sink_j / max(A.shape[1] / vis.shape[1], 1e-6), color="r", ls="--", lw=0.8)
@@ -234,9 +343,19 @@ def _build_panels_for_batch(
     path_mean = out_dir / f"ep{epoch:05d}_attn_mean_over_heads.png"
     _save_fig(fig_m, path_mean)
 
-    def _heatmap(data: np.ndarray, title: str, fname: str, vmin: Optional[float] = None, vmax: Optional[float] = None) -> Path:
-        fig, ax = plt.subplots(figsize=(max(3.0, 0.55 * n_heads + 1.5), max(3.0, 0.35 * len(layers) + 1.2)))
-        im = ax.imshow(data, aspect="auto", cmap="magma", vmin=vmin, vmax=vmax, interpolation="nearest")
+    def _heatmap(
+        data: np.ndarray,
+        title: str,
+        fname: str,
+        vmin: Optional[float] = None,
+        vmax: Optional[float] = None,
+    ) -> Path:
+        fig, ax = plt.subplots(
+            figsize=(max(3.0, 0.55 * n_heads + 1.5), max(3.0, 0.35 * len(layers) + 1.2))
+        )
+        im = ax.imshow(
+            data, aspect="auto", cmap="magma", vmin=vmin, vmax=vmax, interpolation="nearest"
+        )
         ax.set_xticks(range(n_heads))
         ax.set_xticklabels([f"h{h}" for h in range(n_heads)], fontsize=7)
         ax.set_yticks(range(len(layers)))
@@ -269,11 +388,38 @@ def _build_panels_for_batch(
         f"‖v_sink‖ / mean‖v‖ (NOP≪1, broadcast~1) · ep={epoch}",
         f"ep{epoch:05d}_sink_vnorm_ratio_LxH.png",
     )
+    path_rank = _heatmap(
+        av_stable_rank,
+        f"stable_rank(AV) (~1 ⇒ broadcast) · ep={epoch}",
+        f"ep{epoch:05d}_av_stable_rank_LxH.png",
+        vmin=1.0,
+        vmax=float(max(2.0, np.nanmax(av_stable_rank) if np.isfinite(av_stable_rank).any() else 2.0)),
+    )
+    path_cos = _heatmap(
+        av_row_cosine,
+        f"mean row-cosine(AV) (broadcast ⇒ high) · ep={epoch}",
+        f"ep{epoch:05d}_av_row_cosine_LxH.png",
+        vmin=0.0,
+        vmax=1.0,
+    )
+    path_mech = _heatmap(
+        mech_code,
+        f"mechanism heuristic (0=NOP, 0.5=amb, 1=broadcast) · ep={epoch}",
+        f"ep{epoch:05d}_mechanism_LxH.png",
+        vmin=0.0,
+        vmax=1.0,
+    )
 
     scalars: Dict[str, float] = {
         "attn_sinks/mean_sink_rate": float(np.nanmean(sink_rate)),
         "attn_sinks/mean_max_alpha": float(np.nanmean(max_alpha)),
         "attn_sinks/mean_sink_vnorm_ratio": float(np.nanmean(sink_vnorm_ratio)),
+        "attn_sinks/mean_av_stable_rank": float(np.nanmean(av_stable_rank)),
+        "attn_sinks/mean_av_row_cosine": float(np.nanmean(av_row_cosine)),
+        "attn_sinks/frac_nop_heuristic": float(np.nanmean((mech_code == 0.0).astype(np.float64))),
+        "attn_sinks/frac_broadcast_heuristic": float(
+            np.nanmean((mech_code == 1.0).astype(np.float64))
+        ),
         "attn_sinks/frac_soft_eps_heads": float(
             np.nanmean((max_alpha > epsilon).astype(np.float64))
         ),
@@ -285,12 +431,19 @@ def _build_panels_for_batch(
         for head in range(n_heads):
             if np.isnan(sink_rate[li, head]):
                 continue
-            scalars[f"attn_sinks/L{layer}_h{head}/sink_rate"] = float(sink_rate[li, head])
-            scalars[f"attn_sinks/L{layer}_h{head}/max_alpha"] = float(max_alpha[li, head])
+            prefix = f"attn_sinks/L{layer}_h{head}"
+            scalars[f"{prefix}/sink_rate"] = float(sink_rate[li, head])
+            scalars[f"{prefix}/max_alpha"] = float(max_alpha[li, head])
             if not np.isnan(sink_vnorm_ratio[li, head]):
-                scalars[f"attn_sinks/L{layer}_h{head}/sink_vnorm_ratio"] = float(
-                    sink_vnorm_ratio[li, head]
-                )
+                scalars[f"{prefix}/sink_vnorm_ratio"] = float(sink_vnorm_ratio[li, head])
+            if not np.isnan(av_stable_rank[li, head]):
+                scalars[f"{prefix}/av_stable_rank"] = float(av_stable_rank[li, head])
+            if not np.isnan(av_row_cosine[li, head]):
+                scalars[f"{prefix}/av_row_cosine"] = float(av_row_cosine[li, head])
+            if not np.isnan(sink_gate[li, head]):
+                scalars[f"{prefix}/sink_gate"] = float(sink_gate[li, head])
+            if not np.isnan(mech_code[li, head]):
+                scalars[f"{prefix}/mechanism_code"] = float(mech_code[li, head])
 
     images = {
         "attn_sinks/panel_by_layer_head": str(path_heads),
@@ -298,6 +451,9 @@ def _build_panels_for_batch(
         "attn_sinks/panel_sink_rate_LxH": str(path_sr),
         "attn_sinks/panel_max_alpha_LxH": str(path_ma),
         "attn_sinks/panel_sink_vnorm_ratio_LxH": str(path_vn),
+        "attn_sinks/panel_av_stable_rank_LxH": str(path_rank),
+        "attn_sinks/panel_av_row_cosine_LxH": str(path_cos),
+        "attn_sinks/panel_mechanism_LxH": str(path_mech),
     }
     return images, scalars
 
@@ -384,15 +540,19 @@ def maybe_log_attention_sinks_to_wandb(
                 epsilon=epsilon,
                 out_dir=out_dir,
                 epoch=epoch,
+                head_outputs=payload.get("head_outputs", {}),
+                attn_gates=payload.get("attn_gates", {}),
             )
 
-            # Persist the raw batch bundle for offline aggregate plots.
+            # Persist the raw batch bundle for offline aggregate / mechanism plots.
             if bool(getattr(hybrid, "attention_sink_save_pt", True)):
                 torch.save(
                     {
                         "epoch": epoch,
                         "attention": payload["attention"],
                         "value_norms": payload.get("value_norms", {}),
+                        "head_outputs": payload.get("head_outputs", {}),
+                        "attn_gates": payload.get("attn_gates", {}),
                         "gate_means": payload.get("gate_means", {}),
                         "edge_index": payload["edge_index"],
                         "batch": payload["batch"],
@@ -403,6 +563,10 @@ def maybe_log_attention_sinks_to_wandb(
                             "dataset": str(cfg.dataset.name),
                             "gate": str(getattr(hybrid, "gate", "")),
                             "mp_gate": str(getattr(hybrid, "mp_gate", "") or ""),
+                            "diagnostics": (
+                                "vnorm_ratio (NOP≪1); stable_rank(AV)~1 + "
+                                "high row-cosine ⇒ broadcast"
+                            ),
                         },
                     },
                     out_dir / f"attention_batch_ep{epoch:05d}.pt",
