@@ -37,7 +37,7 @@ Offline: HP figures `17`–`25` from `plot_attention_sinks_aggregate.py`.
 | MUTAG SiGMA (gated/ungated) | ✅ | JOB 37966868 · W&B `ibm24bvj` / `tqe7n2j4` |
 | MUTAG GPS | ✅ | JOB **37969759** · W&B `jj98ytzn` / `h7ut8lsp` |
 | ENZYMES + paper TU scale-up | ⏳ | scripts expanded to 6 ds; submit GPS ungated first |
-| Full-dataset dump → Phase B figs | ✅ MUTAG | ENZYMES/COLLAB/… after train |
+| Full-dataset dump → Phase B figs | ✅ MUTAG · ENZYMES · PROTEINS GPS | COLLAB/… |
 | Paper write-up | ⏳ | |
 
 ### First MUTAG findings (ep999 train batch, strongest head)
@@ -66,6 +66,38 @@ HP aggregate: `Heterogeneity_Profile/visualizations/attention_sinks/mutag_{GPS,S
 | SiGMA gated ep156 | 7 heads | mixed (L1H0: deg≈1.8, ρ≈−0.37; L0H1: ρ≈+0.61) | not a clean periphery story |
 
 **Verdict:** “periphery sinks” **holds dataset-wide for GPS ungated L0** (all 188 graphs: mean sink degree **1.06**, never the max-degree hub, Spearman ρ(α, degree/PageRank) ≈ **−0.64**). It is **not** a universal claim across layers or SiGMA — strong SiGMA sinks lean **higher** degree/PageRank. Mid-depth GPS layers rarely sink (τ-rate ≪ 0.5) and, when they do, track centrality more.
+
+### Cross-dataset GPS dumps (2026-08-10) — AS existence + mechanism
+
+Full dumps from best-val ckpts + `summarize_nop_broadcast.py` (τ-sink rows only for mechanism). Canvas: `AttentionSinksGNN.canvas.tsx` · CSVs: `results/tu_attention_sinks/analysis/`.
+
+| Dataset | Strongest head | ×unif | sink-rate | sink vnr | sr(AV) | BC% / NOP% |
+|---------|----------------|-------|-----------|----------|--------|------------|
+| MUTAG ungated | L0 | 2.7× | 80% | 0.88 | 1.00 | 37% / 0% |
+| ENZYMES ungated | L5 | 8.5× | 97% | 0.83 | 1.27 | 46% / 0% |
+| ENZYMES gated | L6 | 8.8× | 97% | 0.95 | 1.34 | 29% / 0% |
+| PROTEINS ungated | L4 | **14.7×** | 90% | 0.88 | 1.00 | **99% / 1%** |
+| IMDB ungated | — | ~1× | **0%** | — | — | — |
+| REDDIT ungated | — | ~1× | **0%** | — | — | — |
+
+**Takeaways**
+1. **×uniform ≠ |V|:** L0 does not get “better multiples” on larger graphs; IMDB/REDDIT are flat. Strong AS are mid-layer on bio graphs.
+2. **Mechanism:** among τ-sinks, **not NOP** (vnr~0.8–1.0); **broadcast-leaning** (sr≈1, high row-cos), especially PROTEINS.
+3. **Gating** does not remove ENZYMES AS.
+4. **COLLAB GPS ungated** best@ep0 — discard for AS claims.
+
+### Phase B — ENZYMES / PROTEINS GPS (2026-08-10)
+
+Local HP aggregate on existing dumps (`edge_index`+`batch` present). Out:
+`Heterogeneity_Profile/visualizations/attention_sinks/{enzymes_GPS_{un,}gated,proteins_GPS_ungated}_full/` (figs **17–25**).
+
+| Run | Strong heads (rate≥0.5) | On strongest: hub% / deg≤2 / ρ(α,deg) | L0 |
+|-----|-------------------------|----------------------------------------|-----|
+| ENZYMES GPS ungated | many mid/deep (L5 8.5× …) | L5: **2% / 9% / −0.08** | flat (rate 0, 1.2×) |
+| ENZYMES GPS gated | many (L6 8.8× …) | L6: **5% / 8% / +0.01** | weak (15%, 1.3×) |
+| PROTEINS GPS ungated | many (L4 **14.7×** …) | L4: **3% / 12% / +0.02** | weak (7%, 1.2×) |
+
+**Verdict:** Unlike MUTAG GPS L0 periphery (hub 0%, ρ≈−0.63), ENZYMES/PROTEINS strong sinks are **not leaves and not hubs** — mid-degree, ρ(α,deg)≈0. Localization is **dataset- and layer-dependent**.
 
 ---
 
@@ -114,103 +146,90 @@ Also on disk: `<run_dir>/attention_sinks/epXXXX/*.png` + `attention_batch_epXXXX
 ```bash
 cd /Users/pellegrinraphael/Desktop/Academic_Research/Repos_GNN/GNNPlus
 
-git status
-git diff --stat
-
 git add \
-  GNNPlus/attention_sink_tracking.py \
-  GNNPlus/config/gated_hybrid_config.py \
-  GNNPlus/train/custom_train.py \
-  GNNPlus/layer/gated_hybrid_layer.py \
-  GNNPlus/network/hybrid_gnn.py \
+  scripts/attention_sinks/summarize_nop_broadcast.py \
   scripts/attention_sinks/dump_attention_maps.py \
-  bash_interface/cluster/run_tu_attention_sinks.sh \
-  bash_interface/cluster/submit_tu_attention_sinks.sh \
+  bash_interface/cluster/run_dump_tu_attention_sinks.sh \
+  bash_interface/cluster/submit_dump_tu_attention_sinks.sh \
+  bash_interface/cluster/run_summarize_tu_attention_mech.sh \
+  bash_interface/cluster/submit_summarize_tu_attention_mech.sh \
   Paper_attention_sinks.md
 
 git commit -m "$(cat <<'EOF'
-Add attention-sink W&B panels and TU AS train campaign.
+Add SiGMA dump + COLLAB retrain paths; keep mech summarize GraphGym-free.
 
-Log sparse-epoch Fesser-style attn heatmaps (per head, mean-over-heads,
-sink-rate / max-α / v-norm) for ungated SiGMA/GPS vs gated contrast on
-MUTAG and ENZYMES.
+Offline dump/summarize array jobs for existing AS ckpts; document COLLAB
+GPS lr001 retrain (lr01 best@ep0 overfit).
 EOF
 )"
-
-git status
-# push yourself when ready:
-# git push -u origin HEAD
-```
-
-### Heterogeneity_Profile (offline plots + restored sink package)
-
-```bash
-cd /Users/pellegrinraphael/Desktop/Academic_Research/Repos_GNN/Heterogeneity_Profile
-
-git status
-git diff --stat
-
-git add \
-  src/graph_moes/attention_sinks/ \
-  src/graph_moes/utils/attention_sink_post.py \
-  scripts/plots/plot_attention_sinks_aggregate.py \
-  scripts/plots/plot_attention_single_graph.py \
-  tests/test_attention_sinks.py \
-  tests/test_attention_sink_post.py \
-  bash_interface/sweeps/run_attention_sink_analysis.sh
-
-git commit -m "$(cat <<'EOF'
-Restore attention-sink analysis package and aggregate plot scripts.
-
-Rebuild core/node_features for graph AS metrics (τ·μ, ε-sinks, centrality)
-and wire offline figure generation used with GNNPlus attention dumps.
-EOF
-)"
-
-git status
 # git push -u origin HEAD
 ```
 
 ---
 
-## Cluster (after push + Duo)
-
-Paper TU set (6): MUTAG · ENZYMES · PROTEINS · COLLAB · IMDB-BINARY · REDDIT-BINARY  
-(4 variants × 6 = **24** tasks). COLLAB uses `lr=0.01`; others `0.001`.
+## Cluster follow-ups (after push + `git pull`)
 
 ```bash
 source ~/.gnnplus_env
 export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
 export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-# if scripts not pushed yet: scp run/submit from laptop
-
-# Cheapest ×uniform vs |V| test — GPS ungated on all 6 ds:
-AS_ARRAY=4,8,12,16,20,24 AS_PARALLEL=6 \
-  bash bash_interface/cluster/submit_tu_attention_sinks.sh
-
-# Skip MUTAG (done), all 4 variants on remaining 5 ds:
-AS_ARRAY=5-24 AS_PARALLEL=10 \
-  bash bash_interface/cluster/submit_tu_attention_sinks.sh
+git pull
 ```
 
-Record JOBIDs:
-- `37966868` — MUTAG smoke 1–4 (2026-08-09)
-- `37969759` — MUTAG GPS 3–4 retry
-- **`37971764`** — GPS ungated × 6 paper TU (tasks 4,8,12,16,20,24) · 2026-08-09
-- **`37971765`** — ENZYMES variants 5–7 (SiGMA gated/ungated + GPS gated)
+### 1) Full SiGMA dumps (existing ckpts; skip MUTAG + REDDIT)
 
-Task map: `ds×4 + variant` with ds order  
-`mutag, enzymes, proteins, collab, imdb_binary, reddit_binary` · variants 0..3 as before.  
-GPS ungated = **4,8,12,16,20,24**.
-
-**Hypothesis note (MUTAG L0 within-ds):** α **falls** with \(n\) (corr ≈ −0.59) so ×uniform only weakly rises (corr ≈ +0.24). Cross-dataset (ENZYMES/COLLAB/REDDIT) is needed to see if larger graphs give bigger multiples.
-
-Monitor:
 ```bash
-squeue -u $USER | grep tu_attn
+AS_DUMP_ARRAY=5,6,9,10,13,14,17,18 AS_DUMP_PARALLEL=8 \
+  bash bash_interface/cluster/submit_dump_tu_attention_sinks.sh
 ```
-W&B: groups `tu_as_<ds>_*`
+
+### 2) COLLAB GPS retrain @ lr=0.001 (lr=0.01 overfit → best@ep0)
+
+Writes new dirs `collab_GPS_{gated,ungated_attn}_lr001_seed2/` (does not overwrite lr01).
+
+```bash
+AS_ARRAY=15,16 AS_PARALLEL=2 AS_BASE_LR=0.001 AS_LR_TAG=lr001 AS_DUMP_ATTN=1 \
+  bash bash_interface/cluster/submit_tu_attention_sinks.sh
+```
+
+### 3) Mechanism CSVs (CPU; inlined summarizer — no GraphGym)
+
+After dumps finish:
+
+```bash
+AS_MECH_ARRAY=5,6,9,10,13,14,17,18 AS_MECH_PARALLEL=8 \
+  bash bash_interface/cluster/submit_summarize_tu_attention_mech.sh
+# + COLLAB GPS lr001 when ready:
+# AS_MECH_ARRAY=15,16 AS_BASE_LR=0.001 AS_LR_TAG=lr001 \
+#   bash bash_interface/cluster/submit_summarize_tu_attention_mech.sh
+```
+
+Rsync analysis CSVs:
+```bash
+rsync -avz \
+  fasrc:/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results/tu_attention_sinks/analysis/ \
+  results/tu_attention_sinks/analysis/
+```
+
+Prior JOBIDs:
+- `37971764` GPS ungated × 6 · `37971765` ENZYMES 5–7 · `37973416` remaining gated/SiGMA
+- COLLAB GPS ungated **lr01** best@ep0 (overfit) — superseded by lr001 retrain above
+
+Monitor: `squeue -u $USER | grep -E 'tu_as|tu_attn'`
+
+### Heterogeneity_Profile (EV tiny-graph fix for Phase B)
+
+```bash
+cd ../Heterogeneity_Profile
+git add src/graph_moes/attention_sinks/node_features.py
+git commit -m "$(cat <<'EOF'
+Fix eigenvector centrality fallback on tiny graphs for AS aggregate.
+
+EOF
+)"
+# git push
+```
 
 ---
 
@@ -242,7 +261,9 @@ Done locally for all 4 MUTAG variants → `visualizations/attention_sinks/mutag_
 - [x] GPS ungated (+ gated)
 - [ ] Epoch evolution panels from W&B (ep0 / ep50 / … / last)
 - [ ] ENZYMES / COLLAB / paper-TU GPS ungated + α vs \(n\) across datasets
-- [ ] ENZYMES full dump + aggregate
+- [x] ENZYMES / PROTEINS full dump + Phase-B aggregate (GPS ungated; ENZYMES gated too)
+- [ ] Full SiGMA dumps (ENZYMES…IMDB) + mech CSVs
+- [ ] COLLAB GPS retrain @ lr001 (non-ep0) + dump
 
 ---
 

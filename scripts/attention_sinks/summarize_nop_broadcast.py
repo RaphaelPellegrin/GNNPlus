@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Summarize NOP vs broadcast diagnostics from attention ``.pt`` dumps.
 
+Cluster-safe: helpers are inlined here (no ``GNNPlus`` / GraphGym import).
+
 For each graph × (layer, head) computes:
 
 * ``max_alpha`` / ``ratio_vs_uniform`` (existence)
@@ -20,22 +22,65 @@ from __future__ import annotations
 
 import argparse
 import csv
-import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
 import numpy as np
 import torch
 
-_REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
 
-from GNNPlus.attention_sink_tracking import (  # noqa: E402
-    classify_sink_mechanism,
-    mean_row_cosine,
-    stable_rank,
-)
+def stable_rank(matrix: np.ndarray) -> float:
+    """Stable rank ``‖M‖_F² / ‖M‖₂²`` (≈1 ⇒ near rank-1 / broadcast-like)."""
+    if matrix.ndim != 2 or matrix.size == 0:
+        return float("nan")
+    singular = np.linalg.svd(matrix, compute_uv=False)
+    s2 = singular.astype(np.float64) ** 2
+    peak = float(s2.max()) if s2.size else 0.0
+    if peak <= 0.0:
+        return 0.0
+    return float(s2.sum() / peak)
+
+
+def mean_row_cosine(matrix: np.ndarray) -> float:
+    """Mean cosine of each row of ``M`` to the mean row (broadcast ⇒ high)."""
+    if matrix.ndim != 2 or matrix.shape[0] < 2 or matrix.shape[1] < 1:
+        return float("nan")
+    mean_row = matrix.mean(axis=0)
+    mean_norm = float(np.linalg.norm(mean_row))
+    if mean_norm <= 1e-12:
+        return float("nan")
+    cosines: List[float] = []
+    for row in matrix:
+        rn = float(np.linalg.norm(row))
+        if rn <= 1e-12:
+            continue
+        cosines.append(float(np.dot(row, mean_row) / (rn * mean_norm)))
+    if not cosines:
+        return float("nan")
+    return float(np.mean(cosines))
+
+
+def classify_sink_mechanism(
+    *,
+    vnorm_ratio: float,
+    av_stable_rank: float,
+    row_cosine: float,
+    nop_vnorm_thresh: float = 0.25,
+    broadcast_rank_thresh: float = 1.5,
+    broadcast_cosine_thresh: float = 0.85,
+) -> str:
+    """Heuristic NOP / broadcast / ambiguous label (Fesser-style)."""
+    nop_like = (not np.isnan(vnorm_ratio)) and vnorm_ratio < nop_vnorm_thresh
+    broadcast_like = (
+        (not np.isnan(av_stable_rank) and av_stable_rank <= broadcast_rank_thresh)
+        and (not np.isnan(row_cosine) and row_cosine >= broadcast_cosine_thresh)
+        and (np.isnan(vnorm_ratio) or vnorm_ratio >= nop_vnorm_thresh)
+    )
+    if nop_like and not broadcast_like:
+        return "nop"
+    if broadcast_like and not nop_like:
+        return "broadcast"
+    return "ambiguous"
 
 
 def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
