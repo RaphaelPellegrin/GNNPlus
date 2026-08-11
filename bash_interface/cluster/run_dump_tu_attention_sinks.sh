@@ -138,7 +138,7 @@ python scripts/attention_sinks/dump_attention_maps.py \
     --run_dir "${run_dir}" \
     --epoch -1 \
     --batch_size "${dump_batch}" \
-    --splits "${AS_DUMP_SPLITS:-train,val,test}" \
+    --splits "$(echo "${AS_DUMP_SPLITS:-train+val+test}" | tr '+;' ',')" \
     --cfg "${cfg}" \
     seed "${seed}" \
     dataset.name "${ds_name}" \

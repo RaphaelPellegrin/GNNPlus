@@ -41,7 +41,8 @@ export_list+=",AS_NUM_TASKS=${AS_NUM_TASKS:-24}"
 export_list+=",AS_SEED=${AS_SEED:-2}"
 export_list+=",AS_DUMP_BATCH=${AS_DUMP_BATCH:-8}"
 export_list+=",AS_DUMP_REDDIT=${AS_DUMP_REDDIT:-0}"
-export_list+=",AS_DUMP_SPLITS=${AS_DUMP_SPLITS:-train,val,test}"
+# Use + not commas: Slurm --export splits on ','.
+export_list+=",AS_DUMP_SPLITS=${AS_DUMP_SPLITS:-train+val+test}"
 export_list+=",GNNPLUS_DATASET_DIR=${GNNPLUS_DATASET_DIR:-}"
 export_list+=",GNNPLUS_OUT_DIR=${GNNPLUS_OUT_DIR}"
 if [ -n "${AS_BASE_LR:-}" ]; then
