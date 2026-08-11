@@ -67,6 +67,28 @@ HP aggregate: `Heterogeneity_Profile/visualizations/attention_sinks/mutag_{GPS,S
 
 **Verdict:** “periphery sinks” **holds dataset-wide for GPS ungated L0** (all 188 graphs: mean sink degree **1.06**, never the max-degree hub, Spearman ρ(α, degree/PageRank) ≈ **−0.64**). It is **not** a universal claim across layers or SiGMA — strong SiGMA sinks lean **higher** degree/PageRank. Mid-depth GPS layers rarely sink (τ-rate ≪ 0.5) and, when they do, track centrality more.
 
+### Paper figures — existence (2026-08-11)
+
+Script: `scripts/attention_sinks/plot_paper_as_existence.py`  
+Out: `results/tu_attention_sinks/paper_figures/` (PNG + PDF)
+
+| Claim | Figure |
+|-------|--------|
+| Clear AS on bio GPS ungated | [fig_bio_gps_ratio_heatmaps.png](results/tu_attention_sinks/paper_figures/fig_bio_gps_ratio_heatmaps.png) · [fig_bio_gps_sinkrate_heatmaps.png](results/tu_attention_sinks/paper_figures/fig_bio_gps_sinkrate_heatmaps.png) |
+| Bio AS vs flat social GPS | [fig_bio_as_vs_flat_gps_bars.png](results/tu_attention_sinks/paper_figures/fig_bio_as_vs_flat_gps_bars.png) |
+| SiGMA AS on IMDB/COLLAB where GPS flat | [fig_sigma_vs_gps_imdb_collab.png](results/tu_attention_sinks/paper_figures/fig_sigma_vs_gps_imdb_collab.png) · [fig_sigma_vs_gps_social_heatmaps.png](results/tu_attention_sinks/paper_figures/fig_sigma_vs_gps_social_heatmaps.png) |
+| Vertical sink band + Fesser diagnostics | [fig_vertical_band_mutag_gps_l0.png](results/tu_attention_sinks/paper_figures/fig_vertical_band_mutag_gps_l0.png) · [fig_vertical_band_proteins_gps_l4.png](results/tu_attention_sinks/paper_figures/fig_vertical_band_proteins_gps_l4.png) · [fig_vertical_band_collab_sigma_l7.png](results/tu_attention_sinks/paper_figures/fig_vertical_band_collab_sigma_l7.png) |
+
+Each vertical-band figure now includes: sink vs flat attention matrices, graph with AS node, ‖v‖ bars (vnr), centrality ranks (deg/PR/…), and Fesser mech text (stable_rank(AV), row-cos). MUTAG dump lacks `head_outputs` → AV stats n/a there.
+
+**Head-specificity:** AS claims are per-(layer, head). Many heads stay near-uniform; report sink-rate / ×uniform on the heads that sink (as above), not mean-over-heads. Same convention as LLM AS papers.
+
+Regen:
+
+```bash
+python scripts/attention_sinks/plot_paper_as_existence.py
+```
+
 ### Cross-dataset GPS dumps (2026-08-10) — AS existence + mechanism
 
 Full dumps from best-val ckpts + `summarize_nop_broadcast.py` (τ-sink rows only for mechanism). Canvas: `AttentionSinksGNN.canvas.tsx` · CSVs: `results/tu_attention_sinks/analysis/`.
@@ -99,9 +121,65 @@ Local HP aggregate on existing dumps (`edge_index`+`batch` present). Out:
 
 **Verdict:** Unlike MUTAG GPS L0 periphery (hub 0%, ρ≈−0.63), ENZYMES/PROTEINS strong sinks are **not leaves and not hubs** — mid-degree, ρ(α,deg)≈0. Localization is **dataset- and layer-dependent**.
 
+### SiGMA mech (2026-08-10) — train dumps → `*_mech.csv`
+
+| Run | Strongest | ×unif | sink% | vnr | BC% / NOP% |
+|-----|-----------|-------|-------|-----|------------|
+| ENZYMES ungated | L3H1 | 14.1× | 100% | 0.92 | 82% / 3% |
+| ENZYMES gated | L8H1 | 9.5× | 97% | 1.02 | 85% / 0% |
+| PROTEINS ungated | L2H1 | 9.8× | 90% | 0.94 | 100% / 0% |
+| PROTEINS gated | L2H1 | 11.2× | 91% | 1.22 | 99% / 1% |
+| IMDB ungated | L5H0 | 6.4× | 83% | 1.13 | 71% / 0% |
+| IMDB gated | L1H1 | 7.5× | 79% | 0.67 | 99% / 1% |
+| COLLAB ungated | L7H1 | 60× | 85% | 0.82 | 97% / 3% |
+| COLLAB gated | L2H1 | 57× | 84% | 0.70 | 100% / 0% |
+
+**SiGMA vs GPS:** SiGMA shows **clear AS on IMDB/COLLAB** where GPS ungated dumps were flat. Still **broadcast-leaning**, not NOP. COLLAB Phase-B (gated): L0 flat; mid heads mix periphery (L1H1 ρ≈−0.72) and hub-leaning (L5H1 hub%≈87%).
+
+### COLLAB GPS lr001 mech (JOB `38071356` train · mech `38192841`)
+
+Best@ep **556** gated / **688** ungated (not ep0). Local CSVs: `analysis/collab_GPS_{gated,ungated_attn}_lr001_seed2_mech.csv`.
+
+| Run | Strongest | ×unif | sink% | notes |
+|-----|-----------|-------|-------|-------|
+| GPS gated lr001 | L10 | ~1.01× | **0%** | flat — no τ-sinks |
+| GPS ungated lr001 | L1 | ~1.09× | **3%** | essentially flat (31/960 τ-sinks; those few BC) |
+
+**Verdict:** COLLAB GPS remains **AS-absent** even after healthy lr001 training (contrast SiGMA COLLAB ~50–60×). Skip Phase-B mats for GPS COLLAB (12G×2) unless needed for negative-control panels.
+
+### Phase B — SiGMA ENZYMES / PROTEINS / IMDB (+ COLLAB ungated mats)
+
+Rsync 2026-08-10: ENZYMES 76×2 · PROTEINS 140×2 · IMDB 127×2 · COLLAB SiGMA ungated **627** (was 319).  
+HP outs: `Heterogeneity_Profile/visualizations/attention_sinks/{enzymes,proteins,imdb}_SiGMA_{un,}gated_full/` · `collab_SiGMA_{un,}gated_full/`.
+
+| Run | Strongest | ×unif | hub% / deg≤2 / ρ(α,deg) | L0 |
+|-----|-----------|-------|-------------------------|-----|
+| ENZYMES SiGMA ungated | L3H1 | 14.4× | **1% / 19% / −0.42** | weak (32%, 1.4×) |
+| ENZYMES SiGMA gated | L8H1 | 9.8× | 8% / 28% / −0.09 | weak |
+| PROTEINS SiGMA ungated | L2H1 | 10.3× | 3% / 11% / −0.19 | mixed (L0H1 70%, 2.2×) |
+| PROTEINS SiGMA gated | L2H1 | 11.3× | 11% / 2% / +0.17 | mixed |
+| IMDB SiGMA ungated | L5H0 | 6.5× | **57% / 0% / +0.18** | flat |
+| IMDB SiGMA gated | L1H1 | 7.8× | 46% / 0% / **+0.89** | flat |
+| COLLAB SiGMA ungated | L7H1 | **59×** | **87% / 0% / +0.26** | flat |
+| COLLAB SiGMA gated | L2H1 | 57× | 19% / 24% / −0.15 (L5H1 hub%≈87%) | flat |
+
+**Verdict:** SiGMA bio sinks ≈ mid-degree / mild anti-hub (like GPS ENZYMES/PROTEINS). **IMDB SiGMA sinks are hub-leaning** (dense social graphs; deg≤2 ≈ 0). L0 rarely the story.
+
+Root cause of train-only first dump: Slurm `--export` splits on commas — fixed to `AS_DUMP_SPLITS=val+test`. **Commit/push locally** (agent does not `git add`/`push`):
+
+```bash
+git add bash_interface/cluster/run_dump_tu_attention_sinks.sh \
+  bash_interface/cluster/submit_dump_tu_attention_sinks.sh
+git commit -m "$(cat <<'EOF'
+Fix Slurm AS_DUMP_SPLITS: use + instead of commas in --export.
+
+EOF
+)"
+```
+
 ---
 
-## Models (4 variants × MUTAG + ENZYMES, seed 2)
+## Models (4 default + optional vanilla full-attn)
 
 | Variant | Arch | Gate | Role |
 |---------|------|------|------|
@@ -109,10 +187,31 @@ Local HP aggregate on existing dumps (`edge_index`+`batch` present). Out:
 | `SiGMA_hetero_gated` | a2g4 matched | headwise | Contrast (sinks should weaken) |
 | `GPS_ungated_attn` | a1g1 GATEDGCN+attn | attn **none**, MP headwise | Lit-style GT |
 | `GPS_gated` | a1g1 | headwise | GPS + gating contrast |
+| `vanilla_full_attn` | **a4g0** (no MP) | **none** | Classic dense full attention |
 
 - `attn_mask=full` (all pairs **within** graph)
 - Out: `$GNNPLUS_OUT_DIR/tu_attention_sinks/<ds>_<variant>_lr001_seed2/`
 - W&B group: `tu_as_<ds>_<variant>`
+
+### Vanilla full-attn launch (cluster)
+
+```bash
+# After git pull on cluster — MUTAG smoke first (task 5 with 5 variants):
+AS_NUM_VARIANTS=5 AS_NUM_TASKS=30 AS_ARRAY=5 AS_PARALLEL=1 AS_DUMP_ATTN=1 \
+  bash bash_interface/cluster/submit_tu_attention_sinks.sh
+
+# All 6 datasets, vanilla only:
+AS_NUM_VARIANTS=5 AS_NUM_TASKS=30 AS_ARRAY=5,10,15,20,25,30 AS_PARALLEL=6 AS_DUMP_ATTN=1 \
+  bash bash_interface/cluster/submit_tu_attention_sinks.sh
+```
+
+Config: `configs/tu_sigma_homo_hetero/vanilla-full-attn-a4g0-anchor.yaml`
+
+### MUTAG GPS re-dump with AV (`head_outputs`)
+
+Old MUTAG dumps predated AV logging. Re-dumped locally (ep65) so
+`fig_vertical_band_mutag_gps_l0.png` now has stable_rank(AV) / row-cos
+(**broadcast**, sr≈1.00, cos≈0.999).
 
 ---
 
@@ -214,7 +313,11 @@ rsync -avz \
 
 Prior JOBIDs:
 - `37971764` GPS ungated × 6 · `37971765` ENZYMES 5–7 · `37973416` remaining gated/SiGMA
-- COLLAB GPS ungated **lr01** best@ep0 (overfit) — superseded by lr001 retrain above
+- COLLAB GPS ungated **lr01** best@ep0 (overfit) — superseded by lr001 retrain
+- **`38071342`** — SiGMA dumps ENZYMES…IMDB (tasks 5,6,9,10,13,14,17,18) · 2026-08-10
+- **`38071356`** — COLLAB GPS gated+ungated **lr001** + dump (tasks 15,16) · 2026-08-10
+- **`38074178`** — SiGMA mech CSVs (train) · **`38074223`** — val+test re-dump (Slurm comma fix) · **`38074330`** — mech refresh full splits
+- **`38192841`** — COLLAB GPS lr001 mech CSVs (tasks 15,16) · 2026-08-10
 
 Monitor: `squeue -u $USER | grep -E 'tu_as|tu_attn'`
 
@@ -262,8 +365,12 @@ Done locally for all 4 MUTAG variants → `visualizations/attention_sinks/mutag_
 - [ ] Epoch evolution panels from W&B (ep0 / ep50 / … / last)
 - [ ] ENZYMES / COLLAB / paper-TU GPS ungated + α vs \(n\) across datasets
 - [x] ENZYMES / PROTEINS full dump + Phase-B aggregate (GPS ungated; ENZYMES gated too)
-- [ ] Full SiGMA dumps (ENZYMES…IMDB) + mech CSVs
-- [ ] COLLAB GPS retrain @ lr001 (non-ep0) + dump
+- [x] Full SiGMA dumps ENZYMES…IMDB (train+val+test) + mech CSVs (`38074178`/`38074330`)
+- [x] Phase-B COLLAB SiGMA gated (local; figs 17–25)
+- [x] Phase-B ENZYMES/PROTEINS/IMDB SiGMA (rsync + aggregate)
+- [x] COLLAB GPS retrain @ lr001 (best@ep556/688) + mech — **AS flat**; Phase-B mats skipped
+- [x] Phase-B COLLAB SiGMA ungated (627 mats; figs 17–25)
+- [ ] Commit/push `AS_DUMP_SPLITS=…+…` Slurm fix (local only)
 
 ---
 

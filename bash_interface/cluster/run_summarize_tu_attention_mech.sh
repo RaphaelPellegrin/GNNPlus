@@ -63,6 +63,7 @@ case "${variant_idx}" in
     1) variant="SiGMA_hetero_ungated_attn" ;;
     2) variant="GPS_gated" ;;
     3) variant="GPS_ungated_attn" ;;
+    4) variant="vanilla_full_attn" ;;
     *) echo "bad variant_idx"; exit 1 ;;
 esac
 

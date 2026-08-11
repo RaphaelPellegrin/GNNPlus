@@ -142,6 +142,26 @@ def load_dataset_master(format, name, dataset_dir):
             dataset = preformat_COCOSuperpixels(dataset_dir, name,
                                                 cfg.dataset.slic_compactness)
 
+        elif pyg_dataset_id == 'TransolverPDE':
+            from GNNPlus.loader.dataset.transolver_pde import (
+                preformat_transolver_pde,
+            )
+            dataset = preformat_transolver_pde(dataset_dir, name)
+            splits = dataset.get_idx_split()
+            dataset.split_idxs = [splits['train'], splits['val'], splits['test']]
+
+        elif pyg_dataset_id in ('AirfRANS', 'ShapeNetCar'):
+            from GNNPlus.loader.dataset.pde_industrial import (
+                preformat_industrial_pde,
+            )
+            ind_name = 'airfrans' if pyg_dataset_id == 'AirfRANS' else 'shapenet_car'
+            # Allow format-level override via name.
+            dataset = preformat_industrial_pde(
+                dataset_dir, name if name not in ('none', '') else ind_name
+            )
+            splits = dataset.get_idx_split()
+            dataset.split_idxs = [splits['train'], splits['val'], splits['test']]
+
         else:
             raise ValueError(f"Unexpected PyG Dataset identifier: {format}")
 
@@ -237,9 +257,10 @@ def load_dataset_master(format, name, dataset_dir):
         timestr = time.strftime("%H:%M:%S", time.gmtime(elapsed)) + f"{elapsed:.2f}"[-3:]
         logging.info(f"RRWP done! Took {timestr}")
 
-    if parse_cfg_bool(cfg.dataset.add_virtual_nodes) and int(cfg.dataset.num_virtual_nodes) > 0:
-        r = int(cfg.dataset.num_virtual_nodes)
-        logging.info(f"Adding {r} virtual node(s) per graph (all splits)...")
+    add_vn = parse_cfg_bool(getattr(cfg.dataset, "add_virtual_nodes", False))
+    num_vn = int(getattr(cfg.dataset, "num_virtual_nodes", 0) or 0)
+    if add_vn and num_vn > 0:
+        logging.info(f"Adding {num_vn} virtual node(s) per graph (all splits)...")
         pre_transform_in_memory(
             dataset,
             partial(maybe_add_virtual_nodes, cfg=cfg),

@@ -6,13 +6,14 @@
 #   MUTAG, ENZYMES, PROTEINS, COLLAB, IMDB-BINARY, REDDIT-BINARY
 #   (~17 / ~33 / ~39 / ~74 / ~20 / ~430 avg |V|)
 #
-# Variants (4):
+# Variants (4 default; set AS_NUM_VARIANTS=5 to include vanilla full-attn):
 #   0  SiGMA_hetero_gated         a2g4 d_h=4  gate=headwise (attn+MP)
 #   1  SiGMA_hetero_ungated_attn  a2g4 d_h=4  gate=none + mp_gate=headwise
 #   2  GPS_gated                  a1g1 d_h=8  gate=headwise
 #   3  GPS_ungated_attn           a1g1 d_h=8  gate=none + mp_gate=headwise
+#   4  vanilla_full_attn          a4g0 d_h=16 gate=none  (no MP; classic full attn)
 #
-# Layout: 6 ds × 4 variants × seed 2 = 24 tasks
+# Layout: 6 ds × NUM_VARIANTS × seed 2
 #   task_id = dataset_idx * NUM_VARIANTS + variant_idx + 1
 #
 # Dense N×N notes:
@@ -25,6 +26,9 @@
 #   bash bash_interface/cluster/submit_tu_attention_sinks.sh
 #   # GPS ungated only (tasks 4,8,12,16,20,24) — cheapest ×uniform vs |V| test:
 #   AS_ARRAY=4,8,12,16,20,24 AS_PARALLEL=6 bash bash_interface/cluster/submit_tu_attention_sinks.sh
+#   # Vanilla full-attn only (needs AS_NUM_VARIANTS=5):
+#   AS_NUM_VARIANTS=5 AS_NUM_TASKS=30 AS_ARRAY=5,10,15,20,25,30 AS_PARALLEL=6 AS_DUMP_ATTN=1 \
+#     bash bash_interface/cluster/submit_tu_attention_sinks.sh
 #   # ENZYMES all variants (old indices were 5-8; now enzymes=ds1 → 5-8 still):
 #   AS_ARRAY=5-8 AS_PARALLEL=4 bash bash_interface/cluster/submit_tu_attention_sinks.sh
 # =============================================================================
@@ -127,6 +131,14 @@ case "${variant_idx}" in
         cfg="${cfg_dir}/gps-a1g1-anchor.yaml"
         arch_tag="a1g1_ungated_attn"
         extra_gate_args+=(gnn.hybrid.gate none gnn.hybrid.mp_gate headwise)
+        ;;
+    4)
+        # Classic full self-attention only (no MP): a4g0, ungated, attn_mask=full.
+        variant="vanilla_full_attn"
+        cfg="${cfg_dir}/vanilla-full-attn-a4g0-anchor.yaml"
+        arch_tag="a4g0_vanilla_full"
+        # Config already sets gate=none; keep overrides explicit for clarity.
+        extra_gate_args+=(gnn.hybrid.gate none gnn.hybrid.mp_gate none gnn.hybrid.attn_mask full)
         ;;
     *)
         log_message "bad variant_idx=${variant_idx}"

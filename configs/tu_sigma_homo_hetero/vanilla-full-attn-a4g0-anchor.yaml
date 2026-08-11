@@ -1,0 +1,85 @@
+# TU graph classification — vanilla full self-attention (no MP).
+#
+# Classic graph Transformer attention ablation for attention-sink studies:
+#   - num_attn_heads=4, num_gnn_heads=0  → a4g0
+#   - attn_mask=full (all pairs within each graph)
+#   - gate=none (no NOP-style gate intervention)
+#   - L12 / H64, same outer train recipe as GPS / SiGMA TU anchors
+#
+# d_h=16 → trainable params roughly in the same ballpark as GPS a1g1 dh=8
+# (~GPS measured ~261k). Exact count logged at train start.
+#
+# Launch overrides: dataset.name, optim.base_lr ∈ {0.001, 0.01}, batch_size.
+out_dir: results/tu_sigma_1x_gcn
+metric_best: accuracy
+metric_agg: argmax
+wandb:
+  use: False
+  project: GNNPlus
+  entity: weber-geoml-harvard-university
+  group: ''
+  name: ''
+dataset:
+  format: PyG-TUDataset
+  name: ENZYMES
+  task: graph
+  task_type: classification
+  transductive: False
+  split_mode: random
+  split: [0.5, 0.25, 0.25]
+  node_encoder: True
+  node_encoder_name: LinearNode
+  node_encoder_bn: False
+  edge_encoder: False
+  edge_encoder_bn: False
+train:
+  mode: custom
+  batch_size: 64
+  eval_period: 1
+  ckpt_period: 100
+  enable_ckpt: True
+  ckpt_best: True
+  ckpt_clean: True
+  eval_smoothing_metrics: False
+model:
+  type: hybrid_gnn
+  loss_fun: cross_entropy
+  graph_pooling: mean
+gnn:
+  head: default
+  layers_mp: 12
+  layers_pre_mp: 0
+  layers_post_mp: 2
+  dim_inner: 64
+  act: relu
+  dropout: 0.1
+  agg: mean
+  ffn: True
+  residual: True
+  hybrid:
+    num_attn_heads: 4
+    num_gnn_heads: 0
+    d_h: 16
+    attn_mask: full
+    gate: none
+    mp_gate: none
+    norm: layernorm
+    gnn_types: ""
+    attn_dropout: 0.1
+    mp_dropout: 0.0
+    block_bn: false
+    residual: true
+    identity_proj: false
+    log_gate_stats: False
+    log_attention_sinks: True
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 0.0
+  base_lr: 0.001
+  min_lr: 0.0
+  max_epoch: 1000
+  scheduler: reduce_on_plateau
+  reduce_factor: 0.5
+  schedule_patience: 50
+  num_warmup_epochs: 0

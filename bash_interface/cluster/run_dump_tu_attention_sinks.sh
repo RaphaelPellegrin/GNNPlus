@@ -94,6 +94,11 @@ case "${variant_idx}" in
         cfg="${cfg_dir}/gps-a1g1-anchor.yaml"
         extra_gate_args+=(gnn.hybrid.gate none gnn.hybrid.mp_gate headwise)
         ;;
+    4)
+        variant="vanilla_full_attn"
+        cfg="${cfg_dir}/vanilla-full-attn-a4g0-anchor.yaml"
+        extra_gate_args+=(gnn.hybrid.gate none gnn.hybrid.mp_gate none gnn.hybrid.attn_mask full)
+        ;;
     *)
         log_message "bad variant_idx=${variant_idx}"
         exit 1

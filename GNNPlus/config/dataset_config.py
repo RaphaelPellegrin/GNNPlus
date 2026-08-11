@@ -18,6 +18,9 @@ def dataset_cfg(cfg):
     # infer-link parameters (e.g., edge prediction task)
     cfg.dataset.infer_link_label = "None"
 
-    # Optional virtual nodes (all splits; applied after positional encodings).
+    # Optional kNN graph construction for point-cloud / PDE meshes.
+    cfg.dataset.knn_k = 8
+
+    # Optional virtual nodes (registers) for attention-sink interventions.
     cfg.dataset.add_virtual_nodes = False
-    cfg.dataset.num_virtual_nodes = 4
+    cfg.dataset.num_virtual_nodes = 0

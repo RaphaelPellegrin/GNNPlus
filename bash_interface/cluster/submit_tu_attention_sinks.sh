@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Submit TU attention-sink training (paper TU set × gated/ungated × SiGMA/GPS).
 #
-# 6 datasets × 4 variants × seed 2 = 24 jobs.
+# Default: 6 datasets × 4 variants × seed 2 = 24 jobs.
+# Optional 5th variant (vanilla full-attn a4g0): AS_NUM_VARIANTS=5 → 30 jobs.
 #   mutag enzymes proteins collab imdb_binary reddit_binary
 #
 # Prerequisites (login node):
@@ -10,11 +11,15 @@
 #   export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 #   cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus && git pull
 #
-# Launch (full):
+# Launch (full 4-variant default):
 #   bash bash_interface/cluster/submit_tu_attention_sinks.sh
 #
 # GPS ungated only — cheapest test of ×uniform vs |V|:
 #   AS_ARRAY=4,8,12,16,20,24 AS_PARALLEL=6 bash bash_interface/cluster/submit_tu_attention_sinks.sh
+#
+# Vanilla full-attn only (classic dense attention, no MP):
+#   AS_NUM_VARIANTS=5 AS_NUM_TASKS=30 AS_ARRAY=5,10,15,20,25,30 AS_PARALLEL=6 AS_DUMP_ATTN=1 \
+#     bash bash_interface/cluster/submit_tu_attention_sinks.sh
 #
 # Skip MUTAG (already done), all variants on remaining 5 ds (tasks 5-24):
 #   AS_ARRAY=5-24 AS_PARALLEL=10 bash bash_interface/cluster/submit_tu_attention_sinks.sh
@@ -98,9 +103,12 @@ cat <<EOF
   Logs:          logs_gnnplus/tu_attn_sinks_${job_id}_<TASK>.log
   Tracker:       Paper_attention_sinks.md
 
-Task map (variant 0..3 × dataset):
+Task map (4 variants × dataset; variant 0..3):
   1-4   MUTAG     5-8   ENZYMES    9-12  PROTEINS
   13-16 COLLAB   17-20  IMDB-BIN   21-24 REDDIT-BIN
   GPS ungated = tasks 4,8,12,16,20,24
+
+Vanilla full-attn (AS_NUM_VARIANTS=5): tasks 5,10,15,20,25,30
+  (MUTAG / ENZYMES / PROTEINS / COLLAB / IMDB / REDDIT)
 
 EOF
