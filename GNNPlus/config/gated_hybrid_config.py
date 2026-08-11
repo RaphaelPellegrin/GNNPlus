@@ -36,8 +36,8 @@ def gated_hybrid_cfg(cfg: CN) -> None:
     cfg.gnn.hybrid.attention_sink_epsilon = 0.3
     cfg.gnn.hybrid.attention_sink_max_nodes = 512  # dense N×N safety
     cfg.gnn.hybrid.attention_sink_save_pt = True  # keep batch .pt next to PNGs
-    # Attention head backend: dense QK (vanilla) or sparse GRIT units (grit).
-    cfg.gnn.hybrid.attn_type = 'vanilla'  # vanilla | grit
+    # Attention head backend: dense QK (vanilla), sparse GRIT, or Transolver++ physics.
+    cfg.gnn.hybrid.attn_type = 'vanilla'  # vanilla | grit | physics
     cfg.gnn.hybrid.grit = CN()
     cfg.gnn.hybrid.grit.clamp = 5.0
     cfg.gnn.hybrid.grit.edge_enhance = True
@@ -45,3 +45,8 @@ def gated_hybrid_cfg(cfg: CN) -> None:
     cfg.gnn.hybrid.grit.use_bias = False
     # When True, RRWP edge encoder pads to the full graph (GRIT full_attn).
     cfg.gnn.hybrid.grit.pad_to_full_graph = True
+    # Transolver++ Physics-Attention knobs (used when attn_type=physics).
+    cfg.gnn.hybrid.physics = CN()
+    cfg.gnn.hybrid.physics.slice_num = 32
+    cfg.gnn.hybrid.physics.use_gumbel = True
+    cfg.gnn.hybrid.physics.temperature_bias = 0.5

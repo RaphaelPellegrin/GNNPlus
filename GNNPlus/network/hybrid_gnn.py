@@ -110,6 +110,18 @@ class HybridGNN(torch.nn.Module):
         pad_to_full = (
             bool(getattr(grit_cfg, 'pad_to_full_graph', True)) if grit_cfg is not None else True
         )
+        phys_cfg = getattr(hcfg, 'physics', None)
+        physics_slice_num = (
+            int(getattr(phys_cfg, 'slice_num', 32)) if phys_cfg is not None else 32
+        )
+        physics_use_gumbel = (
+            bool(getattr(phys_cfg, 'use_gumbel', True)) if phys_cfg is not None else True
+        )
+        physics_temperature_bias = (
+            float(getattr(phys_cfg, 'temperature_bias', 0.5))
+            if phys_cfg is not None
+            else 0.5
+        )
 
         # Optional RRWP encoders (GRIT / grit attention). Applied after FeatureEncoder.
         self.rrwp_abs_encoder: Optional[nn.Module] = None
@@ -153,6 +165,9 @@ class HybridGNN(torch.nn.Module):
                 grit_edge_enhance=grit_edge_enhance,
                 grit_act=grit_act,
                 grit_use_bias=grit_use_bias,
+                physics_slice_num=physics_slice_num,
+                physics_use_gumbel=physics_use_gumbel,
+                physics_temperature_bias=physics_temperature_bias,
             )
             for _ in range(cfg.gnn.layers_mp)
         ])

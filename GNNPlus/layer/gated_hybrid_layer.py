@@ -24,7 +24,7 @@ from torch_geometric.nn import (
 from torch_geometric.utils import to_undirected
 
 AttnMaskType = Literal["full", "graph_restricted"]
-AttnType = Literal["vanilla", "grit"]
+AttnType = Literal["vanilla", "grit", "physics"]
 # ``none`` / ``off``: no learned sigmoid gates (heads contribute at full scale).
 GateMode = Literal["elementwise", "headwise", "none", "off"]
 NormType = Literal["layernorm", "rmsnorm", "none"]
@@ -92,6 +92,7 @@ def _edge_features_to_dh(
 from GNNPlus.layer.gcn_conv_layer_e import GCNConvLayer, GCNConvWithEdges
 from GNNPlus.layer.gatedgcn_layer import GatedGCNLayer
 from GNNPlus.layer.grit_attn_head import _GRITAttnHead
+from GNNPlus.layer.physics_attention import _PhysicsAttnHead
 from GNNPlus.layer.unitary_conv_layer import build_unitary_taylor_conv
 from torch_geometric.graphgym.config import cfg
 
@@ -648,6 +649,9 @@ class GatedHybridGraphLayer(nn.Module):
         grit_edge_enhance: bool = True,
         grit_act: str = "relu",
         grit_use_bias: bool = False,
+        physics_slice_num: int = 32,
+        physics_use_gumbel: bool = True,
+        physics_temperature_bias: float = 0.5,
     ) -> None:
         super().__init__()
         if num_attn_heads < 0 or num_gnn_heads < 0:
@@ -658,9 +662,10 @@ class GatedHybridGraphLayer(nn.Module):
             raise ValueError("d_h must be positive")
 
         attn_type_norm = str(attn_type).strip().lower()
-        if attn_type_norm not in ("vanilla", "grit"):
+        if attn_type_norm not in ("vanilla", "grit", "physics"):
             raise ValueError(
-                f"Unknown attn_type: {attn_type!r} (expected vanilla or grit)"
+                f"Unknown attn_type: {attn_type!r} "
+                "(expected vanilla, grit, or physics)"
             )
         self.attn_type: AttnType = cast(AttnType, attn_type_norm)
 
@@ -710,6 +715,7 @@ class GatedHybridGraphLayer(nn.Module):
         self.k_linears = nn.ModuleList()
         self.v_linears = nn.ModuleList()
         self.grit_attn_heads = nn.ModuleList()
+        self.physics_attn_heads = nn.ModuleList()
         if self.attn_type == "grit":
             for _ in range(num_attn_heads):
                 self.grit_attn_heads.append(
@@ -723,6 +729,19 @@ class GatedHybridGraphLayer(nn.Module):
                         edge_enhance=bool(grit_edge_enhance),
                         act=str(grit_act),
                         use_bias=bool(grit_use_bias),
+                    )
+                )
+        elif self.attn_type == "physics":
+            for _ in range(num_attn_heads):
+                self.physics_attn_heads.append(
+                    _PhysicsAttnHead(
+                        d_model=d_model,
+                        d_h=d_h,
+                        gate_mode=self.gate_mode,
+                        slice_num=int(physics_slice_num),
+                        use_gumbel=bool(physics_use_gumbel),
+                        temperature_bias=float(physics_temperature_bias),
+                        attn_dropout=self.attn_dropout,
                     )
                 )
         else:
@@ -873,6 +892,14 @@ class GatedHybridGraphLayer(nn.Module):
                 out_h, gamma = cast(
                     Tuple[Tensor, Tensor],
                     grit_head(src_attn, ei_attn, ea_attn),
+                )
+                attn_outputs.append(out_h)
+                attn_gate_vals.append(gamma)
+        elif self.attn_type == "physics":
+            for phys_head in self.physics_attn_heads:
+                out_h, gamma = cast(
+                    Tuple[Tensor, Tensor],
+                    phys_head(src_attn, batch),
                 )
                 attn_outputs.append(out_h)
                 attn_gate_vals.append(gamma)

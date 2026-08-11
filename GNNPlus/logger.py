@@ -206,13 +206,24 @@ class CustomLogger(Logger):
     def regression(self):
         true, pred = torch.cat(self._true), torch.cat(self._pred)
         reformat = lambda x: round(float(x), cfg.round)
+        # Relative L2 over the full concatenation (Transolver-style).
+        pred_f = pred.reshape(1, -1).float()
+        true_f = true.reshape(1, -1).float()
+        diff = torch.norm(pred_f - true_f, p=2)
+        denom = torch.norm(true_f, p=2).clamp_min(1e-8)
+        rel_l2 = float((diff / denom).item())
+        true_np = true.detach().cpu().numpy()
+        pred_np = pred.detach().cpu().numpy()
+        if true_np.ndim == 2 and true_np.shape[1] == 1:
+            true_np = true_np.reshape(-1)
+            pred_np = pred_np.reshape(-1)
         return {
             'mae': reformat(mean_absolute_error(true, pred)),
             'r2': reformat(r2_score(true, pred, multioutput='uniform_average')),
-            'spearmanr': reformat(eval_spearmanr(true.numpy(),
-                                                 pred.numpy())['spearmanr']),
+            'spearmanr': reformat(eval_spearmanr(true_np, pred_np)['spearmanr']),
             'mse': reformat(mean_squared_error(true, pred)),
             'rmse': reformat(mean_squared_error(true, pred, squared=False)),
+            'rel_l2': reformat(rel_l2),
         }
 
     def update_stats(self, true, pred, loss, lr, time_used, params,

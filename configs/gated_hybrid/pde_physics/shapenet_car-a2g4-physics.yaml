@@ -1,0 +1,69 @@
+# SiGMA a2g4 + Transolver++ Physics-Attention — ShapeNetCar
+out_dir: results
+metric_best: rel_l2
+metric_agg: argmin
+wandb:
+  use: True
+  project: GNNPlus_PDE_Physics
+  entity: null
+dataset:
+  format: PyG-ShapeNetCar
+  name: shapenet_car
+  task: graph
+  task_type: regression
+  transductive: False
+  node_encoder: True
+  node_encoder_name: LinearNode
+  node_encoder_bn: False
+  edge_encoder: True
+  edge_encoder_name: DummyEdge
+  edge_encoder_bn: False
+  knn_k: 8
+train:
+  mode: custom
+  batch_size: 1
+  eval_period: 1
+  ckpt_period: 100
+  enable_ckpt: True
+model:
+  type: hybrid_gnn
+  loss_fun: mse
+  edge_decoding: dot
+  graph_pooling: add
+gnn:
+  head: inductive_node
+  layers_mp: 8
+  layers_pre_mp: 0
+  layers_post_mp: 1
+  dim_inner: 128
+  act: gelu
+  dropout: 0.0
+  agg: mean
+  ffn: True
+  residual: True
+  hybrid:
+    num_attn_heads: 2
+    num_gnn_heads: 4
+    d_h: 32
+    attn_mask: full
+    gate: headwise
+    norm: layernorm
+    gnn_types: "GCN,GIN,SAGE,GAT"
+    attn_dropout: 0.0
+    mp_dropout: 0.0
+    block_bn: false
+    attn_type: physics
+    log_attention_sinks: False
+    physics:
+      slice_num: 64
+      use_gumbel: True
+      temperature_bias: 0.5
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 1e-5
+  base_lr: 0.001
+  max_epoch: 300
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 50
+  min_lr: 1e-6

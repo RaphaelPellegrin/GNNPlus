@@ -12,6 +12,8 @@ dependencies = [
     "matplotlib>=3.5.3",
     "networkx>=3.0",
     "numpy>=1.23.1",
+    "einops>=0.7.0",
+    "scipy>=1.10.0",
 ]
 
 [tool.setuptools.packages.find]
