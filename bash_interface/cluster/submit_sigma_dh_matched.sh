@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Submit SiGMA d_h-matched Tab. 3/4 budget shrinks (TU Tab. 17/18 analog).
 #
-# 15 families × 5 seeds = 75 jobs, up to 20 GPUs.
-# Skip ZINC (main already ≤500k).
+# 15 families × 2 LRs {1e-3, 1e-2} × 5 seeds = 150 jobs, up to 20 GPUs.
+# Skip ZINC (main already ≤500k). Report the better LR per family after runs.
 #
 # Prerequisites:
 #   source ~/.gnnplus_env
@@ -14,9 +14,8 @@
 # Launch:
 #   bash bash_interface/cluster/submit_sigma_dh_matched.sh
 #
-# Smoke (seed 0 of each family):
-#   SIGMA_DH_MATCHED_ARRAY=1,6,11,16,21,26,31,36,41,46,51,56,61,66,71 \
-#   SIGMA_DH_MATCHED_PARALLEL=15 \
+# Smoke (seed 0, both LRs, first 4 families = PATTERN/CLUSTER):
+#   SIGMA_DH_MATCHED_ARRAY=1,6,11,16,21,26,31,36 SIGMA_DH_MATCHED_PARALLEL=8 \
 #     bash bash_interface/cluster/submit_sigma_dh_matched.sh
 
 set -euo pipefail
@@ -27,8 +26,9 @@ cd "${REPO_ROOT}"
 mkdir -p logs_gnnplus
 
 NUM_SEEDS="${SIGMA_DH_MATCHED_NUM_SEEDS:-5}"
+NUM_LRS="${SIGMA_DH_MATCHED_NUM_LRS:-2}"
 NUM_FAMILIES="${SIGMA_DH_MATCHED_NUM_FAMILIES:-15}"
-NUM_TASKS="${SIGMA_DH_MATCHED_NUM_TASKS:-$((NUM_FAMILIES * NUM_SEEDS))}"
+NUM_TASKS="${SIGMA_DH_MATCHED_NUM_TASKS:-$((NUM_FAMILIES * NUM_LRS * NUM_SEEDS))}"
 ARRAY_SPEC="${SIGMA_DH_MATCHED_ARRAY:-1-${NUM_TASKS}}"
 PARALLEL="${SIGMA_DH_MATCHED_PARALLEL:-20}"
 PARTITION="${SIGMA_DH_MATCHED_PARTITION:-mweber_gpu}"
@@ -81,7 +81,7 @@ sbatch_args=(
     --time="${TIME}"
     --gpus=1
     --output="logs_gnnplus/sigma_dh_matched_%A_%a.log"
-    --export=ALL,ENV_NAME=gnnplus,SIGMA_DH_MATCHED_NUM_SEEDS="${NUM_SEEDS}",GNNPLUS_DATASET_DIR="${GNNPLUS_DATASET_DIR:-}",GNNPLUS_OUT_DIR="${GNNPLUS_OUT_DIR}"
+    --export=ALL,ENV_NAME=gnnplus,SIGMA_DH_MATCHED_NUM_SEEDS="${NUM_SEEDS}",SIGMA_DH_MATCHED_NUM_LRS="${NUM_LRS}",GNNPLUS_DATASET_DIR="${GNNPLUS_DATASET_DIR:-}",GNNPLUS_OUT_DIR="${GNNPLUS_OUT_DIR}"
 )
 
 if [ "${NICE}" != "0" ]; then
@@ -95,34 +95,38 @@ job_id="$(
 
 cat <<EOF
 
-=== SiGMA d_h-matched (Tab. 3/4 ≤500k / ≤1M) submitted ===
+=== SiGMA d_h-matched (Tab. 3/4 ≤500k / ≤1M, 2 LRs) submitted ===
   ARRAY JOBID:   ${job_id}
   Partition:     ${PARTITION}
-  Tasks:         ${ARRAY_SPEC}  (${NUM_FAMILIES} families × ${NUM_SEEDS} seeds = ${NUM_TASKS})
+  Tasks:         ${ARRAY_SPEC}
+                 (${NUM_FAMILIES} families × ${NUM_LRS} LRs × ${NUM_SEEDS} seeds = ${NUM_TASKS})
+  LRs:           0.001 (lr001) and 0.01 (lr01) — pick better per family after
   Parallel:      ${PARALLEL} GPUs max
   Mem / time:    ${MEM} / ${TIME}
   Logs:          logs_gnnplus/sigma_dh_matched_${job_id}_<TASK>.log
-  Out:           \$GNNPLUS_OUT_DIR/sigma_dh_matched/<fam>_seed<s>/
+  Out:           \$GNNPLUS_OUT_DIR/sigma_dh_matched/<fam>_<lr>_seed<s>/
   Docs:          Paper_sigma_dh_matched.md
 
-  Task map (blocks of ${NUM_SEEDS} seeds):
-    1–5    PATTERN   dh16   ~844k   (≤1M)
-    6–10   PATTERN   dh4    ~519k   (≤500k)
-    11–15  CLUSTER   dh36   ~437k   (≤500k, Tab17 ratio)
-    16–20  CLUSTER   dh24   ~254k   (≤500k, Tab18 ratio)
-    21–25  MNIST     dh37   ~488k   (≤500k)
-    26–30  CIFAR10   dh20   ~477k   (≤500k; keep a8g4)
-    31–35  CIFAR10   dh34   ~978k   (≤1M; keep a8g4)
-    36–40  Pep-func  dh23   ~491k   (≤500k; a1g2)
-    41–45  Pep-func  dh75   ~995k   (≤1M; a1g2)
-    46–50  Pep-struct dh43  ~498k   (≤500k)
-    51–55  Pep-struct dh92  ~998k   (≤1M)
-    56–60  VOC       dh15   ~995k   (≤1M; H95)
-    61–65  VOC       H64/dh12 ~499k (≤500k; H shrink required)
-    66–70  COCO      dh34   ~480k   (≤500k)
-    71–75  MalNet    dh57   ~498k   (≤500k)
+  Task map (each family = 10 tasks: lr001 seeds 0–4, then lr01 seeds 0–4):
+    1–10     PATTERN   dh16
+    11–20    PATTERN   dh4
+    21–30    CLUSTER   dh36
+    31–40    CLUSTER   dh24
+    41–50    MNIST     dh37
+    51–60    CIFAR10   dh20
+    61–70    CIFAR10   dh34
+    71–80    Pep-func  dh23
+    81–90    Pep-func  dh75
+    91–100   Pep-struct dh43
+    101–110  Pep-struct dh92
+    111–120  VOC       dh15
+    121–130  VOC       H64/dh12
+    131–140  COCO      dh34
+    141–150  MalNet    dh57
 
-  Skip: ZINC (main 450k already ≤500k). MNIST/COCO/MalNet mains already ≤1M.
+  Fast first (PATTERN+CLUSTER+Pep-struct+MalNet+Pep-func):
+    SIGMA_DH_MATCHED_ARRAY=1-40,71-110,141-150 SIGMA_DH_MATCHED_PARALLEL=20 \\
+      bash bash_interface/cluster/submit_sigma_dh_matched.sh
 
   Paste JOBID into Paper_sigma_dh_matched.md + CLUSTER_LAUNCHES.md
 

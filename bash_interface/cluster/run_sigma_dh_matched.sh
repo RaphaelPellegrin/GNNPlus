@@ -6,8 +6,12 @@
 # under ~500k and/or ~1M. VOC ≤500k also shrinks H (95→64) because d_h alone
 # cannot reach 500k. ZINC skipped (main already ≤500k).
 #
-# Layout: 15 families × 5 seeds = 75
-#   task_id = family_idx * NUM_SEEDS + seed + 1
+# Like Tab. 17/18: try two learning rates {1e-3, 1e-2} and report the better
+# family (selected by val / W&B best_test_perf after the fact).
+#
+# Layout: 15 families × 2 LRs × 5 seeds = 150
+#   task_id = (family_idx * NUM_LRS + lr_idx) * NUM_SEEDS + seed + 1
+#   lr_idx 0 → 0.001 (lr001), lr_idx 1 → 0.01 (lr01)
 #
 # Submit:
 #   bash bash_interface/cluster/submit_sigma_dh_matched.sh
@@ -32,8 +36,9 @@ source "${SCRIPT_DIR}/common_env.sh"
 
 task_id=${SLURM_ARRAY_TASK_ID:-1}
 num_seeds="${SIGMA_DH_MATCHED_NUM_SEEDS:-5}"
+num_lrs="${SIGMA_DH_MATCHED_NUM_LRS:-2}"
 
-# tag|cfg_relpath|wandb_group
+# tag|cfg_relpath|wandb_group_base
 families=(
   # PATTERN / CLUSTER (ratio analogs; already under 500k / 1M)
   "pattern_dh16|configs/gated_hybrid/dh_matched/pattern-grit-vn4-dh16.yaml|paper_sigma_dh_matched_pattern_dh16"
@@ -56,7 +61,7 @@ families=(
 )
 
 num_families=${#families[@]}
-num_tasks=$((num_families * num_seeds))
+num_tasks=$((num_families * num_lrs * num_seeds))
 
 if [ "$task_id" -lt 1 ] || [ "$task_id" -gt "$num_tasks" ]; then
   log_message "task_id=${task_id} out of range (1..${num_tasks})"
@@ -65,9 +70,27 @@ fi
 
 idx=$((task_id - 1))
 seed=$((idx % num_seeds))
-family_idx=$((idx / num_seeds))
+rest=$((idx / num_seeds))
+lr_idx=$((rest % num_lrs))
+family_idx=$((rest / num_lrs))
 
-IFS='|' read -r fam_tag cfg wandb_group <<< "${families[$family_idx]}"
+case "${lr_idx}" in
+  0)
+    base_lr="0.001"
+    lr_tag="lr001"
+    ;;
+  1)
+    base_lr="0.01"
+    lr_tag="lr01"
+    ;;
+  *)
+    log_message "bad lr_idx=${lr_idx}"
+    exit 1
+    ;;
+esac
+
+IFS='|' read -r fam_tag cfg wandb_group_base <<< "${families[$family_idx]}"
+wandb_group="${wandb_group_base}_${lr_tag}"
 
 if [ ! -f "${cfg}" ]; then
   log_message "Config not found: ${cfg}"
@@ -76,22 +99,24 @@ fi
 
 job_tag="${SLURM_ARRAY_JOB_ID:-${SLURM_JOB_ID:-local}}"
 wandb_name="${wandb_group}_seed${seed}_job${job_tag}_${task_id}"
-wandb_tags="sigma_dh_matched,${fam_tag},seed${seed}"
+wandb_tags="sigma_dh_matched,${fam_tag},${lr_tag},seed${seed}"
 
 if [ -n "${GNNPLUS_OUT_DIR:-}" ]; then
-  run_dir="${GNNPLUS_OUT_DIR}/sigma_dh_matched/${fam_tag}_seed${seed}"
+  run_dir="${GNNPLUS_OUT_DIR}/sigma_dh_matched/${fam_tag}_${lr_tag}_seed${seed}"
 else
-  run_dir="results/sigma_dh_matched/${fam_tag}_seed${seed}"
+  run_dir="results/sigma_dh_matched/${fam_tag}_${lr_tag}_seed${seed}"
 fi
 mkdir -p "${run_dir}"
 
-log_message "d_h-matched ${task_id}/${num_tasks}: fam=${fam_tag} seed=${seed} cfg=${cfg}"
+log_message "d_h-matched ${task_id}/${num_tasks}: fam=${fam_tag} lr=${base_lr} (${lr_tag}) seed=${seed} cfg=${cfg}"
 log_message "run_dir=${run_dir}"
 
 cat > "${run_dir}/train_meta.txt" <<META
 family=${fam_tag}
 cfg=${cfg}
 seed=${seed}
+lr=${base_lr}
+lr_tag=${lr_tag}
 task_id=${task_id}
 job=${job_tag}
 wandb_group=${wandb_group}
@@ -100,6 +125,7 @@ cp -f "${cfg}" "${run_dir}/config_used.yaml"
 
 extra_args=(
   out_dir "${run_dir}"
+  optim.base_lr "${base_lr}"
   train.enable_ckpt True
   train.ckpt_best True
   train.ckpt_clean True
@@ -110,12 +136,7 @@ fi
 
 export WANDB_EXTRA_TAGS="${wandb_tags}"
 
-# VOC / COCO need more host RAM for superpixel graphs.
-mem_hint="128GB"
-case "${fam_tag}" in
-  voc_*|coco_*) mem_hint="128GB" ;;
-esac
-log_message "mem_hint=${mem_hint} (sbatch --mem controls actual allocation)"
+log_message "mem_hint=128GB (sbatch --mem controls actual allocation)"
 
 python main.py \
   --cfg "${cfg}" \

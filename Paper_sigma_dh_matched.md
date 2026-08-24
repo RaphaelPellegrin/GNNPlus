@@ -3,6 +3,8 @@
 Apply the **Tab. 17 → Tab. 18** recipe from the TU appendix to Dwivedi + LRGB
 SiGMA (paper Tables 3–4): keep the best paper heads / depth / train recipe,
 shrink **per-head width `d_h`** so params land under **~500k** and/or **~1M**.
+Also try **two learning rates** \(\{10^{-3}, 10^{-2}\}\) per family (same as Tab. 17/18)
+and report the better LR after the fact.
 
 Entity/project: [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/weber-geoml-harvard-university/GNNPlus)
 Master tracker: [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md)
@@ -81,67 +83,71 @@ git pull
 bash bash_interface/cluster/submit_sigma_dh_matched.sh
 ```
 
-Smoke (seed 0 of each family):
+Smoke (seed 0, both LRs, PATTERN/CLUSTER only):
 
 ```bash
-SIGMA_DH_MATCHED_ARRAY=1,6,11,16,21,26,31,36,41,46,51,56,61,66,71 \
-SIGMA_DH_MATCHED_PARALLEL=15 \
+SIGMA_DH_MATCHED_ARRAY=1,6,11,16,21,26,31,36 SIGMA_DH_MATCHED_PARALLEL=8 \
   bash bash_interface/cluster/submit_sigma_dh_matched.sh
 ```
 
 | Field | Value |
 |-------|-------|
 | **SLURM** | 🛑 *not submitted yet* |
-| **Tasks** | `1-75%20` · 15 families × 5 seeds |
+| **Tasks** | `1-150%20` · 15 families × **2 LRs** × 5 seeds |
+| **LRs** | `0.001` (`lr001`) and `0.01` (`lr01`) — overrides YAML `optim.base_lr` |
 | **Mem / time** | 128GB / 120h |
 | **Partition** | `mweber_gpu` |
 | **Scripts** | `submit_sigma_dh_matched.sh` / `run_sigma_dh_matched.sh` |
 | **Configs** | `configs/gated_hybrid/dh_matched/` |
-| **Out** | `$GNNPLUS_OUT_DIR/sigma_dh_matched/<fam>_seed<s>/` |
+| **Out** | `$GNNPLUS_OUT_DIR/sigma_dh_matched/<fam>_<lr>_seed<s>/` |
 | **Logs** | `logs_gnnplus/sigma_dh_matched_<JOB>_<TASK>.log` |
 
 ### Task map
 
-| Tasks | Family | W&B group |
-|------:|--------|-----------|
-| 1–5 | PATTERN `d_h=16` | `paper_sigma_dh_matched_pattern_dh16` |
-| 6–10 | PATTERN `d_h=4` | `paper_sigma_dh_matched_pattern_dh4` |
-| 11–15 | CLUSTER `d_h=36` | `paper_sigma_dh_matched_cluster_dh36` |
-| 16–20 | CLUSTER `d_h=24` | `paper_sigma_dh_matched_cluster_dh24` |
-| 21–25 | MNIST `d_h=37` | `paper_sigma_dh_matched_mnist_dh37` |
-| 26–30 | CIFAR `d_h=20` | `paper_sigma_dh_matched_cifar_dh20` |
-| 31–35 | CIFAR `d_h=34` | `paper_sigma_dh_matched_cifar_dh34` |
-| 36–40 | Pep-func `d_h=23` | `paper_sigma_dh_matched_pepfunc_dh23` |
-| 41–45 | Pep-func `d_h=75` | `paper_sigma_dh_matched_pepfunc_dh75` |
-| 46–50 | Pep-struct `d_h=43` | `paper_sigma_dh_matched_pepstruct_dh43` |
-| 51–55 | Pep-struct `d_h=92` | `paper_sigma_dh_matched_pepstruct_dh92` |
-| 56–60 | VOC `d_h=15` | `paper_sigma_dh_matched_voc_dh15` |
-| 61–65 | VOC H64 `d_h=12` | `paper_sigma_dh_matched_voc_h64_dh12` |
-| 66–70 | COCO `d_h=34` | `paper_sigma_dh_matched_coco_dh34` |
-| 71–75 | MalNet `d_h=57` | `paper_sigma_dh_matched_malnet_dh57` |
+Each family occupies **10** tasks: `lr001` seeds 0–4, then `lr01` seeds 0–4.
+W&B group = `paper_sigma_dh_matched_<fam>_{lr001,lr01}`.
+
+| Tasks | Family |
+|------:|--------|
+| 1–10 | PATTERN `d_h=16` |
+| 11–20 | PATTERN `d_h=4` |
+| 21–30 | CLUSTER `d_h=36` |
+| 31–40 | CLUSTER `d_h=24` |
+| 41–50 | MNIST `d_h=37` |
+| 51–60 | CIFAR `d_h=20` |
+| 61–70 | CIFAR `d_h=34` |
+| 71–80 | Pep-func `d_h=23` |
+| 81–90 | Pep-func `d_h=75` |
+| 91–100 | Pep-struct `d_h=43` |
+| 101–110 | Pep-struct `d_h=92` |
+| 111–120 | VOC `d_h=15` |
+| 121–130 | VOC H64 `d_h=12` |
+| 131–140 | COCO `d_h=34` |
+| 141–150 | MalNet `d_h=57` |
+
+Fast first:
+
+```bash
+SIGMA_DH_MATCHED_ARRAY=1-40,71-110,141-150 SIGMA_DH_MATCHED_PARALLEL=20 \
+  bash bash_interface/cluster/submit_sigma_dh_matched.sh
+```
 
 ## Aggregate
 
+For each family, aggregate **both** LR groups and keep the better mean:
+
 ```bash
-for g in \
-  paper_sigma_dh_matched_pattern_dh16 \
-  paper_sigma_dh_matched_pattern_dh4 \
-  paper_sigma_dh_matched_cluster_dh36 \
-  paper_sigma_dh_matched_cluster_dh24 \
-  paper_sigma_dh_matched_mnist_dh37 \
-  paper_sigma_dh_matched_cifar_dh20 \
-  paper_sigma_dh_matched_cifar_dh34 \
-  paper_sigma_dh_matched_pepfunc_dh23 \
-  paper_sigma_dh_matched_pepfunc_dh75 \
-  paper_sigma_dh_matched_pepstruct_dh43 \
-  paper_sigma_dh_matched_pepstruct_dh92 \
-  paper_sigma_dh_matched_voc_dh15 \
-  paper_sigma_dh_matched_voc_h64_dh12 \
-  paper_sigma_dh_matched_coco_dh34 \
-  paper_sigma_dh_matched_malnet_dh57
+for base in \
+  pattern_dh16 pattern_dh4 cluster_dh36 cluster_dh24 \
+  mnist_dh37 cifar_dh20 cifar_dh34 \
+  pepfunc_dh23 pepfunc_dh75 pepstruct_dh43 pepstruct_dh92 \
+  voc_dh15 voc_h64_dh12 coco_dh34 malnet_dh57
 do
-  python scripts/api_wanndb_query/aggregate_paper_repro.py \
-    --group "$g" --metric best_test_perf --state finished
+  for lr in lr001 lr01; do
+    python scripts/api_wanndb_query/aggregate_paper_repro.py \
+      --group "paper_sigma_dh_matched_${base}_${lr}" \
+      --metric best_test_perf --state finished
+  done
 done
 ```
 

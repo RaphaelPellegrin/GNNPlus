@@ -707,8 +707,8 @@ git pull
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  SiGMA d_h-matched Tab. 3/4 (≤500k / ≤1M)                ║
-║  🎯  keep paper heads; shrink d_h (VOC also H) — 15×5 = 75 jobs         ║
+║  🛑  TO RUN  ·  SiGMA d_h-matched Tab. 3/4 (≤500k / ≤1M, 2 LRs)         ║
+║  🎯  keep paper heads; shrink d_h; LR ∈ {1e-3, 1e-2} — 15×2×5 = 150    ║
 ║  📄  Paper_sigma_dh_matched.md                                           ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
@@ -728,18 +728,25 @@ bash bash_interface/cluster/submit_sigma_dh_matched.sh
 |-------|-------|
 | **SLURM** | 🛑 *not submitted yet* |
 | **Submit** | `bash_interface/cluster/submit_sigma_dh_matched.sh` |
-| **Tasks** | `1-75%20` · 15 families × 5 seeds |
+| **Tasks** | `1-150%20` · 15 families × **2 LRs** × 5 seeds |
+| **LRs** | `0.001` (`lr001`) · `0.01` (`lr01`) — pick better per family |
 | **Mem / time** | 128GB / 120h |
-| **W&B** | `paper_sigma_dh_matched_{pattern,cluster,mnist,cifar,pepfunc,pepstruct,voc,coco,malnet}_*` |
+| **W&B** | `paper_sigma_dh_matched_<fam>_{lr001,lr01}` |
 | **Docs** | [`Paper_sigma_dh_matched.md`](Paper_sigma_dh_matched.md) |
 | **Logs** | `logs_gnnplus/sigma_dh_matched_<JOB>_<TASK>.log` |
 | **Skip** | ZINC (main 450k already ≤500k) |
 
-Smoke (seed 0 each family):
+Smoke (seed 0, both LRs, PATTERN/CLUSTER):
 
 ```bash
-SIGMA_DH_MATCHED_ARRAY=1,6,11,16,21,26,31,36,41,46,51,56,61,66,71 \
-SIGMA_DH_MATCHED_PARALLEL=15 \
+SIGMA_DH_MATCHED_ARRAY=1,6,11,16,21,26,31,36 SIGMA_DH_MATCHED_PARALLEL=8 \
+  bash bash_interface/cluster/submit_sigma_dh_matched.sh
+```
+
+Fast first:
+
+```bash
+SIGMA_DH_MATCHED_ARRAY=1-40,71-110,141-150 SIGMA_DH_MATCHED_PARALLEL=20 \
   bash bash_interface/cluster/submit_sigma_dh_matched.sh
 ```
 
