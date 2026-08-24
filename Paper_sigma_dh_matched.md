@@ -71,7 +71,7 @@ Regen configs (does not overwrite PATTERN/CLUSTER hand configs):
 python scripts/generate_sigma_dh_matched_configs.py
 ```
 
-## Cluster
+## Cluster (three tiers)
 
 ```bash
 source ~/.gnnplus_env
@@ -79,33 +79,49 @@ export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
 export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
-
-bash bash_interface/cluster/submit_sigma_dh_matched.sh
 ```
 
-Smoke (seed 0, both LRs, PATTERN/CLUSTER only):
+| Tier | Submit script | Families | Jobs | Default parallel / time |
+|------|---------------|----------|-----:|-------------------------|
+| **fast** | `submit_sigma_dh_matched_fast.sh` | PATTERN, CLUSTER, MNIST, Pep-func/struct, MalNet | **100** | 20 / 48h |
+| **slow** | `submit_sigma_dh_matched_slow.sh` | CIFAR10, VOC | **40** | 8 / 120h |
+| **coco** | `submit_sigma_dh_matched_coco.sh` | COCO only | **10** | 2 / 168h |
+
+Shared worker: `run_sigma_dh_matched.sh` (`SIGMA_DH_MATCHED_TIER=fast|slow|coco`).  
+LRs: `{0.001, 0.01}` × 5 seeds; report better LR per family after.
 
 ```bash
-SIGMA_DH_MATCHED_ARRAY=1,6,11,16,21,26,31,36 SIGMA_DH_MATCHED_PARALLEL=8 \
-  bash bash_interface/cluster/submit_sigma_dh_matched.sh
+bash bash_interface/cluster/submit_sigma_dh_matched_fast.sh
+bash bash_interface/cluster/submit_sigma_dh_matched_slow.sh
+bash bash_interface/cluster/submit_sigma_dh_matched_coco.sh
+```
+
+Smoke (seed 0, both LRs, first families of each tier):
+
+```bash
+SIGMA_DH_MATCHED_ARRAY=1,6 SIGMA_DH_MATCHED_PARALLEL=2 \
+  bash bash_interface/cluster/submit_sigma_dh_matched_fast.sh
+
+SIGMA_DH_MATCHED_ARRAY=1,6 SIGMA_DH_MATCHED_PARALLEL=2 \
+  bash bash_interface/cluster/submit_sigma_dh_matched_slow.sh
+
+SIGMA_DH_MATCHED_ARRAY=1,6 SIGMA_DH_MATCHED_PARALLEL=2 \
+  bash bash_interface/cluster/submit_sigma_dh_matched_coco.sh
 ```
 
 | Field | Value |
 |-------|-------|
 | **SLURM** | 🛑 *not submitted yet* |
-| **Tasks** | `1-150%20` · 15 families × **2 LRs** × 5 seeds |
 | **LRs** | `0.001` (`lr001`) and `0.01` (`lr01`) — overrides YAML `optim.base_lr` |
-| **Mem / time** | 128GB / 120h |
+| **Mem** | 128GB |
 | **Partition** | `mweber_gpu` |
-| **Scripts** | `submit_sigma_dh_matched.sh` / `run_sigma_dh_matched.sh` |
 | **Configs** | `configs/gated_hybrid/dh_matched/` |
 | **Out** | `$GNNPLUS_OUT_DIR/sigma_dh_matched/<fam>_<lr>_seed<s>/` |
-| **Logs** | `logs_gnnplus/sigma_dh_matched_<JOB>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/sigma_dh_{fast,slow,coco}_<JOB>_<TASK>.log` |
 
-### Task map
+### Task maps
 
-Each family occupies **10** tasks: `lr001` seeds 0–4, then `lr01` seeds 0–4.
-W&B group = `paper_sigma_dh_matched_<fam>_{lr001,lr01}`.
+**Fast** (10 tasks/family: lr001 seeds 0–4, then lr01 seeds 0–4):
 
 | Tasks | Family |
 |------:|--------|
@@ -114,23 +130,22 @@ W&B group = `paper_sigma_dh_matched_<fam>_{lr001,lr01}`.
 | 21–30 | CLUSTER `d_h=36` |
 | 31–40 | CLUSTER `d_h=24` |
 | 41–50 | MNIST `d_h=37` |
-| 51–60 | CIFAR `d_h=20` |
-| 61–70 | CIFAR `d_h=34` |
-| 71–80 | Pep-func `d_h=23` |
-| 81–90 | Pep-func `d_h=75` |
-| 91–100 | Pep-struct `d_h=43` |
-| 101–110 | Pep-struct `d_h=92` |
-| 111–120 | VOC `d_h=15` |
-| 121–130 | VOC H64 `d_h=12` |
-| 131–140 | COCO `d_h=34` |
-| 141–150 | MalNet `d_h=57` |
+| 51–60 | Pep-func `d_h=23` |
+| 61–70 | Pep-func `d_h=75` |
+| 71–80 | Pep-struct `d_h=43` |
+| 81–90 | Pep-struct `d_h=92` |
+| 91–100 | MalNet `d_h=57` |
 
-Fast first:
+**Slow:**
 
-```bash
-SIGMA_DH_MATCHED_ARRAY=1-40,71-110,141-150 SIGMA_DH_MATCHED_PARALLEL=20 \
-  bash bash_interface/cluster/submit_sigma_dh_matched.sh
-```
+| Tasks | Family |
+|------:|--------|
+| 1–10 | CIFAR `d_h=20` |
+| 11–20 | CIFAR `d_h=34` |
+| 21–30 | VOC `d_h=15` |
+| 31–40 | VOC H64 `d_h=12` |
+
+**COCO:** tasks 1–5 = `lr001` seeds 0–4; 6–10 = `lr01` seeds 0–4.
 
 ## Aggregate
 
@@ -139,9 +154,12 @@ For each family, aggregate **both** LR groups and keep the better mean:
 ```bash
 for base in \
   pattern_dh16 pattern_dh4 cluster_dh36 cluster_dh24 \
-  mnist_dh37 cifar_dh20 cifar_dh34 \
+  mnist_dh37 \
   pepfunc_dh23 pepfunc_dh75 pepstruct_dh43 pepstruct_dh92 \
-  voc_dh15 voc_h64_dh12 coco_dh34 malnet_dh57
+  malnet_dh57 \
+  cifar_dh20 cifar_dh34 \
+  voc_dh15 voc_h64_dh12 \
+  coco_dh34
 do
   for lr in lr001 lr01; do
     python scripts/api_wanndb_query/aggregate_paper_repro.py \

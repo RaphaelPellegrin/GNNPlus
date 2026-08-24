@@ -707,8 +707,8 @@ git pull
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  SiGMA d_h-matched Tab. 3/4 (≤500k / ≤1M, 2 LRs)         ║
-║  🎯  keep paper heads; shrink d_h; LR ∈ {1e-3, 1e-2} — 15×2×5 = 150    ║
+║  🛑  TO RUN  ·  SiGMA d_h-matched Tab. 3/4 — 3 tiers                     ║
+║  🎯  fast / slow (CIFAR+VOC) / coco · LR ∈ {1e-3,1e-2} · 5 seeds        ║
 ║  📄  Paper_sigma_dh_matched.md                                           ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
@@ -720,34 +720,28 @@ export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-bash bash_interface/cluster/submit_sigma_dh_matched.sh
-# 👉 paste JOBID into Paper_sigma_dh_matched.md + here
+bash bash_interface/cluster/submit_sigma_dh_matched_fast.sh   # 100 jobs
+bash bash_interface/cluster/submit_sigma_dh_matched_slow.sh   # 40 jobs
+bash bash_interface/cluster/submit_sigma_dh_matched_coco.sh   # 10 jobs
+# 👉 paste JOBIDs into Paper_sigma_dh_matched.md + here
 ```
 
-| Field | Value |
-|-------|-------|
-| **SLURM** | 🛑 *not submitted yet* |
-| **Submit** | `bash_interface/cluster/submit_sigma_dh_matched.sh` |
-| **Tasks** | `1-150%20` · 15 families × **2 LRs** × 5 seeds |
-| **LRs** | `0.001` (`lr001`) · `0.01` (`lr01`) — pick better per family |
-| **Mem / time** | 128GB / 120h |
-| **W&B** | `paper_sigma_dh_matched_<fam>_{lr001,lr01}` |
-| **Docs** | [`Paper_sigma_dh_matched.md`](Paper_sigma_dh_matched.md) |
-| **Logs** | `logs_gnnplus/sigma_dh_matched_<JOB>_<TASK>.log` |
-| **Skip** | ZINC (main 450k already ≤500k) |
+| Tier | Submit | Jobs | Default // time | Contents |
+|------|--------|-----:|-----------------|----------|
+| **fast** | `submit_sigma_dh_matched_fast.sh` | 100 | 20 / 48h | PATTERN, CLUSTER, MNIST, Pep-*, MalNet |
+| **slow** | `submit_sigma_dh_matched_slow.sh` | 40 | 8 / 120h | CIFAR10, VOC |
+| **coco** | `submit_sigma_dh_matched_coco.sh` | 10 | 2 / 168h | COCO |
+| **SLURM** | 🛑 *not submitted yet* | | | |
+| **LRs** | `{0.001, 0.01}` × 5 seeds — pick better per family | | | |
+| **Worker** | `run_sigma_dh_matched.sh` (`SIGMA_DH_MATCHED_TIER=…`) | | | |
+| **Docs** | [`Paper_sigma_dh_matched.md`](Paper_sigma_dh_matched.md) | | | |
+| **Skip** | ZINC (main 450k already ≤500k) | | | |
 
-Smoke (seed 0, both LRs, PATTERN/CLUSTER):
-
-```bash
-SIGMA_DH_MATCHED_ARRAY=1,6,11,16,21,26,31,36 SIGMA_DH_MATCHED_PARALLEL=8 \
-  bash bash_interface/cluster/submit_sigma_dh_matched.sh
-```
-
-Fast first:
+Smoke:
 
 ```bash
-SIGMA_DH_MATCHED_ARRAY=1-40,71-110,141-150 SIGMA_DH_MATCHED_PARALLEL=20 \
-  bash bash_interface/cluster/submit_sigma_dh_matched.sh
+SIGMA_DH_MATCHED_ARRAY=1,6 SIGMA_DH_MATCHED_PARALLEL=2 \
+  bash bash_interface/cluster/submit_sigma_dh_matched_fast.sh
 ```
 
 ---

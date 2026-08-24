@@ -2,19 +2,20 @@
 # =============================================================================
 # SiGMA d_h-matched (TU Tab. 17/18 analog) — Tab. 3/4 over-500k SiGMA
 #
-# Keep paper architecture (heads, L, train recipe); shrink d_h so params land
-# under ~500k and/or ~1M. VOC ≤500k also shrinks H (95→64) because d_h alone
-# cannot reach 500k. ZINC skipped (main already ≤500k).
+# Tiered via SIGMA_DH_MATCHED_TIER:
+#   fast  — PATTERN, CLUSTER, MNIST, Pep-func/struct, MalNet  (default)
+#   slow  — CIFAR10, VOC
+#   coco  — COCO-SP only
 #
-# Like Tab. 17/18: try two learning rates {1e-3, 1e-2} and report the better
-# family (selected by val / W&B best_test_perf after the fact).
+# Like Tab. 17/18: LR ∈ {1e-3, 1e-2} × 5 seeds; report better LR after.
 #
-# Layout: 15 families × 2 LRs × 5 seeds = 150
+# Layout per tier:
 #   task_id = (family_idx * NUM_LRS + lr_idx) * NUM_SEEDS + seed + 1
-#   lr_idx 0 → 0.001 (lr001), lr_idx 1 → 0.01 (lr01)
 #
-# Submit:
-#   bash bash_interface/cluster/submit_sigma_dh_matched.sh
+# Prefer the tier submit scripts:
+#   bash bash_interface/cluster/submit_sigma_dh_matched_fast.sh
+#   bash bash_interface/cluster/submit_sigma_dh_matched_slow.sh
+#   bash bash_interface/cluster/submit_sigma_dh_matched_coco.sh
 # =============================================================================
 
 #SBATCH --job-name=sigma_dh_matched
@@ -37,34 +38,48 @@ source "${SCRIPT_DIR}/common_env.sh"
 task_id=${SLURM_ARRAY_TASK_ID:-1}
 num_seeds="${SIGMA_DH_MATCHED_NUM_SEEDS:-5}"
 num_lrs="${SIGMA_DH_MATCHED_NUM_LRS:-2}"
+tier="${SIGMA_DH_MATCHED_TIER:-fast}"
 
 # tag|cfg_relpath|wandb_group_base
-families=(
-  # PATTERN / CLUSTER (ratio analogs; already under 500k / 1M)
-  "pattern_dh16|configs/gated_hybrid/dh_matched/pattern-grit-vn4-dh16.yaml|paper_sigma_dh_matched_pattern_dh16"
-  "pattern_dh4|configs/gated_hybrid/dh_matched/pattern-grit-vn4-dh4.yaml|paper_sigma_dh_matched_pattern_dh4"
-  "cluster_dh36|configs/gated_hybrid/dh_matched/cluster-a1g1-dh36.yaml|paper_sigma_dh_matched_cluster_dh36"
-  "cluster_dh24|configs/gated_hybrid/dh_matched/cluster-a1g1-dh24.yaml|paper_sigma_dh_matched_cluster_dh24"
-  # Tab. 3 remainder
-  "mnist_dh37|configs/gated_hybrid/dh_matched/mnist-a2g2-dh37.yaml|paper_sigma_dh_matched_mnist_dh37"
-  "cifar_dh20|configs/gated_hybrid/dh_matched/cifar10-a8g4-dh20.yaml|paper_sigma_dh_matched_cifar_dh20"
-  "cifar_dh34|configs/gated_hybrid/dh_matched/cifar10-a8g4-dh34.yaml|paper_sigma_dh_matched_cifar_dh34"
-  # Tab. 4
-  "pepfunc_dh23|configs/gated_hybrid/dh_matched/peptides-func-a1g2-dh23.yaml|paper_sigma_dh_matched_pepfunc_dh23"
-  "pepfunc_dh75|configs/gated_hybrid/dh_matched/peptides-func-a1g2-dh75.yaml|paper_sigma_dh_matched_pepfunc_dh75"
-  "pepstruct_dh43|configs/gated_hybrid/dh_matched/peptides-struct-a1g1-dh43.yaml|paper_sigma_dh_matched_pepstruct_dh43"
-  "pepstruct_dh92|configs/gated_hybrid/dh_matched/peptides-struct-a1g1-dh92.yaml|paper_sigma_dh_matched_pepstruct_dh92"
-  "voc_dh15|configs/gated_hybrid/dh_matched/voc-a2g2-dh15.yaml|paper_sigma_dh_matched_voc_dh15"
-  "voc_h64_dh12|configs/gated_hybrid/dh_matched/voc-a2g2-h64-dh12.yaml|paper_sigma_dh_matched_voc_h64_dh12"
-  "coco_dh34|configs/gated_hybrid/dh_matched/coco-a1g1-dh34.yaml|paper_sigma_dh_matched_coco_dh34"
-  "malnet_dh57|configs/gated_hybrid/dh_matched/malnet-a1g1-dh57.yaml|paper_sigma_dh_matched_malnet_dh57"
-)
+case "${tier}" in
+  fast)
+    families=(
+      "pattern_dh16|configs/gated_hybrid/dh_matched/pattern-grit-vn4-dh16.yaml|paper_sigma_dh_matched_pattern_dh16"
+      "pattern_dh4|configs/gated_hybrid/dh_matched/pattern-grit-vn4-dh4.yaml|paper_sigma_dh_matched_pattern_dh4"
+      "cluster_dh36|configs/gated_hybrid/dh_matched/cluster-a1g1-dh36.yaml|paper_sigma_dh_matched_cluster_dh36"
+      "cluster_dh24|configs/gated_hybrid/dh_matched/cluster-a1g1-dh24.yaml|paper_sigma_dh_matched_cluster_dh24"
+      "mnist_dh37|configs/gated_hybrid/dh_matched/mnist-a2g2-dh37.yaml|paper_sigma_dh_matched_mnist_dh37"
+      "pepfunc_dh23|configs/gated_hybrid/dh_matched/peptides-func-a1g2-dh23.yaml|paper_sigma_dh_matched_pepfunc_dh23"
+      "pepfunc_dh75|configs/gated_hybrid/dh_matched/peptides-func-a1g2-dh75.yaml|paper_sigma_dh_matched_pepfunc_dh75"
+      "pepstruct_dh43|configs/gated_hybrid/dh_matched/peptides-struct-a1g1-dh43.yaml|paper_sigma_dh_matched_pepstruct_dh43"
+      "pepstruct_dh92|configs/gated_hybrid/dh_matched/peptides-struct-a1g1-dh92.yaml|paper_sigma_dh_matched_pepstruct_dh92"
+      "malnet_dh57|configs/gated_hybrid/dh_matched/malnet-a1g1-dh57.yaml|paper_sigma_dh_matched_malnet_dh57"
+    )
+    ;;
+  slow)
+    families=(
+      "cifar_dh20|configs/gated_hybrid/dh_matched/cifar10-a8g4-dh20.yaml|paper_sigma_dh_matched_cifar_dh20"
+      "cifar_dh34|configs/gated_hybrid/dh_matched/cifar10-a8g4-dh34.yaml|paper_sigma_dh_matched_cifar_dh34"
+      "voc_dh15|configs/gated_hybrid/dh_matched/voc-a2g2-dh15.yaml|paper_sigma_dh_matched_voc_dh15"
+      "voc_h64_dh12|configs/gated_hybrid/dh_matched/voc-a2g2-h64-dh12.yaml|paper_sigma_dh_matched_voc_h64_dh12"
+    )
+    ;;
+  coco)
+    families=(
+      "coco_dh34|configs/gated_hybrid/dh_matched/coco-a1g1-dh34.yaml|paper_sigma_dh_matched_coco_dh34"
+    )
+    ;;
+  *)
+    log_message "Unknown SIGMA_DH_MATCHED_TIER=${tier} (expected fast|slow|coco)"
+    exit 1
+    ;;
+esac
 
 num_families=${#families[@]}
 num_tasks=$((num_families * num_lrs * num_seeds))
 
 if [ "$task_id" -lt 1 ] || [ "$task_id" -gt "$num_tasks" ]; then
-  log_message "task_id=${task_id} out of range (1..${num_tasks})"
+  log_message "task_id=${task_id} out of range (1..${num_tasks}) for tier=${tier}"
   exit 1
 fi
 
@@ -99,7 +114,7 @@ fi
 
 job_tag="${SLURM_ARRAY_JOB_ID:-${SLURM_JOB_ID:-local}}"
 wandb_name="${wandb_group}_seed${seed}_job${job_tag}_${task_id}"
-wandb_tags="sigma_dh_matched,${fam_tag},${lr_tag},seed${seed}"
+wandb_tags="sigma_dh_matched,${tier},${fam_tag},${lr_tag},seed${seed}"
 
 if [ -n "${GNNPLUS_OUT_DIR:-}" ]; then
   run_dir="${GNNPLUS_OUT_DIR}/sigma_dh_matched/${fam_tag}_${lr_tag}_seed${seed}"
@@ -108,10 +123,12 @@ else
 fi
 mkdir -p "${run_dir}"
 
-log_message "d_h-matched ${task_id}/${num_tasks}: fam=${fam_tag} lr=${base_lr} (${lr_tag}) seed=${seed} cfg=${cfg}"
+log_message "d_h-matched tier=${tier} ${task_id}/${num_tasks}: fam=${fam_tag} lr=${base_lr} (${lr_tag}) seed=${seed}"
+log_message "cfg=${cfg}"
 log_message "run_dir=${run_dir}"
 
 cat > "${run_dir}/train_meta.txt" <<META
+tier=${tier}
 family=${fam_tag}
 cfg=${cfg}
 seed=${seed}
@@ -135,8 +152,6 @@ if [ -n "${GNNPLUS_DATASET_DIR:-}" ]; then
 fi
 
 export WANDB_EXTRA_TAGS="${wandb_tags}"
-
-log_message "mem_hint=128GB (sbatch --mem controls actual allocation)"
 
 python main.py \
   --cfg "${cfg}" \
