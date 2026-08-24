@@ -677,8 +677,8 @@ git pull
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  READY  ·  SiGMA ∼100k budget row (7 ds × 5 seeds = 35)              ║
-║  🎯  ZINC MNIST PATTERN CLUSTER Pep-f Pep-s VOC · all ≤100k              ║
+║  ✅  SUBMITTED  ·  SLURM 37732478  ·  1-35%20                            ║
+║  🎯  SiGMA ∼100k budget row (7 ds × 5 seeds)                             ║
 ║  📄  Paper_sigma_budget.md                                               ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
@@ -690,16 +690,58 @@ export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-bash bash_interface/cluster/submit_sigma_budget_100k.sh
+# ✅ already submitted — do not re-run unless re-launching
+# bash bash_interface/cluster/submit_sigma_budget_100k.sh
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *paste after submit* |
+| **SLURM** | ✅ **`37732478`** |
 | **Submit** | `bash_interface/cluster/submit_sigma_budget_100k.sh` |
 | **Tasks** | `1-35%20` · mem 128GB |
 | **W&B** | `paper_budget_<ds>_b100k` |
 | **Docs** | [`Paper_sigma_budget.md`](Paper_sigma_budget.md) |
+| **Logs** | `logs_gnnplus/sigma_b100k_37732478_<TASK>.log` |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑  TO RUN  ·  SiGMA d_h-matched Tab. 3/4 (≤500k / ≤1M)                ║
+║  🎯  keep paper heads; shrink d_h (VOC also H) — 15×5 = 75 jobs         ║
+║  📄  Paper_sigma_dh_matched.md                                           ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_sigma_dh_matched.sh
+# 👉 paste JOBID into Paper_sigma_dh_matched.md + here
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *not submitted yet* |
+| **Submit** | `bash_interface/cluster/submit_sigma_dh_matched.sh` |
+| **Tasks** | `1-75%20` · 15 families × 5 seeds |
+| **Mem / time** | 128GB / 120h |
+| **W&B** | `paper_sigma_dh_matched_{pattern,cluster,mnist,cifar,pepfunc,pepstruct,voc,coco,malnet}_*` |
+| **Docs** | [`Paper_sigma_dh_matched.md`](Paper_sigma_dh_matched.md) |
+| **Logs** | `logs_gnnplus/sigma_dh_matched_<JOB>_<TASK>.log` |
+| **Skip** | ZINC (main 450k already ≤500k) |
+
+Smoke (seed 0 each family):
+
+```bash
+SIGMA_DH_MATCHED_ARRAY=1,6,11,16,21,26,31,36,41,46,51,56,61,66,71 \
+SIGMA_DH_MATCHED_PARALLEL=15 \
+  bash bash_interface/cluster/submit_sigma_dh_matched.sh
+```
 
 ---
 
@@ -764,3 +806,4 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Table 6 COCO relaunch | ✅ mweber `34070245`; H200 twin `34098527` | `34070245` / `34098527` |
 | ENZYMES ogpkubk9 sweep | 🛑 TO RUN | — |
 | TU GCN vs SiGMA homo vs hetero | ✅ | `37434534` |
+| SiGMA d_h-matched PATTERN/CLUSTER (Tab. 17/18 analog) | 🛑 TO RUN | — |

@@ -1,0 +1,75 @@
+# Pep-func Tab.4 SiGMA a1g2 GCN×2 H275: d_h=75 (~995k b1m). Heads/L/H/LR frozen.
+out_dir: results
+metric_best: ap
+wandb:
+  use: false
+  project: GNNPlus
+  group: paper_sigma_dh_matched_pepfunc_dh75
+  tags:
+  - gnnplus
+  - hybrid_gnn
+  - sigma_dh_matched
+  - paper_sigma_dh_matched_pepfunc_dh75
+  - peptides_func
+  - dh75
+  - b1m
+  - hybrid_a1g2
+dataset:
+  format: OGB
+  name: peptides-functional
+  task: graph
+  task_type: classification_multilabel
+  transductive: false
+  node_encoder: true
+  node_encoder_name: Atom+RWSE
+  node_encoder_bn: false
+  edge_encoder: true
+  edge_encoder_name: Bond
+  edge_encoder_bn: false
+posenc_RWSE:
+  enable: true
+  kernel:
+    times_func: range(1,33)
+  model: Linear
+  dim_pe: 28
+  raw_norm_type: BatchNorm
+train:
+  mode: custom
+  batch_size: 16
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: hybrid_gnn
+  loss_fun: cross_entropy
+  graph_pooling: mean
+gnn:
+  head: mlp_graph
+  ffn: false
+  layers_pre_mp: 0
+  layers_mp: 3
+  layers_post_mp: 4
+  dim_inner: 275
+  act: gelu
+  residual: false
+  dropout: 0.2
+  hybrid:
+    num_attn_heads: 1
+    num_gnn_heads: 2
+    d_h: 75
+    attn_mask: graph_restricted
+    gate: elementwise
+    norm: rmsnorm
+    gnn_types: GCN,GCN
+    attn_dropout: 0.1
+    mp_dropout: 0.2
+    block_bn: false
+    log_gate_stats: true
+optim:
+  clip_grad_norm: true
+  optimizer: adamW
+  weight_decay: 0.0
+  base_lr: 0.00020830328241707908
+  min_lr: 0.0
+  max_epoch: 900
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10

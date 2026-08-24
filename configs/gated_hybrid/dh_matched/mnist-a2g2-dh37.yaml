@@ -1,0 +1,78 @@
+# MNIST Tab.3 SiGMA a2g2 H60: d_h=37 (~488k ≤500k). Heads/L/H/LR frozen.
+out_dir: results
+metric_best: accuracy
+wandb:
+  use: false
+  project: GNNPlus
+  group: paper_sigma_dh_matched_mnist_dh37
+  tags:
+  - gnnplus
+  - hybrid_gnn
+  - sigma_dh_matched
+  - paper_sigma_dh_matched_mnist_dh37
+  - mnist
+  - dh37
+  - b500k
+  - hybrid_a2g2
+dataset:
+  format: PyG-GNNBenchmarkDataset
+  name: MNIST
+  task: graph
+  task_type: classification
+  transductive: false
+  node_encoder: true
+  node_encoder_name: LinearNode
+  node_encoder_bn: false
+  edge_encoder: true
+  edge_encoder_name: LinearEdge
+  edge_encoder_bn: false
+posenc_RWSE:
+  enable: false
+  kernel:
+    times_func: range(1,21)
+  model: Linear
+  dim_pe: 16
+  raw_norm_type: BatchNorm
+train:
+  mode: custom
+  batch_size: 16
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: hybrid_gnn
+  loss_fun: cross_entropy
+  graph_pooling: mean
+gnn:
+  head: graph
+  ffn: true
+  layers_pre_mp: 0
+  layers_mp: 6
+  layers_post_mp: 1
+  dim_inner: 60
+  act: relu
+  residual: true
+  dropout: 0.15
+  agg: mean
+  hybrid:
+    num_attn_heads: 2
+    num_gnn_heads: 2
+    d_h: 37
+    attn_mask: full
+    gate: elementwise
+    norm: layernorm
+    gnn_types: GATEDGCN,GATEDGCN
+    attn_dropout: 0.5
+    mp_dropout: 0.15
+    block_bn: false
+    residual: true
+    identity_proj: false
+    log_gate_stats: true
+optim:
+  clip_grad_norm: true
+  optimizer: adamW
+  weight_decay: 1.0e-05
+  base_lr: 0.0005
+  min_lr: 0.0
+  max_epoch: 200
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 5

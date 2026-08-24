@@ -1,0 +1,92 @@
+# PATTERN Table-3 SiGMA (a2g2 GCNE×2 GRIT, L12 H90, VN=4) with d_h=4 (tab18: ~1.00× GCNE L12/H90). Heads/L/H/LR frozen; only head width shrinks (TU Tab. 17/18 analog).
+out_dir: results
+metric_best: accuracy-SBM
+wandb:
+  use: false
+  project: GNNPlus
+  tags:
+  - gnnplus
+  - hybrid_gnn
+  - sigma_dh_matched
+  - paper_sigma_dh_matched_pattern_dh4
+  - pattern
+  - dh4
+  - tab18
+  - vn4
+  - grit
+  - hybrid_a2g2
+  group: paper_sigma_dh_matched_pattern_dh4
+dataset:
+  format: PyG-GNNBenchmarkDataset
+  name: PATTERN
+  task: graph
+  task_type: classification
+  transductive: false
+  split_mode: standard
+  add_virtual_nodes: true
+  num_virtual_nodes: 4
+  node_encoder: true
+  node_encoder_name: LinearNode+RWSE
+  node_encoder_bn: false
+  edge_encoder: true
+  edge_encoder_name: DummyEdge
+  edge_encoder_bn: false
+posenc_RWSE:
+  enable: true
+  kernel:
+    times_func: range(1,33)
+  model: Linear
+  raw_norm_type: BatchNorm
+posenc_RRWP:
+  enable: true
+  ksteps: 21
+  add_identity: true
+  add_node_attr: false
+train:
+  mode: custom
+  batch_size: 32
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: hybrid_gnn
+  loss_fun: weighted_cross_entropy
+  edge_decoding: dot
+gnn:
+  head: inductive_node
+  layers_mp: 12
+  layers_pre_mp: 0
+  layers_post_mp: 3
+  dim_inner: 90
+  act: relu
+  dropout: 0.05
+  agg: mean
+  ffn: true
+  residual: true
+  hybrid:
+    num_attn_heads: 2
+    num_gnn_heads: 2
+    d_h: 4
+    attn_mask: graph_restricted
+    gate: elementwise
+    norm: rmsnorm
+    gnn_types: "GCNE,GCNE"
+    attn_dropout: 0.2
+    mp_dropout: 0.15
+    block_bn: false
+    log_gate_stats: true
+    attn_type: grit
+    grit:
+      clamp: 5.0
+      edge_enhance: true
+      act: relu
+      use_bias: false
+      pad_to_full_graph: true
+optim:
+  clip_grad_norm: true
+  optimizer: adamW
+  weight_decay: 1.0e-05
+  base_lr: 0.0022173922801332815
+  min_lr: 0.0
+  max_epoch: 200
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 5
