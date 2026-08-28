@@ -345,7 +345,8 @@ Document known mismatches between labels and production heads:
 - [x] `configs/synthetic/gcn_gin_routing_sigma_a0g1_gcn.yaml` — **GCN-only baseline**
 - [x] `configs/synthetic/gcn_gin_routing_sigma_a0g1_gin.yaml` — **GIN-only baseline**
 - [ ] `scripts/synthetic/eval_gcn_gin_routing_masks.py` — head-masking eval
-- [ ] `scripts/synthetic/plot_gcn_gin_routing_results.py`
+- [x] `scripts/synthetic/analyze_gcn_gin_routing_results.py` — per-type acc + gate plots
+- [ ] `scripts/synthetic/plot_gcn_gin_routing_results.py` (superseded by analyze script)
 - [x] `bash_interface/cluster/submit_gcn_gin_routing.sh` + `run_gcn_gin_routing.sh`
 - [ ] Add row to [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md) when submitted (paste JOBIDs)
 
@@ -372,8 +373,21 @@ bash bash_interface/cluster/submit_gcn_gin_routing.sh both
 
 | Job | SLURM JOBID | Array | Tasks | Status | Logs |
 |-----|------------:|-------|------:|--------|------|
-| toy (Track A) | — | `1-80%10` | 80 | 🛑 ready | `logs_gnnplus/gcn_gin_route_toy_<JOBID>_<TASK>.log` |
-| sigma (Track B) | — | `1-80%10` | 80 | 🛑 ready | `logs_gnnplus/gcn_gin_route_sigma_<JOBID>_<TASK>.log` |
+| toy (Track A) | **42432154** | `1-40%10` | 40 | ✅ done | `logs_gnnplus/gcn_gin_route_toy_42432154_<TASK>.log` |
+| sigma (Track B) | **42432155** | `1-40%10` | 40 | ✅ done | `logs_gnnplus/gcn_gin_route_sigma_42432155_<TASK>.log` |
+
+**Analyze results** (per-type acc + root gates):
+
+```bash
+source ~/.gnnplus_env
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+python scripts/synthetic/analyze_gcn_gin_routing_results.py \
+  --results-root /n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results/gcn_gin_routing \
+  --dataset-dir /n/netscratch/mweber_lab/Lab/gnnplus_datasets \
+  --out-dir results/gcn_gin_routing/analysis
+```
+
+Outputs: `per_run_metrics.csv`, `summary_by_model.csv`, `fig_baseline_per_type.png`, `fig_gate_by_type.png`
 
 **W&B:** tag `gcn_gin_routing_synthetic` · groups `paper_gcn_gin_routing_{toy,sigma}_<model>_<lr>`  
 **Out:** `$GNNPLUS_OUT_DIR/gcn_gin_routing/<track>/<model>_<lr>_seed<s>/`
