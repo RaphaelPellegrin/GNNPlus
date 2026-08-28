@@ -219,8 +219,6 @@ def _load_cfg_for_run(
         dataset_dir,
         "seed",
         str(run_ref.seed),
-        "run_dir",
-        str(run_ref.run_dir),
     ]
     try:
         args = parse_args()
@@ -228,6 +226,7 @@ def _load_cfg_for_run(
         load_cfg(cfg, args)
     finally:
         sys.argv = old_argv
+    # run_dir is not a YACS key — set after load_cfg (see dump_attention_maps.py).
     cfg.run_dir = str(run_ref.run_dir)
     cfg.out_dir = str(run_ref.run_dir.parent.parent)
 
