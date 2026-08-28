@@ -90,6 +90,7 @@ def _edge_features_to_dh(
 
 
 from GNNPlus.layer.gcn_conv_layer_e import GCNConvLayer, GCNConvWithEdges
+from GNNPlus.layer.routing_sum_conv import RoutingNormSumConv, RoutingSumConv
 from GNNPlus.layer.gatedgcn_layer import GatedGCNLayer
 from GNNPlus.layer.grit_attn_head import _GRITAttnHead
 from GNNPlus.layer.physics_attention import _PhysicsAttnHead
@@ -395,17 +396,26 @@ class _ProjectedMPHead(nn.Module):
         self.gate_mode = _normalize_gate_mode(gate_mode)
         self._gnn_dropout = float(gnn_dropout)
         self.identity_proj = bool(identity_proj)
+        self._routing_signal = self.kind in ("ROUTING_SUM", "ROUTING_NORMGCN")
 
-        if self.identity_proj and d_h != d_model:
-            raise ValueError(
-                f"identity_proj requires d_h == d_model (got d_h={d_h}, d_model={d_model})"
-            )
+        if self._routing_signal and self.identity_proj:
+            raise ValueError("identity_proj is not supported for routing MP heads")
 
         if self.gate_mode == "none":
             gate_out = 0
         else:
             gate_out = 1 if self.gate_mode == "headwise" else d_h
-        if self.identity_proj:
+        if self._routing_signal:
+            self.hg_proj = None
+            self.h_proj = None
+            self.gate_proj = (
+                None if gate_out == 0 else nn.Linear(d_model, gate_out)
+            )
+        elif self.identity_proj:
+            if d_h != d_model:
+                raise ValueError(
+                    f"identity_proj requires d_h == d_model (got d_h={d_h}, d_model={d_model})"
+                )
             self.hg_proj = None
             self.gate_proj = (
                 None if gate_out == 0 else nn.Linear(d_model, gate_out)
@@ -489,11 +499,16 @@ class _ProjectedMPHead(nn.Module):
                     taylor_order=int(cfg.gnn.unitary_taylor_order),
                 ),
             )
+        elif self.kind == "ROUTING_SUM":
+            self.conv = cast(nn.Module, RoutingSumConv(d_h))
+        elif self.kind == "ROUTING_NORMGCN":
+            self.conv = cast(nn.Module, RoutingNormSumConv(d_h))
         else:
             raise ValueError(
                 f"Unknown MP head type: {kind!r} "
                 "(expected GCN, GCNE, GCNE_CONV, GIN, GINE, GGNN, "
-                "GATEDGCN, RESGATEDGCN, UNIGCN, SAGE, or GAT)"
+                "GATEDGCN, RESGATEDGCN, UNIGCN, SAGE, GAT, "
+                "ROUTING_SUM, or ROUTING_NORMGCN)"
             )
 
     def forward(
@@ -503,6 +518,20 @@ class _ProjectedMPHead(nn.Module):
         edge_attr: Optional[Tensor] = None,
     ) -> Tuple[Tensor, Tensor]:
         """Return ``(gated_mp_output, gate_value)``."""
+        if self._routing_signal:
+            signal = x[:, 0:1]
+            if self.gate_mode == "none":
+                g = None
+            else:
+                assert self.gate_proj is not None
+                g = self.gate_proj(x)
+            raw = self.conv(signal, edge_index)
+            if g is None:
+                gamma = torch.ones(raw.size(0), 1, device=raw.device, dtype=raw.dtype)
+                return raw, gamma
+            gamma = torch.sigmoid(g)
+            return raw * gamma, gamma
+
         if self.identity_proj:
             h = self.h_proj(x) if self.h_proj is not None else x
             if self.gate_mode == "none":

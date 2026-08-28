@@ -397,6 +397,41 @@ sbatch --job-name=cluster_push80_cluster --array=1-16%4 --mem=128GB --time=120:0
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑  TO RUN  ·  GCN/GIN routing synthetic (rebuttal) · toy + sigma      ║
+║  🧪  4 models × 2 LRs × 5 seeds = 80 tasks/track (160 total)            ║
+║  📄  Paper_gcn_gin_routing_synthetic.md                                  ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+# once (~1 min CPU)
+python scripts/synthetic/generate_gcn_gin_routing_dataset.py \
+  --root "$GNNPLUS_DATASET_DIR/GcnGinRouting"
+
+bash bash_interface/cluster/submit_gcn_gin_routing.sh both
+# 👉 paste toy + sigma JOBIDs into Paper_gcn_gin_routing_synthetic.md + here
+```
+
+| Field | Value |
+|-------|-------|
+| **Tracks** | toy (Track A routing convs) + sigma (PyG GIN/GCN) |
+| **Tasks** | `1-80%10` per track |
+| **Partition** | `mweber_gpu` · 4h · 32GB · 1 GPU |
+| **W&B** | tag `gcn_gin_routing_synthetic` · `paper_gcn_gin_routing_{toy,sigma}_*` |
+| **Out** | `$GNNPLUS_OUT_DIR/gcn_gin_routing/<track>/` |
+| **toy JOBID** | 🛑 *paste after sbatch* |
+| **sigma JOBID** | 🛑 *paste after sbatch* |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
 ║  🛑  TO RUN  ·  Hetero MUTAG/ENZYMES · Xu et al. ICLR 2019 HPs (6 jobs) ║
 ║  🧪  GCN / GIN / SiGMA · arXiv:1810.00826 / weihua916/powerful-gnns      ║
 ║  📄  Paper_heterogeneity.md                                              ║
@@ -707,42 +742,38 @@ git pull
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  SiGMA d_h-matched Tab. 3/4 — 3 tiers                     ║
+║  ✅  SUBMITTED  ·  SiGMA d_h-matched Tab. 3/4 — 3 tiers (2026-08-24)    ║
 ║  🎯  fast / slow (CIFAR+VOC) / coco · LR ∈ {1e-3,1e-2} · 5 seeds        ║
 ║  📄  Paper_sigma_dh_matched.md                                           ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
 ```bash
-source ~/.gnnplus_env
-export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
-export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
-cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-git pull
-
-bash bash_interface/cluster/submit_sigma_dh_matched_fast.sh   # 100 jobs
-bash bash_interface/cluster/submit_sigma_dh_matched_slow.sh   # 40 jobs
-bash bash_interface/cluster/submit_sigma_dh_matched_coco.sh   # 10 jobs
-# 👉 paste JOBIDs into Paper_sigma_dh_matched.md + here
+# ✅ already submitted — do not re-run unless re-launching
+# SIGMA_DH_MATCHED_PARALLEL=10 SIGMA_DH_MATCHED_PARTITION=mweber_gpu \
+#   bash bash_interface/cluster/submit_sigma_dh_matched_fast.sh
+# SIGMA_DH_MATCHED_PARALLEL=5 SIGMA_DH_MATCHED_PARTITION=mweber_gpu \
+#   bash bash_interface/cluster/submit_sigma_dh_matched_slow.sh
+# SIGMA_DH_MATCHED_PARALLEL=2 SIGMA_DH_MATCHED_PARTITION=mweber_gpu \
+#   SIGMA_DH_MATCHED_TIME=14-00:00:00 \
+#   bash bash_interface/cluster/submit_sigma_dh_matched_coco.sh
 ```
 
-| Tier | Submit | Jobs | Default // time | Contents |
-|------|--------|-----:|-----------------|----------|
-| **fast** | `submit_sigma_dh_matched_fast.sh` | 100 | 20 / 48h | PATTERN, CLUSTER, MNIST, Pep-*, MalNet |
-| **slow** | `submit_sigma_dh_matched_slow.sh` | 40 | 8 / 120h | CIFAR10, VOC |
-| **coco** | `submit_sigma_dh_matched_coco.sh` | 10 | 2 / 168h | COCO |
-| **SLURM** | 🛑 *not submitted yet* | | | |
-| **LRs** | `{0.001, 0.01}` × 5 seeds — pick better per family | | | |
-| **Worker** | `run_sigma_dh_matched.sh` (`SIGMA_DH_MATCHED_TIER=…`) | | | |
-| **Docs** | [`Paper_sigma_dh_matched.md`](Paper_sigma_dh_matched.md) | | | |
-| **Skip** | ZINC (main 450k already ≤500k) | | | |
+| Tier | SLURM | Array | Parallel | Time | Contents |
+|------|------:|-------|---------:|------|----------|
+| **fast** | ✅ **`41709078`** (1–50 done) · rerun **`42412053`** (51–100; failed `42403449`) | `1-100%10` / `51-100%20` | 10 / 20 | 48h | PATTERN–MNIST ✅; Pep-*, MalNet rerun |
+| **slow** | ✅ **`41709082`** | `1-40%5` | 5 | 120h | CIFAR10, VOC |
+| **coco** | ✅ **`41709085`** | `1-10%2` | 2 | **14d** | COCO |
+| **Partition** | `mweber_gpu` (skipped `gpu_h200` Priority backlog) | | | | |
+| **LRs** | `{0.001, 0.01}` × 5 seeds — pick better per family | | | | |
+| **Worker** | `run_sigma_dh_matched.sh` (`SIGMA_DH_MATCHED_TIER=…`) | | | | |
+| **Docs** | [`Paper_sigma_dh_matched.md`](Paper_sigma_dh_matched.md) | | | | |
+| **Out** | `$GNNPLUS_OUT_DIR/sigma_dh_matched/<fam>_<lr>_seed<s>/` | | | | |
+| **Logs** | `logs_gnnplus/sigma_dh_{fast,slow,coco}_<JOB>_<TASK>.log` | | | | |
+| **Fairshare** | Aug 23 EOD `mweber_lab: 0.749064` | | | | |
+| **Skip** | ZINC (main 450k already ≤500k) | | | | |
 
-Smoke:
-
-```bash
-SIGMA_DH_MATCHED_ARRAY=1,6 SIGMA_DH_MATCHED_PARALLEL=2 \
-  bash bash_interface/cluster/submit_sigma_dh_matched_fast.sh
-```
+Monitor: `squeue -u $USER -n sigma_dh_fast,sigma_dh_slow,sigma_dh_coco`
 
 ---
 
@@ -807,4 +838,5 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Table 6 COCO relaunch | ✅ mweber `34070245`; H200 twin `34098527` | `34070245` / `34098527` |
 | ENZYMES ogpkubk9 sweep | 🛑 TO RUN | — |
 | TU GCN vs SiGMA homo vs hetero | ✅ | `37434534` |
-| SiGMA d_h-matched PATTERN/CLUSTER (Tab. 17/18 analog) | 🛑 TO RUN | — |
+| SiGMA d_h-matched Tab. 3/4 (3 tiers, 2 LRs) | ✅ fast/slow/coco on `mweber_gpu` | `41709078` / `41709082` / `41709085` |
+| GCN/GIN routing synthetic (toy + sigma) | 🛑 TO RUN | — |

@@ -16,6 +16,7 @@ from torch_geometric.graphgym.register import register_loader
 
 from GNNPlus.loader.dataset.aqsol_molecules import AQSOL
 from GNNPlus.loader.dataset.coco_superpixels import COCOSuperpixels
+from GNNPlus.loader.dataset.gcn_gin_routing import GcnGinRoutingDataset
 from GNNPlus.loader.dataset.malnet_tiny import MalNetTiny
 from GNNPlus.loader.dataset.voc_superpixels import VOCSuperpixels
 from GNNPlus.loader.split_generator import (prepare_splits,
@@ -127,6 +128,9 @@ def load_dataset_master(format, name, dataset_dir):
                 raise NotImplementedError(f"crocodile not implemented")
             dataset = WikipediaNetwork(dataset_dir, name,
                                        geom_gcn_preprocess=True)
+
+        elif pyg_dataset_id == 'GcnGinRouting':
+            dataset = preformat_GcnGinRouting(dataset_dir, name)
 
         elif pyg_dataset_id == 'ZINC':
             dataset = preformat_ZINC(dataset_dir, name)
@@ -596,6 +600,18 @@ def preformat_TUDataset(dataset_dir, name):
         raise ValueError(f"Loading dataset '{name}' from "
                          f"TUDataset is not supported.")
     dataset = TUDataset(dataset_dir, name, pre_transform=func)
+    return dataset
+
+
+def preformat_GcnGinRouting(dataset_dir: str, name: str):
+    """Load synthetic GCN/GIN routing stars (train+val+test joined)."""
+    del name  # reserved for future variants (v1, etc.)
+    dataset = join_dataset_splits(
+        [
+            GcnGinRoutingDataset(dataset_dir, split=split)  # type: ignore[arg-type]
+            for split in ['train', 'val', 'test']
+        ]
+    )
     return dataset
 
 
