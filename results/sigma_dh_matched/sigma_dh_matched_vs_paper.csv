@@ -1,0 +1,7 @@
+dataset,config_label,budget_tier,params_small,params_paper,params_display,small_sigma_pct,paper_sigma_pct,delta_pp,notes
+PATTERN,dh16,~1M,844000,1990000,844k → 1.99M,87.23,86.99,0.23,Small SiGMA mean ±0.18% (lr001 n=5)
+PATTERN,dh4,~500k,519000,1990000,519k → 1.99M,87.03,86.99,0.04,Small SiGMA mean ±0.07% (lr001 n=5)
+CLUSTER,dh36,~500k,437000,1030000,437k → 1.03M,78.82,78.96,-0.13,Small SiGMA mean ±0.08% (lr001 n=5)
+CLUSTER,dh24,~500k,254000,1030000,254k → 1.03M,78.72,78.96,-0.24,Small SiGMA mean ±0.16% (lr001 n=5)
+MNIST,dh37,~500k,488000,965000,488k → 965k,98.62,98.63,-0.01,Small SiGMA mean ±0.07% (lr001 n=5)
+CIFAR10,dh20,~500k,477000,27800000,477k → 27.8M,75.15,79.53,-4.37,Small SiGMA mean ±0.57% (lr001 n=5)

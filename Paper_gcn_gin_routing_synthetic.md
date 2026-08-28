@@ -376,15 +376,15 @@ bash bash_interface/cluster/submit_gcn_gin_routing.sh both
 | toy (Track A) | **42432154** | `1-40%10` | 40 | ✅ done | `logs_gnnplus/gcn_gin_route_toy_42432154_<TASK>.log` |
 | sigma (Track B) | **42432155** | `1-40%10` | 40 | ✅ done | `logs_gnnplus/gcn_gin_route_sigma_42432155_<TASK>.log` |
 
-**Analyze results** (per-type acc + root gates):
+**Analyze results** (per-type acc + root gates) — submit SLURM job (no python on login):
 
 ```bash
 source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-python scripts/synthetic/analyze_gcn_gin_routing_results.py \
-  --results-root /n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results/gcn_gin_routing \
-  --dataset-dir /n/netscratch/mweber_lab/Lab/gnnplus_datasets \
-  --out-dir results/gcn_gin_routing/analysis
+git pull   # after you push analyze script + bash_interface/cluster/submit_analyze_*.sh
+bash bash_interface/cluster/submit_analyze_gcn_gin_routing_results.sh
 ```
 
 Outputs: `per_run_metrics.csv`, `summary_by_model.csv`, `fig_baseline_per_type.png`, `fig_gate_by_type.png`
