@@ -6,8 +6,9 @@
 #   bash bash_interface/cluster/submit_gcn_gin_routing.sh sigma
 #   bash bash_interface/cluster/submit_gcn_gin_routing.sh both
 #
-# On cluster: git pull, then run this script (configs + dataset auto-generated).
-# Set GCN_GIN_ROUTING_SKIP_DATA=1 to skip dataset generation when train.pt exists.
+# On cluster: source ~/.gnnplus_env; export GNNPLUS_*; git pull; then:
+#   bash bash_interface/cluster/submit_gcn_gin_routing.sh both
+# Prep uses common_env.sh (gnnplus conda, PYTHONNOUSERSITE=1).
 
 set -euo pipefail
 
@@ -15,6 +16,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${REPO_ROOT}"
 mkdir -p logs_gnnplus
+
+# Use lab gnnplus env (not login-node ~/.local python) for config/dataset prep.
+# shellcheck source=common_env.sh
+source "${SCRIPT_DIR}/common_env.sh"
 
 track_arg="${1:-both}"
 NUM_SEEDS="${GCN_GIN_ROUTING_NUM_SEEDS:-5}"
