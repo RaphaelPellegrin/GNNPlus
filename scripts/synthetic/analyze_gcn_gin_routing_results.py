@@ -240,7 +240,14 @@ def _pick_best_epoch(run_dir: Path) -> int:
     return int(max(epochs))
 
 
-def _root_indices(batch: Any) -> torch.Tensor:
+def _pred_labels_from_score(pred_score: torch.Tensor) -> torch.Tensor:
+    """Convert model scores to integer labels (matches GraphGym ``Logger``)."""
+    if pred_score.ndim == 1 or (pred_score.ndim == 2 and pred_score.shape[1] == 1):
+        thresh = float(getattr(cfg.model, "thresh", 0.5))
+        return (pred_score.view(-1) > thresh).long()
+    return pred_score.argmax(dim=-1).view(-1)
+
+
     """Global node indices of the root (first node) per graph in a batch."""
     if hasattr(batch, "ptr") and batch.ptr is not None:
         return batch.ptr[:-1].long()
@@ -302,7 +309,7 @@ def evaluate_run(
         batch = batch.to(device)
         pred, true = model(batch)
         _loss, pred_score = compute_loss(pred, true)
-        pred_label = pred_score.argmax(dim=-1).view(-1)
+        pred_label = _pred_labels_from_score(pred_score)
         true_label = true.view(-1).long()
 
         if not hasattr(batch, "tau") or batch.tau is None:
