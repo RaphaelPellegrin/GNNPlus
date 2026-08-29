@@ -178,38 +178,107 @@ def _parse_run_ref(track: str, run_dir: Path) -> Optional[RunRef]:
     )
 
 
-def iter_run_refs(results_root: Path, tracks: Sequence[str]) -> Iterator[RunRef]:
-    """Yield run directories that contain ``config_used.yaml`` and ``ckpt/``."""
+@dataclass(frozen=True)
+class RunDiscoveryStats:
+    """Counts from scanning a results tree for analyzable runs."""
+
+    track: str
+    n_dirs: int
+    n_accepted: int
+    n_no_config: int
+    n_no_ckpt_dir: int
+    n_empty_ckpt: int
+    n_bad_name: int
+
+
+def _resolve_run_config(run_dir: Path) -> Optional[Path]:
+    """Return config yaml for a run dir, or None if missing."""
+    for name in ("config_used.yaml", "config.yaml"):
+        path = run_dir / name
+        if path.is_file():
+            return path
+    return None
+
+
+def discover_run_refs(
+    results_root: Path,
+    tracks: Sequence[str],
+) -> tuple[list[RunRef], list[RunDiscoveryStats]]:
+    """Find run directories with config + checkpoint files."""
+    refs: list[RunRef] = []
+    stats_out: list[RunDiscoveryStats] = []
+
     for track in tracks:
         track_dir = results_root / track
+        n_dirs = 0
+        n_accepted = 0
+        n_no_config = 0
+        n_no_ckpt_dir = 0
+        n_empty_ckpt = 0
+        n_bad_name = 0
+
         if not track_dir.is_dir():
             logging.warning("Missing track directory: %s", track_dir)
+            stats_out.append(
+                RunDiscoveryStats(track, 0, 0, 0, 0, 0, 0),
+            )
             continue
+
         for run_dir in sorted(track_dir.iterdir()):
             if not run_dir.is_dir():
                 continue
-            if not (run_dir / "config_used.yaml").is_file():
+            n_dirs += 1
+            if _resolve_run_config(run_dir) is None:
+                n_no_config += 1
+                logging.warning("Skipping %s (no config_used.yaml / config.yaml)", run_dir)
                 continue
             ckpt_dir = run_dir / "ckpt"
             if not ckpt_dir.is_dir():
+                n_no_ckpt_dir += 1
                 logging.warning("Skipping %s (no ckpt/)", run_dir)
                 continue
             if not any(ckpt_dir.glob("*.ckpt")):
+                n_empty_ckpt += 1
                 logging.warning("Skipping %s (empty ckpt/)", run_dir)
                 continue
             ref = _parse_run_ref(track, run_dir)
             if ref is None:
+                n_bad_name += 1
                 logging.warning("Skipping unrecognized run name: %s", run_dir.name)
                 continue
-            yield ref
+            refs.append(ref)
+            n_accepted += 1
+
+        stats_out.append(
+            RunDiscoveryStats(
+                track=track,
+                n_dirs=n_dirs,
+                n_accepted=n_accepted,
+                n_no_config=n_no_config,
+                n_no_ckpt_dir=n_no_ckpt_dir,
+                n_empty_ckpt=n_empty_ckpt,
+                n_bad_name=n_bad_name,
+            )
+        )
+
+    return refs, stats_out
+
+
+def iter_run_refs(results_root: Path, tracks: Sequence[str]) -> Iterator[RunRef]:
+    """Yield run directories that contain config + ``ckpt/*.ckpt``."""
+    refs, _ = discover_run_refs(results_root, tracks)
+    yield from refs
 
 
 def _load_cfg_for_run(
     run_ref: RunRef,
     dataset_dir: str,
 ) -> None:
-    """Load GraphGym cfg from ``config_used.yaml`` for one run."""
-    cfg_path = str(run_ref.run_dir / "config_used.yaml")
+    """Load GraphGym cfg from the run's saved config yaml."""
+    cfg_path_obj = _resolve_run_config(run_ref.run_dir)
+    if cfg_path_obj is None:
+        raise FileNotFoundError(f"No config yaml in {run_ref.run_dir}")
+    cfg_path = str(cfg_path_obj)
     old_argv = sys.argv
     sys.argv = [
         old_argv[0],
@@ -551,7 +620,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
 
     results_root = Path(args.results_root)
     out_dir = Path(args.out_dir)
-    tracks = [t.strip() for t in args.tracks.split(",") if t.strip()]
+    tracks = [t.strip() for t in re.split(r"[,;]+", args.tracks) if t.strip()]
 
     if args.device == "auto":
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -559,6 +628,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         device = torch.device(args.device)
     logging.info("Results root: %s", results_root)
     logging.info("Dataset dir: %s", args.dataset_dir)
+    logging.info("Tracks: %s", tracks)
     logging.info("Device: %s", device)
 
     per_run_csv = out_dir / "per_run_metrics.csv"
@@ -573,7 +643,19 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         logging.info("Wrote figures to %s", out_dir)
         return
 
-    run_refs = list(iter_run_refs(results_root, tracks))
+    run_refs, discovery = discover_run_refs(results_root, tracks)
+    for row in discovery:
+        logging.info(
+            "Discovery track=%s dirs=%d accepted=%d "
+            "(no_config=%d no_ckpt=%d empty_ckpt=%d bad_name=%d)",
+            row.track,
+            row.n_dirs,
+            row.n_accepted,
+            row.n_no_config,
+            row.n_no_ckpt_dir,
+            row.n_empty_ckpt,
+            row.n_bad_name,
+        )
     if args.lr_tag:
         run_refs = [r for r in run_refs if r.lr_tag == args.lr_tag]
     if not run_refs:

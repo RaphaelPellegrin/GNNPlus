@@ -16,7 +16,7 @@
 # Optional overrides:
 #   GCN_GIN_ANALYZE_RESULTS_ROOT  (default: $GNNPLUS_OUT_DIR/gcn_gin_routing)
 #   GCN_GIN_ANALYZE_OUT_DIR       (default: $REPO/results/gcn_gin_routing/analysis)
-#   GCN_GIN_ANALYZE_TRACKS        (default: toy,sigma)
+#   GCN_GIN_ANALYZE_TRACKS        (default: toy,sigma — use toy;sigma in sbatch export)
 #   GCN_GIN_ANALYZE_LR_TAG        (e.g. lr001 — filter runs)
 #   GCN_GIN_ANALYZE_DEVICE        (auto|cpu|cuda)
 #   GCN_GIN_ANALYZE_PARTITION / _MEM / _TIME
@@ -53,6 +53,12 @@ if [ ! -f "scripts/synthetic/analyze_gcn_gin_routing_results.py" ]; then
   echo "ERROR: analyze script missing — git pull after push"
   exit 1
 fi
+if ! grep -q "run_dir is not a YACS key" scripts/synthetic/analyze_gcn_gin_routing_results.py; then
+  echo "ERROR: stale analyze script (missing run_dir fix) — need commit a5ef4ad+"
+  echo "  git fetch origin && git pull"
+  echo "  grep 'run_dir is not a YACS' scripts/synthetic/analyze_gcn_gin_routing_results.py"
+  exit 1
+fi
 
 chmod +x bash_interface/cluster/run_analyze_gcn_gin_routing_results.sh
 
@@ -60,12 +66,16 @@ PARTITION="${GCN_GIN_ANALYZE_PARTITION:-mweber_gpu}"
 MEM="${GCN_GIN_ANALYZE_MEM:-32GB}"
 TIME="${GCN_GIN_ANALYZE_TIME:-02:00:00}"
 
+# SLURM --export splits on commas; encode multi-track lists with semicolons.
+_analyze_tracks_display="${GCN_GIN_ANALYZE_TRACKS:-toy,sigma}"
+_analyze_tracks_export="${_analyze_tracks_display//,/\;}"
+
 export_list="ALL,ENV_NAME=gnnplus"
 export_list+=",GNNPLUS_OUT_DIR=${GNNPLUS_OUT_DIR}"
 export_list+=",GNNPLUS_DATASET_DIR=${GNNPLUS_DATASET_DIR}"
 export_list+=",GCN_GIN_ANALYZE_RESULTS_ROOT=${results_root}"
 export_list+=",GCN_GIN_ANALYZE_OUT_DIR=${out_dir}"
-export_list+=",GCN_GIN_ANALYZE_TRACKS=${GCN_GIN_ANALYZE_TRACKS:-toy,sigma}"
+export_list+=",GCN_GIN_ANALYZE_TRACKS=${_analyze_tracks_export}"
 export_list+=",GCN_GIN_ANALYZE_DEVICE=${GCN_GIN_ANALYZE_DEVICE:-auto}"
 if [ -n "${GCN_GIN_ANALYZE_LR_TAG:-}" ]; then
   export_list+=",GCN_GIN_ANALYZE_LR_TAG=${GCN_GIN_ANALYZE_LR_TAG}"
@@ -92,6 +102,7 @@ cat <<EOF
   Results:       ${results_root}
   Dataset:       ${GNNPLUS_DATASET_DIR}
   Output:        ${out_dir}
+  Tracks:        ${_analyze_tracks_display} (sbatch export: ${_analyze_tracks_export})
   Logs:          logs_gnnplus/gcn_gin_analyze_${job_id}.log
 
 Monitor:
