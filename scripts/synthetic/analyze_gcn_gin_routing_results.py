@@ -307,14 +307,35 @@ def evaluate_run(
 
     for batch in test_loader:
         batch = batch.to(device)
+        if not hasattr(batch, "tau") or batch.tau is None:
+            raise AttributeError("Batch missing graph-level tau — regenerate dataset.")
+        tau = batch.tau.view(-1).long()
+
+        # Collect gates on a clone — both collect_per_graph_gates and model(batch)
+        # run the encoder and overwrite node features.
+        if collect_gates and has_collect:
+            try:
+                gate_out = core.collect_per_graph_gates(batch.clone())
+                gnn_node = gate_out["gnn_node"]  # [N, L, Ng]
+                roots = _root_indices(batch).to(gnn_node.device)
+                layer_idx = 0
+                gin_root = gnn_node[roots, layer_idx, gin_idx].detach().cpu()
+                gcn_root = gnn_node[roots, layer_idx, gcn_idx].detach().cpu()
+                tau_cpu = tau.detach().cpu()
+                gin_gates_t0.extend(gin_root[tau_cpu == 0].tolist())
+                gin_gates_t1.extend(gin_root[tau_cpu == 1].tolist())
+                gcn_gates_t0.extend(gcn_root[tau_cpu == 0].tolist())
+                gcn_gates_t1.extend(gcn_root[tau_cpu == 1].tolist())
+            except Exception:
+                logging.exception(
+                    "Gate collection failed for %s (acc metrics kept)",
+                    run_ref.run_dir.name,
+                )
+
         pred, true = model(batch)
         _loss, pred_score = compute_loss(pred, true)
         pred_label = _pred_labels_from_score(pred_score)
         true_label = true.view(-1).long()
-
-        if not hasattr(batch, "tau") or batch.tau is None:
-            raise AttributeError("Batch missing graph-level tau — regenerate dataset.")
-        tau = batch.tau.view(-1).long()
 
         correct = pred_label == true_label
         correct_all += int(correct.sum().item())
@@ -328,19 +349,6 @@ def evaluate_run(
             correct_t0 += int(correct[mask0].sum().item())
         if mask1.any():
             correct_t1 += int(correct[mask1].sum().item())
-
-        if collect_gates and has_collect:
-            gate_out = core.collect_per_graph_gates(batch)
-            gnn_node = gate_out["gnn_node"]  # [N, L, Ng]
-            roots = _root_indices(batch).to(gnn_node.device)
-            layer_idx = 0
-            gin_root = gnn_node[roots, layer_idx, gin_idx].detach().cpu()
-            gcn_root = gnn_node[roots, layer_idx, gcn_idx].detach().cpu()
-            tau_cpu = tau.detach().cpu()
-            gin_gates_t0.extend(gin_root[tau_cpu == 0].tolist())
-            gin_gates_t1.extend(gin_root[tau_cpu == 1].tolist())
-            gcn_gates_t0.extend(gcn_root[tau_cpu == 0].tolist())
-            gcn_gates_t1.extend(gcn_root[tau_cpu == 1].tolist())
 
     def _safe_acc(num: int, den: int) -> float:
         return float(num / den) if den > 0 else float("nan")
@@ -548,12 +556,22 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         raise SystemExit(f"No runs found under {results_root}")
 
     metrics: list[RunMetrics] = []
+    failed: list[str] = []
     for ref in run_refs:
         logging.info("Evaluating %s / %s", ref.track, ref.run_dir.name)
         try:
             metrics.append(evaluate_run(ref, args.dataset_dir, device))
         except Exception:
             logging.exception("Failed on %s", ref.run_dir)
+            failed.append(f"{ref.track}/{ref.run_dir.name}")
+
+    if failed:
+        logging.warning(
+            "Skipped %d / %d runs: %s",
+            len(failed),
+            len(run_refs),
+            ", ".join(failed[:8]) + (" ..." if len(failed) > 8 else ""),
+        )
 
     if not metrics:
         raise SystemExit("No runs evaluated successfully.")
