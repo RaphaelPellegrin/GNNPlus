@@ -26,6 +26,7 @@ import logging
 import os
 import re
 import sys
+from collections import Counter
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from statistics import mean, pstdev
@@ -50,6 +51,11 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 import GNNPlus  # noqa: F401 — register modules
+from GNNPlus.gcn_gin_routing_gate_tracking import (
+    RootGateAccumulator,
+    accumulate_root_gates_from_batch,
+    hybrid_head_indices,
+)
 from GNNPlus.hybrid_gate_tracking import _unwrap_model
 
 RUN_NAME_RE = re.compile(
@@ -178,30 +184,18 @@ def iter_run_refs(results_root: Path, tracks: Sequence[str]) -> Iterator[RunRef]
                 continue
             if not (run_dir / "config_used.yaml").is_file():
                 continue
-            if not (run_dir / "ckpt").is_dir():
+            ckpt_dir = run_dir / "ckpt"
+            if not ckpt_dir.is_dir():
                 logging.warning("Skipping %s (no ckpt/)", run_dir)
+                continue
+            if not any(ckpt_dir.glob("*.ckpt")):
+                logging.warning("Skipping %s (empty ckpt/)", run_dir)
                 continue
             ref = _parse_run_ref(track, run_dir)
             if ref is None:
                 logging.warning("Skipping unrecognized run name: %s", run_dir.name)
                 continue
             yield ref
-
-
-def _head_indices(gnn_types: str) -> tuple[int, int, bool]:
-    """Return (gin_head_idx, gcn_head_idx, is_two_head)."""
-    parts = [p.strip() for p in str(gnn_types).split(",") if p.strip()]
-    if len(parts) != 2:
-        return 0, 1, False
-    gin_idx = 0
-    gcn_idx = 1
-    for idx, kind in enumerate(parts):
-        upper = kind.upper()
-        if "GIN" in upper or "ROUTING_SUM" in upper:
-            gin_idx = idx
-        if "GCN" in upper or "ROUTING_NORM" in upper or "NORMGCN" in upper:
-            gcn_idx = idx
-    return gin_idx, gcn_idx, True
 
 
 def _load_cfg_for_run(
@@ -248,18 +242,6 @@ def _pred_labels_from_score(pred_score: torch.Tensor) -> torch.Tensor:
     return pred_score.argmax(dim=-1).view(-1)
 
 
-    """Global node indices of the root (first node) per graph in a batch."""
-    if hasattr(batch, "ptr") and batch.ptr is not None:
-        return batch.ptr[:-1].long()
-    batch_ids = batch.batch
-    num_graphs = int(batch_ids.max().item()) + 1 if batch_ids.numel() else 0
-    roots = torch.zeros(num_graphs, dtype=torch.long, device=batch_ids.device)
-    for g in range(num_graphs):
-        mask = batch_ids == g
-        roots[g] = int(torch.nonzero(mask, as_tuple=False)[0].item())
-    return roots
-
-
 @torch.no_grad()
 def evaluate_run(
     run_ref: RunRef,
@@ -286,12 +268,12 @@ def evaluate_run(
 
     hybrid = getattr(cfg.gnn, "hybrid", None)
     gnn_types = str(getattr(hybrid, "gnn_types", "")) if hybrid is not None else ""
-    gin_idx, gcn_idx, two_head = _head_indices(gnn_types)
+    gin_idx, gcn_idx, two_head = hybrid_head_indices(gnn_types)
     gate_mode = str(getattr(hybrid, "gate", "none")).lower() if hybrid is not None else "none"
     collect_gates = two_head and gate_mode not in ("none", "off")
 
     core = _unwrap_model(model)
-    has_collect = hasattr(core, "collect_per_graph_gates")
+    gate_accum = RootGateAccumulator()
 
     correct_all = 0
     correct_t0 = 0
@@ -299,11 +281,6 @@ def evaluate_run(
     n_all = 0
     n_t0 = 0
     n_t1 = 0
-
-    gin_gates_t0: list[float] = []
-    gin_gates_t1: list[float] = []
-    gcn_gates_t0: list[float] = []
-    gcn_gates_t1: list[float] = []
 
     for batch in test_loader:
         batch = batch.to(device)
@@ -313,24 +290,16 @@ def evaluate_run(
 
         # Collect gates on a clone — both collect_per_graph_gates and model(batch)
         # run the encoder and overwrite node features.
-        if collect_gates and has_collect:
-            try:
-                gate_out = core.collect_per_graph_gates(batch.clone())
-                gnn_node = gate_out["gnn_node"]  # [N, L, Ng]
-                roots = _root_indices(batch).to(gnn_node.device)
-                layer_idx = 0
-                gin_root = gnn_node[roots, layer_idx, gin_idx].detach().cpu()
-                gcn_root = gnn_node[roots, layer_idx, gcn_idx].detach().cpu()
-                tau_cpu = tau.detach().cpu()
-                gin_gates_t0.extend(gin_root[tau_cpu == 0].tolist())
-                gin_gates_t1.extend(gin_root[tau_cpu == 1].tolist())
-                gcn_gates_t0.extend(gcn_root[tau_cpu == 0].tolist())
-                gcn_gates_t1.extend(gcn_root[tau_cpu == 1].tolist())
-            except Exception:
-                logging.exception(
-                    "Gate collection failed for %s (acc metrics kept)",
-                    run_ref.run_dir.name,
-                )
+        if collect_gates:
+            accumulate_root_gates_from_batch(
+                core,
+                batch,
+                tau,
+                gin_idx,
+                gcn_idx,
+                gate_accum,
+                layer_idx=0,
+            )
 
         pred, true = model(batch)
         _loss, pred_score = compute_loss(pred, true)
@@ -353,8 +322,13 @@ def evaluate_run(
     def _safe_acc(num: int, den: int) -> float:
         return float(num / den) if den > 0 else float("nan")
 
-    def _safe_mean(vals: list[float]) -> float:
-        return float(mean(vals)) if vals else float("nan")
+    gate_stats = gate_accum.means()
+    if collect_gates and not gate_accum.has_samples:
+        logging.warning(
+            "No root gates collected for %s (%d batch failures)",
+            run_ref.run_dir.name,
+            gate_accum.n_fail_batches,
+        )
 
     return RunMetrics(
         track=run_ref.track,
@@ -371,11 +345,11 @@ def evaluate_run(
         acc_tau1=_safe_acc(correct_t1, n_t1),
         gin_head_idx=gin_idx,
         gcn_head_idx=gcn_idx,
-        gin_gate_tau0=_safe_mean(gin_gates_t0),
-        gin_gate_tau1=_safe_mean(gin_gates_t1),
-        gcn_gate_tau0=_safe_mean(gcn_gates_t0),
-        gcn_gate_tau1=_safe_mean(gcn_gates_t1),
-        has_gates=collect_gates and bool(gin_gates_t0 or gin_gates_t1),
+        gin_gate_tau0=gate_stats["gin_gate_tau0"],
+        gin_gate_tau1=gate_stats["gin_gate_tau1"],
+        gcn_gate_tau0=gate_stats["gcn_gate_tau0"],
+        gcn_gate_tau1=gate_stats["gcn_gate_tau1"],
+        has_gates=collect_gates and gate_accum.has_samples,
     )
 
 
@@ -554,6 +528,9 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         run_refs = [r for r in run_refs if r.lr_tag == args.lr_tag]
     if not run_refs:
         raise SystemExit(f"No runs found under {results_root}")
+
+    track_counts = Counter(ref.track for ref in run_refs)
+    logging.info("Run directories with checkpoints: %s", dict(track_counts))
 
     metrics: list[RunMetrics] = []
     failed: list[str] = []

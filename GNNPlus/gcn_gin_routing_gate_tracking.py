@@ -7,6 +7,7 @@ Logs mean root MP gate γ for GIN vs GCN heads on τ=0 (GCN-type) vs τ=1
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass, field
 from statistics import mean
 from typing import Any, Dict, Iterable, List, Tuple
 
@@ -71,6 +72,86 @@ def _safe_mean(vals: List[float]) -> float:
     return float(mean(vals)) if vals else float("nan")
 
 
+@dataclass
+class RootGateAccumulator:
+    """Running lists of root MP gate γ split by graph type τ."""
+
+    gin_t0: List[float] = field(default_factory=list)
+    gin_t1: List[float] = field(default_factory=list)
+    gcn_t0: List[float] = field(default_factory=list)
+    gcn_t1: List[float] = field(default_factory=list)
+    n_ok_batches: int = 0
+    n_fail_batches: int = 0
+
+    @property
+    def has_samples(self) -> bool:
+        """True when at least one root gate was recorded."""
+        return bool(self.gin_t0 or self.gin_t1)
+
+    def means(self) -> Dict[str, float]:
+        """Per-τ mean root gates and routing deltas."""
+        mean_gin_t0 = _safe_mean(self.gin_t0)
+        mean_gin_t1 = _safe_mean(self.gin_t1)
+        mean_gcn_t0 = _safe_mean(self.gcn_t0)
+        mean_gcn_t1 = _safe_mean(self.gcn_t1)
+        return {
+            "gin_gate_tau0": mean_gin_t0,
+            "gin_gate_tau1": mean_gin_t1,
+            "gcn_gate_tau0": mean_gcn_t0,
+            "gcn_gate_tau1": mean_gcn_t1,
+            "delta_gcn": mean_gcn_t0 - mean_gcn_t1,
+            "delta_gin": mean_gin_t1 - mean_gin_t0,
+        }
+
+
+def accumulate_root_gates_from_batch(
+    core: nn.Module,
+    batch: Any,
+    tau: torch.Tensor,
+    gin_idx: int,
+    gcn_idx: int,
+    accum: RootGateAccumulator,
+    *,
+    layer_idx: int = 0,
+) -> bool:
+    """Append root γ for one mini-batch; return True on success."""
+    if not hasattr(core, "collect_per_graph_gates"):
+        return False
+    try:
+        gate_out = core.collect_per_graph_gates(batch.clone())
+        gnn_node = gate_out["gnn_node"]
+        if gnn_node.ndim != 3:
+            raise ValueError(f"expected gnn_node [N,L,Ng], got {tuple(gnn_node.shape)}")
+        num_heads = int(gnn_node.shape[-1])
+        if num_heads <= max(gin_idx, gcn_idx):
+            raise ValueError(
+                f"gnn_node has {num_heads} heads; need gin={gin_idx}, gcn={gcn_idx}",
+            )
+        if int(gnn_node.shape[1]) <= layer_idx:
+            raise ValueError(
+                f"layer_idx={layer_idx} out of range for L={int(gnn_node.shape[1])}",
+            )
+        roots = _root_indices(batch).to(gnn_node.device)
+        gin_root = gnn_node[roots, layer_idx, gin_idx].detach().float().cpu()
+        gcn_root = gnn_node[roots, layer_idx, gcn_idx].detach().float().cpu()
+        tau_cpu = tau.detach().view(-1).long().cpu()
+        if int(gin_root.numel()) != int(tau_cpu.numel()):
+            raise ValueError(
+                f"tau graphs={int(tau_cpu.numel())} vs root gates={int(gin_root.numel())}",
+            )
+        accum.gin_t0.extend(gin_root[tau_cpu == 0].tolist())
+        accum.gin_t1.extend(gin_root[tau_cpu == 1].tolist())
+        accum.gcn_t0.extend(gcn_root[tau_cpu == 0].tolist())
+        accum.gcn_t1.extend(gcn_root[tau_cpu == 1].tolist())
+        accum.n_ok_batches += 1
+        return True
+    except Exception:
+        accum.n_fail_batches += 1
+        if accum.n_fail_batches <= 1:
+            logging.exception("Root gate collection failed on first bad batch")
+        return False
+
+
 def build_per_tau_root_gate_wandb_log(
     model: nn.Module,
     loader: Iterable[Any],
@@ -115,10 +196,7 @@ def build_per_tau_root_gate_wandb_log(
     was_training = model.training
     model.eval()
 
-    gin_t0: List[float] = []
-    gin_t1: List[float] = []
-    gcn_t0: List[float] = []
-    gcn_t1: List[float] = []
+    accum = RootGateAccumulator()
 
     try:
         with torch.no_grad():
@@ -135,16 +213,15 @@ def build_per_tau_root_gate_wandb_log(
                     return {}
                 batch = batch.to(device)
                 tau = batch.tau.view(-1).long()
-                gate_out = core.collect_per_graph_gates(batch.clone())
-                gnn_node = gate_out["gnn_node"]
-                roots = _root_indices(batch).to(gnn_node.device)
-                gin_root = gnn_node[roots, layer_idx, gin_idx].detach().cpu()
-                gcn_root = gnn_node[roots, layer_idx, gcn_idx].detach().cpu()
-                tau_cpu = tau.detach().cpu()
-                gin_t0.extend(gin_root[tau_cpu == 0].tolist())
-                gin_t1.extend(gin_root[tau_cpu == 1].tolist())
-                gcn_t0.extend(gcn_root[tau_cpu == 0].tolist())
-                gcn_t1.extend(gcn_root[tau_cpu == 1].tolist())
+                accumulate_root_gates_from_batch(
+                    core,
+                    batch,
+                    tau,
+                    gin_idx,
+                    gcn_idx,
+                    accum,
+                    layer_idx=layer_idx,
+                )
     except Exception:
         logging.exception(
             "Per-τ gate logging failed on %s split",
@@ -155,16 +232,17 @@ def build_per_tau_root_gate_wandb_log(
         if was_training:
             model.train()
 
-    if not gin_t0 and not gin_t1:
+    if not accum.has_samples:
         return {}
 
     prefix = f"gates_by_tau/{split_name}"
-    mean_gin_t0 = _safe_mean(gin_t0)
-    mean_gin_t1 = _safe_mean(gin_t1)
-    mean_gcn_t0 = _safe_mean(gcn_t0)
-    mean_gcn_t1 = _safe_mean(gcn_t1)
-    delta_gcn = mean_gcn_t0 - mean_gcn_t1
-    delta_gin = mean_gin_t1 - mean_gin_t0
+    stats = accum.means()
+    mean_gin_t0 = stats["gin_gate_tau0"]
+    mean_gin_t1 = stats["gin_gate_tau1"]
+    mean_gcn_t0 = stats["gcn_gate_tau0"]
+    mean_gcn_t1 = stats["gcn_gate_tau1"]
+    delta_gcn = stats["delta_gcn"]
+    delta_gin = stats["delta_gin"]
 
     out: Dict[str, float] = {
         f"{prefix}/tau0/mean_gin_gamma": mean_gin_t0,
@@ -175,8 +253,8 @@ def build_per_tau_root_gate_wandb_log(
         f"{prefix}/routing/delta_gin": delta_gin,
         f"{prefix}/routing/gcn_loving_tau0": mean_gcn_t0,
         f"{prefix}/routing/gin_loving_tau1": mean_gin_t1,
-        f"{prefix}/_n_graphs_tau0": float(len(gin_t0)),
-        f"{prefix}/_n_graphs_tau1": float(len(gin_t1)),
+        f"{prefix}/_n_graphs_tau0": float(len(accum.gin_t0)),
+        f"{prefix}/_n_graphs_tau1": float(len(accum.gin_t1)),
     }
     return out
 
