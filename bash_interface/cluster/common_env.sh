@@ -10,6 +10,10 @@ log_message() {
 
 # --- Weights & Biases (Harvard GeoML team) ---
 # Set WANDB_API_KEY before sbatch, e.g. source ~/.gnnplus_env (chmod 600, not in git).
+if [ -z "${WANDB_API_KEY:-}" ] && [ -f "${HOME}/.gnnplus_env" ]; then
+    # shellcheck source=/dev/null
+    source "${HOME}/.gnnplus_env"
+fi
 if [ -z "${WANDB_API_KEY:-}" ]; then
     log_message "WARNING: WANDB_API_KEY is not set — W&B logging will fail if wandb.use True"
 fi
@@ -63,14 +67,21 @@ fi
 
 # Editable install (no model changes; ensures imports resolve)
 python -m pip install -e . --no-deps --quiet 2>/dev/null || true
-python -c "
-import GNNPlus
-from GNNPlus.network.custom_gnn import CustomGNN
-import torch
-prefix = '${CONDA_ENVS_PATH}/${ENV_NAME}'
-assert torch.__file__.startswith(prefix), f'torch not in env: {torch.__file__}'
-print('GNNPlus + torch import OK from', prefix)
-" || {
-    log_message "GNNPlus import check failed (is gnnplus env installed in holylabs, not ~/.local?)"
+if ! python -c "
+import traceback
+import sys
+try:
+    import GNNPlus
+    from GNNPlus.network.custom_gnn import CustomGNN
+    import torch
+    prefix = '${CONDA_ENVS_PATH}/${ENV_NAME}'
+    if not torch.__file__.startswith(prefix):
+        raise RuntimeError(f'torch not in env: {torch.__file__} (expected prefix {prefix})')
+    print('GNNPlus + torch import OK from', prefix)
+except Exception:
+    traceback.print_exc()
+    sys.exit(1)
+"; then
+    log_message "GNNPlus import check failed (see traceback above)"
     exit 1
-}
+fi

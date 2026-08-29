@@ -10,10 +10,23 @@ from pathlib import Path
 from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
 
-from scripts.tu_errica.errica_hp_grid import load_hp_config  # noqa: E402
+
+def _load_hp_module() -> object:
+    """Load ``errica_hp_grid.py`` without requiring ``scripts`` as a package."""
+    import importlib.util
+
+    path = _REPO_ROOT / "scripts" / "tu_errica" / "errica_hp_grid.py"
+    spec = importlib.util.spec_from_file_location("errica_hp_grid", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load errica_hp_grid from {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_hp_module = _load_hp_module()
+load_hp_config = _hp_module.load_hp_config
 
 # Map grid keys → GraphGym cfg keys.
 _KEY_MAP: dict[str, str] = {

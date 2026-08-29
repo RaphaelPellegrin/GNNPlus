@@ -35,6 +35,8 @@ SCRIPT_DIR="${REPO_ROOT}/bash_interface/cluster"
 # shellcheck source=common_env.sh
 source "${SCRIPT_DIR}/common_env.sh"
 
+log_message "common_env OK; starting Errica task setup (campaign=${TU_ERRICA_CAMPAIGN:-canonical})"
+
 campaign="${TU_ERRICA_CAMPAIGN:-canonical}"
 task_id=${SLURM_ARRAY_TASK_ID:-1}
 
@@ -118,12 +120,23 @@ if [ ! -f "${cfg}" ]; then
 fi
 
 # HP overrides from Errica grid (or canonical).
-read -r -a hp_args < <(
-    python3 scripts/tu_errica/emit_cfg_overrides.py \
-        --model "${model_key}" \
-        --hp-id "${hp_id}" \
-        $([ "${use_canonical}" = "1" ] && echo --canonical)
-)
+emit_args=(--model "${model_key}")
+if [ "${use_canonical}" = "1" ]; then
+    emit_args+=(--canonical)
+else
+    emit_args+=(--hp-id="${hp_id}")
+fi
+if ! hp_line="$(python scripts/tu_errica/emit_cfg_overrides.py "${emit_args[@]}")"; then
+    log_message "emit_cfg_overrides failed for model=${model_key} args=${emit_args[*]}"
+    exit 1
+fi
+if [ -z "${hp_line}" ]; then
+    log_message "emit_cfg_overrides returned empty output for model=${model_key}"
+    exit 1
+fi
+# shellcheck disable=SC2206
+hp_args=(${hp_line})
+log_message "HP overrides loaded (${#hp_args[@]} tokens)"
 
 job_tag="${SLURM_ARRAY_JOB_ID:-${SLURM_JOB_ID:-local}}"
 hp_tag="canonical"
