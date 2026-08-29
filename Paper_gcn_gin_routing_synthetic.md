@@ -83,14 +83,18 @@ Optional combined grid: add `--combined` → `fig_example_graphs.png`
 | τ=1, correct | `fig_forward_tau1_correct.png` |
 | τ=1, incorrect | `fig_forward_tau1_incorrect.png` |
 
-Regenerate (needs a trained `a0g2_gated` run with checkpoints — **toy** track for incorrect examples):
+Regenerate (cluster — do not run python on login node):
 
 ```bash
-python scripts/synthetic/plot_gcn_gin_routing_forward_trace.py \
-  --run-dir $GNNPLUS_OUT_DIR/gcn_gin_routing/toy/a0g2_gated_lr001_seed0 \
-  --dataset-dir $GNNPLUS_DATASET_DIR \
-  --out-dir results/gcn_gin_routing/analysis/forward_traces
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+bash bash_interface/cluster/submit_plot_gcn_gin_routing_forward_trace.sh
 ```
+
+Optional: `GCN_GIN_FORWARD_RUN_DIR=$GNNPLUS_OUT_DIR/gcn_gin_routing/toy/a0g2_gated_lr01_seed0 bash ...`
 
 Each figure shows: star graph · per-node features through encoder · GIN/GCN routing-head raw/γ/out · fused root embedding · logits vs analytic rule scores.
 
