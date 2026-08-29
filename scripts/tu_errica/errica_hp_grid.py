@@ -70,6 +70,55 @@ SIGMA_CANONICAL: dict[str, Any] = {
     "early_stop_use_loss": False,
 }
 
+# Dataset families for hybrid SiGMA search (Option 3).
+BIO_DS_TAGS: frozenset[str] = frozenset({"enzymes", "proteins", "nci1", "dd"})
+SOCIAL_DS_TAGS: frozenset[str] = frozenset({"imdb-b", "reddit-b", "collab"})
+
+DS_TAG_TO_NAME: dict[str, str] = {
+    "enzymes": "ENZYMES",
+    "proteins": "PROTEINS",
+    "nci1": "NCI1",
+    "dd": "DD",
+    "imdb-b": "IMDB-BINARY",
+    "reddit-b": "REDDIT-BINARY",
+    "collab": "COLLAB",
+}
+
+MODEL_TAG_BY_KEY: dict[str, str] = {
+    "gin": "GIN",
+    "graphsage": "GraphSAGE",
+    "sigma_hetero": "SiGMA_hetero",
+}
+
+
+def build_bio_sigma_micro_grid(
+    *,
+    layers_mp: int,
+    dim_inner: int,
+    d_h_values: list[int],
+) -> list[dict[str, Any]]:
+    """Small SiGMA grid at GIN-matched L/H (bio datasets, Option 3)."""
+    grid: list[dict[str, Any]] = []
+    for batch_size in (32, 128):
+        for base_lr in (0.001, 0.01):
+            for d_h in d_h_values:
+                grid.append(
+                    {
+                        "batch_size": batch_size,
+                        "base_lr": base_lr,
+                        "layers_mp": layers_mp,
+                        "dim_inner": dim_inner,
+                        "d_h": d_h,
+                        "early_stop_use_loss": False,
+                    }
+                )
+    return grid
+
+
+def social_sigma_grid_entries() -> list[dict[str, Any]]:
+    """Full Errica-style SiGMA grid for social datasets (Option 3)."""
+    return expand_grid(SIGMA_GRID)
+
 
 def expand_grid(grid: dict[str, list[Any]]) -> list[dict[str, Any]]:
     """Cartesian product of a hyperparameter grid."""

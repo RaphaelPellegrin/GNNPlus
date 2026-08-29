@@ -41,6 +41,8 @@ _KEY_MAP: dict[str, str] = {
     "d_h": "gnn.hybrid.d_h",
 }
 
+_SKIP_HP_KEYS = frozenset({"sigma_params", "gin_params_budget", "under_budget"})
+
 
 def _format_value(value: Any) -> str:
     if isinstance(value, bool):
@@ -48,29 +50,73 @@ def _format_value(value: Any) -> str:
     return str(value)
 
 
-def emit_overrides(model: str, hp_id: int, *, canonical: bool) -> list[str]:
-    """Return flat key/value list suitable for ``python main.py ...``."""
-    cfg = load_hp_config(model, hp_id, canonical_only=canonical)
+def emit_overrides_from_hp(hp: dict[str, Any]) -> list[str]:
+    """Return flat CLI args from an HP dict."""
     args: list[str] = []
-    for key, value in cfg.items():
+    for key, value in hp.items():
+        if key in _SKIP_HP_KEYS:
+            continue
         cfg_key = _KEY_MAP.get(key, key)
         args.extend([cfg_key, _format_value(value)])
     return args
 
 
+def emit_overrides(model: str, hp_id: int, *, canonical: bool) -> list[str]:
+    """Return flat key/value list suitable for ``python main.py ...``."""
+    cfg = load_hp_config(model, hp_id, canonical_only=canonical)
+    return emit_overrides_from_hp(cfg)
+
+
+def load_selection_hp(selection_file: Path, ds_tag: str, fold: int) -> dict[str, Any]:
+    """Load winning HP for grid_eval from a per-fold selection JSON."""
+    with selection_file.open(encoding="utf-8") as handle:
+        payload = json.load(handle)
+    selection = payload.get("selection", payload)
+    entry = selection[ds_tag][str(fold)]
+    hp = entry["hp"]
+    if not isinstance(hp, dict):
+        raise TypeError(f"Invalid hp entry for {ds_tag} fold {fold}")
+    return hp
+
+
+def load_sigma_grid_hp(grid_file: Path, hp_id: int) -> dict[str, Any]:
+    """Load one SiGMA grid entry from a per-fold grid JSON."""
+    with grid_file.open(encoding="utf-8") as handle:
+        payload = json.load(handle)
+    grid = payload["grid"]
+    return dict(grid[hp_id])
+
+
 def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", required=True, choices=["gin", "graphsage", "sigma_hetero"])
+    parser.add_argument("--model", choices=["gin", "graphsage", "sigma_hetero"])
     parser.add_argument("--hp-id", type=int, default=-1)
     parser.add_argument("--canonical", action="store_true")
+    parser.add_argument("--selection-file", type=Path, default=None)
+    parser.add_argument("--ds-tag", default=None)
+    parser.add_argument("--fold", type=int, default=None)
+    parser.add_argument("--sigma-grid-file", type=Path, default=None)
     parser.add_argument("--json", action="store_true", help="Print JSON instead of CLI args")
     args = parser.parse_args()
-    overrides = load_hp_config(args.model, args.hp_id, canonical_only=args.canonical)
+
+    if args.selection_file is not None:
+        if args.ds_tag is None or args.fold is None:
+            parser.error("--selection-file requires --ds-tag and --fold")
+        overrides = load_selection_hp(args.selection_file, args.ds_tag, args.fold)
+    elif args.sigma_grid_file is not None:
+        if args.hp_id < 0:
+            parser.error("--sigma-grid-file requires --hp-id")
+        overrides = load_sigma_grid_hp(args.sigma_grid_file, args.hp_id)
+    else:
+        if args.model is None:
+            parser.error("--model is required without --selection-file / --sigma-grid-file")
+        overrides = load_hp_config(args.model, args.hp_id, canonical_only=args.canonical)
+
     if args.json:
         json.dump(overrides, sys.stdout)
         return
-    flat = emit_overrides(args.model, args.hp_id, canonical=args.canonical)
+    flat = emit_overrides_from_hp(overrides)
     sys.stdout.write(" ".join(flat))
 
 
