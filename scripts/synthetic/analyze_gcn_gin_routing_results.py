@@ -36,6 +36,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.colors import to_rgba
 import torch
 from torch_geometric.graphgym.checkpoint import get_ckpt_epochs, load_ckpt
 from torch_geometric.graphgym.cmd_args import parse_args
@@ -154,6 +155,11 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         default="auto",
         choices=("auto", "cpu", "cuda"),
         help="Evaluation device.",
+    )
+    parser.add_argument(
+        "--plots-only",
+        action="store_true",
+        help="Regenerate figures from existing per_run_metrics.csv (skip eval).",
     )
     return parser.parse_args(argv)
 
@@ -363,6 +369,38 @@ def _write_csv(path: Path, rows: Sequence[dict[str, Any]], fieldnames: Sequence[
             writer.writerow(row)
 
 
+def _load_metrics_from_csv(path: Path) -> list[RunMetrics]:
+    """Load ``RunMetrics`` rows written by a prior analyze pass."""
+    with path.open(encoding="utf-8", newline="") as fh:
+        reader = csv.DictReader(fh)
+        rows: list[RunMetrics] = []
+        for row in reader:
+            rows.append(
+                RunMetrics(
+                    track=str(row["track"]),
+                    model=str(row["model"]),
+                    lr_tag=str(row["lr_tag"]),
+                    seed=int(row["seed"]),
+                    run_dir=str(row["run_dir"]),
+                    epoch=int(row["epoch"]),
+                    n_all=int(row["n_all"]),
+                    n_tau0=int(row["n_tau0"]),
+                    n_tau1=int(row["n_tau1"]),
+                    acc_all=float(row["acc_all"]),
+                    acc_tau0=float(row["acc_tau0"]),
+                    acc_tau1=float(row["acc_tau1"]),
+                    gin_head_idx=int(row["gin_head_idx"]),
+                    gcn_head_idx=int(row["gcn_head_idx"]),
+                    gin_gate_tau0=float(row["gin_gate_tau0"]),
+                    gin_gate_tau1=float(row["gin_gate_tau1"]),
+                    gcn_gate_tau0=float(row["gcn_gate_tau0"]),
+                    gcn_gate_tau1=float(row["gcn_gate_tau1"]),
+                    has_gates=row["has_gates"].strip().lower() in ("true", "1", "yes"),
+                )
+            )
+    return rows
+
+
 def _summarize_runs(rows: Sequence[RunMetrics]) -> list[dict[str, Any]]:
     """Mean/std over seeds grouped by track, model, lr."""
     groups: dict[tuple[str, str, str], list[RunMetrics]] = {}
@@ -476,6 +514,7 @@ def _plot_gates_by_type(rows: Sequence[RunMetrics], out_path: Path) -> None:
         keys = [(0, "GIN"), (1, "GIN"), (0, "GCN"), (1, "GCN")]
         colors = ["#55A868", "#55A868", "#4C72B0", "#4C72B0"]
         alphas = [1.0, 0.55, 1.0, 0.55]
+        bar_colors = [to_rgba(c, a) for c, a in zip(colors, alphas, strict=True)]
         x = list(range(len(keys)))
         means = [float(mean(series[k])) if series[k] else float("nan") for k in keys]
         stds = [
@@ -486,8 +525,7 @@ def _plot_gates_by_type(rows: Sequence[RunMetrics], out_path: Path) -> None:
             means,
             yerr=stds,
             capsize=3,
-            color=colors,
-            alpha=alphas,
+            color=bar_colors,
             edgecolor="black",
             linewidth=0.6,
         )
@@ -522,6 +560,18 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     logging.info("Results root: %s", results_root)
     logging.info("Dataset dir: %s", args.dataset_dir)
     logging.info("Device: %s", device)
+
+    per_run_csv = out_dir / "per_run_metrics.csv"
+    if args.plots_only:
+        if not per_run_csv.is_file():
+            raise SystemExit(f"--plots-only requires {per_run_csv}")
+        metrics = _load_metrics_from_csv(per_run_csv)
+        summary = _summarize_runs(metrics)
+        logging.info("Loaded %d runs from %s (plots only)", len(metrics), per_run_csv)
+        _plot_baseline_per_type(summary, out_dir / "fig_baseline_per_type.png")
+        _plot_gates_by_type(metrics, out_dir / "fig_gate_by_type.png")
+        logging.info("Wrote figures to %s", out_dir)
+        return
 
     run_refs = list(iter_run_refs(results_root, tracks))
     if args.lr_tag:
