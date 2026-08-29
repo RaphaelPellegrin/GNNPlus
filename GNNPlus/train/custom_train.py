@@ -196,6 +196,10 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
     split_names = ['val', 'test']
     full_epoch_times = []
     perf = [[] for _ in range(num_splits)]
+    early_stop_patience = int(getattr(cfg.train, 'early_stop_patience', 0) or 0)
+    early_stop_use_loss = bool(getattr(cfg.train, 'early_stop_use_loss', False))
+    epochs_without_improvement = 0
+    best_monitor_value: float | None = None
     for cur_epoch in range(start_epoch, cfg.optim.max_epoch):
         start_time = time.perf_counter()
         train_epoch(loggers[0], loaders[0], model, optimizer, scheduler,
@@ -304,6 +308,36 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
                             gtl.attention.gamma.requires_grad:
                         logging.info(f"    {gtl.__class__.__name__} {li}: "
                                      f"gamma={gtl.attention.gamma.item()}")
+
+            if early_stop_patience > 0 and len(val_perf) > 0:
+                if early_stop_use_loss:
+                    monitor = float(val_perf[-1]['loss'])
+                    improved = (
+                        best_monitor_value is None or monitor < best_monitor_value
+                    )
+                else:
+                    metric_name = (
+                        cfg.metric_best
+                        if cfg.metric_best != 'auto'
+                        else 'accuracy'
+                    )
+                    monitor = float(val_perf[-1].get(metric_name, 0.0))
+                    improved = (
+                        best_monitor_value is None or monitor > best_monitor_value
+                    )
+                if improved:
+                    best_monitor_value = monitor
+                    epochs_without_improvement = 0
+                else:
+                    epochs_without_improvement += 1
+                if epochs_without_improvement >= early_stop_patience:
+                    logging.info(
+                        "Early stopping at epoch %d (patience=%d, monitor=%.6f)",
+                        cur_epoch,
+                        early_stop_patience,
+                        monitor,
+                    )
+                    break
     with open(f'results/{cfg.dataset.name}_result.txt','a') as f:
         f.write(f'{cfg.gnn.layer_type} '+f'residual_{cfg.gnn.residual} '+f'ffn_{cfg.gnn.ffn} '+f'{cfg.gnn.layers_mp} '+f'{cfg.gnn.dim_inner} '+f'{cfg.gnn.dropout} seed_{cfg.seed}: ')
         f.write(f'{best_test}\n')

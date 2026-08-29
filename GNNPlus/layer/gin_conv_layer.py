@@ -50,7 +50,8 @@ class GINConvLayer(nn.Module):
             nn.ReLU(),
             nn.Linear(dim_out, dim_out),
         )
-        self.model = pyg_nn.GINConv(gin_nn)
+        train_eps = bool(getattr(cfg.gnn, "gin_train_eps", False))
+        self.model = pyg_nn.GINConv(gin_nn, train_eps=train_eps)
 
         if self.ffn:
             if self.batch_norm:

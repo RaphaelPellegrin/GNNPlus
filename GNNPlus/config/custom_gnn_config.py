@@ -20,3 +20,6 @@ def custom_gnn_cfg(cfg):
     # Values: '' (none) | headwise | elementwise
     cfg.gnn.gate = ''
     cfg.gnn.log_gate_stats = False
+
+    # GIN-specific (Errica grid searches train_eps true/false).
+    cfg.gnn.gin_train_eps = False

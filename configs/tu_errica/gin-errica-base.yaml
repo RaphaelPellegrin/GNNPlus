@@ -1,0 +1,69 @@
+# Errica-fair TU graph classification — GIN baseline (diningphil/gnn-comparison recipe).
+#
+# Protocol: 10-fold fixed splits (split_mode: errica-cv-10), inner holdout train/val,
+# early stopping patience=500 on val accuracy, Adam lr=0.01, StepLR×0.5/50ep.
+# Launch script overrides dataset.name, split_index, seed, and HP via errica_hp_grid.
+#
+# Errica reference (GIN, degree social): IMDB-B 71.2±3.9, REDDIT-B 89.9±1.9,
+# COLLAB 75.6±2.3, PROTEINS 73.3±4.0, ENZYMES 29.5±8.2, NCI1 80.0±1.4.
+out_dir: results/tu_errica
+metric_best: accuracy
+metric_agg: argmax
+wandb:
+  use: False
+  project: GNNPlus
+  entity: weber-geoml-harvard-university
+  group: ''
+  name: ''
+dataset:
+  format: PyG-TUDataset
+  name: ENZYMES
+  task: graph
+  task_type: classification
+  transductive: False
+  split_mode: errica-cv-10
+  split_index: 0
+  split_dir: ./splits
+  node_encoder: True
+  node_encoder_name: LinearNode
+  node_encoder_bn: False
+  edge_encoder: False
+  edge_encoder_bn: False
+train:
+  mode: custom
+  batch_size: 128
+  eval_period: 1
+  enable_ckpt: True
+  ckpt_best: True
+  ckpt_clean: True
+  early_stop_patience: 500
+  early_stop_use_loss: False
+  eval_smoothing_metrics: False
+model:
+  type: custom_gnn
+  loss_fun: cross_entropy
+  graph_pooling: add
+gnn:
+  head: default
+  layer_type: gin
+  layers_mp: 4
+  layers_pre_mp: 0
+  layers_post_mp: 2
+  dim_inner: 64
+  act: relu
+  dropout: 0.5
+  agg: add
+  ffn: False
+  residual: False
+  gin_train_eps: True
+optim:
+  clip_grad_norm: False
+  optimizer: adam
+  weight_decay: 0.0
+  base_lr: 0.01
+  min_lr: 0.0
+  max_epoch: 1000
+  scheduler: step_lr
+  step_size: 50
+  step_gamma: 0.5
+  num_warmup_epochs: 0

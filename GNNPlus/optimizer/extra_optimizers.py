@@ -24,6 +24,8 @@ def adamW_optimizer(params: Iterator[Parameter], base_lr: float,
     return AdamW(params, lr=base_lr, weight_decay=weight_decay)
 
 
+# Note: ``adam`` and scheduler ``none`` are already registered by GraphGym core.
+
 
 @dataclass
 class ExtendedSchedulerConfig(SchedulerConfig):
@@ -33,6 +35,19 @@ class ExtendedSchedulerConfig(SchedulerConfig):
     num_warmup_epochs: int = 10
     train_mode: str = 'custom'
     eval_period: int = 1
+    step_size: int = 50
+    step_gamma: float = 0.5
+
+
+@register.register_scheduler('step_lr')
+def step_lr_scheduler(optimizer: Optimizer, step_size: int,
+                      step_gamma: float) -> optim.lr_scheduler.StepLR:
+    """Fixed-interval LR decay (Errica GIN: every 50 epochs ×0.5)."""
+    return optim.lr_scheduler.StepLR(
+        optimizer,
+        step_size=step_size,
+        gamma=step_gamma,
+    )
 
 
 @register.register_scheduler('plateau')

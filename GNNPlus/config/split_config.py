@@ -18,6 +18,11 @@ def set_cfg_split(cfg):
     # Dir to cache cross-validation splits
     cfg.dataset.split_dir = './splits'
 
+    # Errica (ICLR 2020) protocol — vendored splits live under split_dir/errica/.
+    cfg.dataset.errica_split_dir = ''
+    # Override auto feature mode: chem | social_constant | social_degree
+    cfg.dataset.errica_feature_mode = ''
+
     # Choose to run multiple splits in one program execution, if set,
     # takes the precedence over cfg.dataset.split_index for split selection
     cfg.run_multiple_splits = []

@@ -19,6 +19,7 @@ from GNNPlus.loader.dataset.coco_superpixels import COCOSuperpixels
 from GNNPlus.loader.dataset.gcn_gin_routing import GcnGinRoutingDataset
 from GNNPlus.loader.dataset.malnet_tiny import MalNetTiny
 from GNNPlus.loader.dataset.voc_superpixels import VOCSuperpixels
+from GNNPlus.loader.errica_splits import errica_feature_mode
 from GNNPlus.loader.split_generator import (prepare_splits,
                                              set_dataset_splits)
 from GNNPlus.preprocessing.graph_augmentations import maybe_add_virtual_nodes, parse_cfg_bool
@@ -579,6 +580,37 @@ def preformat_Peptides(dataset_dir, name):
     return dataset
 
 
+def _errica_scalar_degree_transform(data: object) -> object:
+    """Set node features to scalar degree (Errica COLLABORATIVE_DEGREE protocol)."""
+    from torch_geometric.utils import degree
+
+    deg = degree(data.edge_index[0], num_nodes=data.num_nodes)
+    data.x = deg.view(-1, 1).to(torch.float32)
+    return data
+
+
+def _tu_pre_transform(name: str) -> object | None:
+    """Return PyG pre_transform for TU datasets (Errica-aware)."""
+    if cfg.dataset.split_mode == "errica-cv-10":
+        mode = errica_feature_mode(name)
+        if mode == "social_constant":
+            return T.Constant(1)
+        if mode == "social_degree":
+            return _errica_scalar_degree_transform
+        return None
+
+    if name in ['DD', 'MUTAG', 'NCI1', 'ENZYMES', 'PROTEINS', 'TRIANGLES']:
+        return None
+    if name.startswith('IMDB-') or name in (
+        'COLLAB',
+        'REDDIT-BINARY',
+        'REDDIT-MULTI-5K',
+        'REDDIT-MULTI-12K',
+    ):
+        return T.Constant()
+    return None
+
+
 def preformat_TUDataset(dataset_dir, name):
     """Load and preformat datasets from PyG's TUDataset.
 
@@ -589,14 +621,12 @@ def preformat_TUDataset(dataset_dir, name):
     Returns:
         PyG dataset object
     """
-    if name in ['DD', 'MUTAG', 'NCI1', 'ENZYMES', 'PROTEINS', 'TRIANGLES']:
-        func = None
-    elif name.startswith('IMDB-') or name in ('COLLAB', 'REDDIT-BINARY', 'REDDIT-MULTI-5K', 'REDDIT-MULTI-12K'):
-        # Social datasets often have no node features; use constant ones
-        # (PyG TUDataset docs: Constant / OneHotDegree).
-        # https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.datasets.TUDataset.html
-        func = T.Constant()
-    else:
+    func = _tu_pre_transform(name)
+    if func is None and name not in [
+        'DD', 'MUTAG', 'NCI1', 'ENZYMES', 'PROTEINS', 'TRIANGLES',
+        'IMDB-BINARY', 'IMDB-MULTI', 'COLLAB', 'REDDIT-BINARY',
+        'REDDIT-MULTI-5K', 'REDDIT-MULTI-12K',
+    ]:
         raise ValueError(f"Loading dataset '{name}' from "
                          f"TUDataset is not supported.")
     dataset = TUDataset(dataset_dir, name, pre_transform=func)
