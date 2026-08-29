@@ -31,7 +31,9 @@ source "${SCRIPT_DIR}/common_env.sh"
 results_root="${GCN_GIN_ANALYZE_RESULTS_ROOT:-${GNNPLUS_OUT_DIR:-/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results}/gcn_gin_routing}"
 dataset_dir="${GCN_GIN_ANALYZE_DATASET_DIR:-${GNNPLUS_DATASET_DIR:-/n/netscratch/mweber_lab/Lab/gnnplus_datasets}}"
 out_dir="${GCN_GIN_ANALYZE_OUT_DIR:-${REPO_ROOT}/results/gcn_gin_routing/analysis}"
+# SLURM --export splits on commas; submit script passes toy;sigma when both tracks.
 tracks="${GCN_GIN_ANALYZE_TRACKS:-toy,sigma}"
+tracks="${tracks//;/,}"
 device="${GCN_GIN_ANALYZE_DEVICE:-auto}"
 
 if [ ! -d "${results_root}" ]; then
@@ -59,6 +61,9 @@ log_message "tracks=${tracks} device=${device}"
 extra_args=()
 if [ -n "${GCN_GIN_ANALYZE_LR_TAG:-}" ]; then
   extra_args+=(--lr-tag "${GCN_GIN_ANALYZE_LR_TAG}")
+fi
+if [ "${GCN_GIN_ANALYZE_PLOTS_ONLY:-0}" = "1" ]; then
+  extra_args+=(--plots-only)
 fi
 
 python scripts/synthetic/analyze_gcn_gin_routing_results.py \
