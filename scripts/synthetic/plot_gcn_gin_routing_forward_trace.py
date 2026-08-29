@@ -55,7 +55,7 @@ import GNNPlus  # noqa: F401 — register modules
 from GNNPlus.gcn_gin_routing_gate_tracking import hybrid_head_indices
 from GNNPlus.hybrid_gate_tracking import _unwrap_model
 from GNNPlus.layer.gated_hybrid_layer import GatedHybridGraphLayer
-from GNNPlus.loader.dataset.gcn_gin_routing import FEAT_SIGNAL
+from GNNPlus.loader.dataset.gcn_gin_routing import FEAT_SIGNAL, FEAT_TYPE
 
 from scripts.synthetic.analyze_gcn_gin_routing_results import (  # noqa: E402
     RunRef,
@@ -242,7 +242,7 @@ def trace_single_graph(
 
     graph_embed = x_fused_t[batch_enc.ptr[0].item()].detach().cpu().numpy()
 
-    roles = data.node_role.cpu().numpy()
+    roles = np.atleast_1d(data.node_role.cpu().numpy()).astype(int)
     return GraphForwardTrace(
         graph_idx=graph_idx,
         tau=int(data.tau.item()),
@@ -320,27 +320,32 @@ def _collect_examples(
     return out
 
 
+# Graph-level batch attributes (per-graph). Node-level attrs come from get_example().
+_GRAPH_LEVEL_BATCH_KEYS: tuple[str, ...] = ("tau", "gcn_score", "gin_score", "y")
+
+
 def _extract_graph_from_batch(batch: Batch, graph_idx: int) -> Data:
     """Extract one graph from a batched PyG object."""
     data = batch.get_example(graph_idx)
-    for key in ("tau", "gcn_score", "gin_score", "node_role", "root_index"):
+    for key in _GRAPH_LEVEL_BATCH_KEYS:
         if hasattr(batch, key):
             val = getattr(batch, key)
-            if val is None:
+            if val is None or not isinstance(val, Tensor):
                 continue
-            if isinstance(val, Tensor) and val.dim() == 0:
+            if val.dim() == 0:
                 setattr(data, key, val)
-            elif isinstance(val, Tensor):
+            else:
                 setattr(data, key, val[graph_idx])
     return data
 
 
 def _node_labels(roles: np.ndarray) -> list[str]:
     """Human-readable node labels for tables."""
+    roles_1d = np.atleast_1d(roles).astype(int)
     labels: list[str] = []
     sig_i = 0
     dum_i = 0
-    for role in roles:
+    for role in roles_1d:
         if role == 0:
             labels.append("r")
         elif role == 1:
@@ -494,7 +499,8 @@ def _draw_table(
 
 def _key_node_indices(roles: np.ndarray) -> list[int]:
     """Root + signal neighbors only (skip dummy leaves for readability)."""
-    return [i for i, r in enumerate(roles) if r in (0, 1)]
+    roles_1d = np.atleast_1d(roles).astype(int)
+    return [i for i, r in enumerate(roles_1d) if r in (0, 1)]
 
 
 def save_forward_trace_figure(
@@ -507,7 +513,11 @@ def save_forward_trace_figure(
     """Render one fully worked forward trace to PNG."""
     key_nodes = _key_node_indices(trace.node_roles)
     node_names = _node_labels(trace.node_roles)
-    highlight = {key_nodes.index(i) for i in key_nodes if trace.node_roles[i] == 0}
+    highlight = {
+        key_nodes.index(i)
+        for i in key_nodes
+        if int(np.atleast_1d(trace.node_roles)[i]) == 0
+    }
 
     def row_for_node(i: int) -> list[str]:
         return [
