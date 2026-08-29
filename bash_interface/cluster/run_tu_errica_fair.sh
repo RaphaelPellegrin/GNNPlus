@@ -188,6 +188,19 @@ fi
 
 export WANDB_EXTRA_TAGS="${wandb_tags}"
 
+# SiGMA full-graph attention is OOM at batch_size=128 on large TU graphs (DD, REDDIT-B)
+# even on ~140GB GPUs. GIN/GraphSAGE are unaffected. Match tu_sigma_homo_hetero / DD retry.
+batch_override_args=()
+if [ "${model_key}" = "sigma_hetero" ]; then
+    case "${ds_tag}" in
+        dd) batch_override_args+=(train.batch_size 16) ;;
+        reddit-b) batch_override_args+=(train.batch_size 16) ;;
+    esac
+    if [ "${#batch_override_args[@]}" -gt 0 ]; then
+        log_message "SiGMA batch override for ${ds_name}: ${batch_override_args[*]}"
+    fi
+fi
+
 python main.py \
     --cfg "${cfg}" \
     --repeat 1 \
@@ -198,6 +211,7 @@ python main.py \
     wandb.group "${wandb_group}" \
     wandb.name "${wandb_name}" \
     "${extra_args[@]}" \
-    "${hp_args[@]}"
+    "${hp_args[@]}" \
+    "${batch_override_args[@]}"
 
 log_message "Done: ${run_dir}"
