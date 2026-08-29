@@ -51,13 +51,19 @@ MODELS: tuple[dict[str, Any], ...] = (
 )
 
 
-def _build_cfg(track: str, model: dict[str, Any]) -> dict[str, Any]:
+def _build_cfg(
+    track: str,
+    model: dict[str, Any],
+    *,
+    node_encoder: bool = True,
+    slug_suffix: str = "",
+) -> dict[str, Any]:
     """Return one GraphGym config dict."""
     is_toy = track == "toy"
     d_h = 1 if is_toy else 4
     dim_inner = 2 if is_toy else 4
     gnn_types = model["gnn_types_toy"] if is_toy else model["gnn_types_sigma"]
-    slug = model["slug"]
+    slug = f"{model['slug']}{slug_suffix}"
     hybrid: dict[str, Any] = {
         "num_attn_heads": 0,
         "num_gnn_heads": model["num_gnn_heads"],
@@ -97,7 +103,7 @@ def _build_cfg(track: str, model: dict[str, Any]) -> dict[str, Any]:
             "task_type": "classification",
             "transductive": False,
             "split_mode": "standard",
-            "node_encoder": True,
+            "node_encoder": node_encoder,
             "node_encoder_name": "LinearNode",
             "node_encoder_bn": False,
             "edge_encoder": False,
@@ -138,13 +144,25 @@ def _build_cfg(track: str, model: dict[str, Any]) -> dict[str, Any]:
 
 
 def main() -> None:
-    """Write eight YAML configs under ``configs/synthetic/``."""
+    """Write YAML configs under ``configs/synthetic/``."""
+    import sys
+
     OUT_DIR.mkdir(parents=True, exist_ok=True)
+    write_noxenc = "--noxenc" in sys.argv
     for track in ("toy", "sigma"):
         for model in MODELS:
             slug = model["slug"]
             path = OUT_DIR / f"gcn_gin_routing_{track}_{slug}.yaml"
             cfg = _build_cfg(track, model)
+            with path.open("w", encoding="utf-8") as fh:
+                yaml.safe_dump(cfg, fh, sort_keys=False)
+            print(f"Wrote {path}")
+
+    if write_noxenc:
+        for model in MODELS:
+            slug = model["slug"]
+            path = OUT_DIR / f"gcn_gin_routing_toy_{slug}_noxenc.yaml"
+            cfg = _build_cfg("toy", model, node_encoder=False, slug_suffix="_noxenc")
             with path.open("w", encoding="utf-8") as fh:
                 yaml.safe_dump(cfg, fh, sort_keys=False)
             print(f"Wrote {path}")

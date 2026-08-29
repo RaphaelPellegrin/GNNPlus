@@ -1,0 +1,64 @@
+out_dir: results
+metric_best: accuracy
+wandb:
+  use: false
+  project: GNNPlus
+  tags:
+  - gnnplus
+  - hybrid_gnn
+  - gcn_gin_routing_synthetic
+  - gcn_gin_routing_toy
+  - gcn_gin_routing_toy_a0g1_gcn_noxenc
+dataset:
+  format: PyG-GcnGinRouting
+  name: v1
+  task: graph
+  task_type: classification
+  transductive: false
+  split_mode: standard
+  node_encoder: false
+  node_encoder_name: LinearNode
+  node_encoder_bn: false
+  edge_encoder: false
+train:
+  mode: custom
+  batch_size: 128
+  eval_period: 1
+  ckpt_period: 50
+model:
+  type: hybrid_gnn
+  loss_fun: cross_entropy
+  graph_pooling: graph_token
+gnn:
+  head: default
+  ffn: false
+  layers_pre_mp: 0
+  layers_mp: 1
+  layers_post_mp: 1
+  dim_inner: 2
+  act: relu
+  residual: false
+  dropout: 0.0
+  hybrid:
+    num_attn_heads: 0
+    num_gnn_heads: 1
+    d_h: 1
+    attn_mask: full
+    gate: none
+    norm: none
+    gnn_types: ROUTING_NORMGCN
+    attn_dropout: 0.0
+    mp_dropout: 0.0
+    block_bn: false
+    log_gate_stats: true
+    residual: false
+    identity_proj: false
+    mp_gate: none
+optim:
+  clip_grad_norm: false
+  optimizer: adam
+  weight_decay: 0.0
+  base_lr: 0.001
+  max_epoch: 200
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 5

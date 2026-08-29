@@ -70,6 +70,21 @@ CaseKey = tuple[int, Literal["correct", "incorrect"]]
 ROLE_NAMES: tuple[str, str, str] = ("root", "signal", "dummy")
 
 
+@dataclass(frozen=True)
+class TraceModelInfo:
+    """Architecture metadata for forward-trace plotting."""
+
+    model_name: str
+    gin_idx: int
+    gcn_idx: int
+    gin_name: str
+    gcn_name: str
+    num_mp_heads: int
+    has_gates: bool
+    has_node_encoder: bool
+    active_head_kind: Optional[Literal["gin", "gcn"]] = None
+
+
 @dataclass
 class GraphForwardTrace:
     """Intermediate tensors for one single-graph forward pass."""
@@ -96,6 +111,11 @@ class GraphForwardTrace:
     prob_class1: float
     gin_head_name: str
     gcn_head_name: str
+    model_name: str
+    is_two_head: bool
+    has_gates: bool
+    has_node_encoder: bool
+    active_head_kind: Optional[Literal["gin", "gcn"]] = None
 
 
 def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
@@ -162,6 +182,16 @@ def _run_ref_from_dir(run_dir: Path) -> RunRef:
     return ref
 
 
+def _head_kind_from_type(gnn_type: str) -> Literal["gin", "gcn"]:
+    """Map a hybrid MP type string to GIN vs GCN routing family."""
+    upper = gnn_type.upper()
+    if "ROUTING_SUM" in upper or (upper == "GIN"):
+        return "gin"
+    if "ROUTING_NORM" in upper or "NORMGCN" in upper or upper == "GCN":
+        return "gcn"
+    raise ValueError(f"Cannot infer routing head kind from {gnn_type!r}")
+
+
 def _routing_head_raw(
     head: torch.nn.Module,
     x: Tensor,
@@ -184,12 +214,13 @@ def trace_single_graph(
     device: torch.device,
     *,
     graph_idx: int,
-    gin_idx: int,
-    gcn_idx: int,
-    gin_name: str,
-    gcn_name: str,
+    model_info: TraceModelInfo,
 ) -> GraphForwardTrace:
     """Run a detailed forward trace on one graph."""
+    gin_idx = model_info.gin_idx
+    gcn_idx = model_info.gcn_idx
+    gin_name = model_info.gin_name
+    gcn_name = model_info.gcn_name
     core = _unwrap_model(model)
     batch = Batch.from_data_list([data.clone()]).to(device)
     x_raw = batch.x.detach().cpu().numpy().copy()
@@ -209,10 +240,26 @@ def trace_single_graph(
     if not isinstance(layer0, GatedHybridGraphLayer):
         raise TypeError("Expected GatedHybridGraphLayer at layers[0]")
 
-    gin_head = layer0.mp_heads[gin_idx]
-    gcn_head = layer0.mp_heads[gcn_idx]
-    gin_raw_t, gin_gamma_t = _routing_head_raw(gin_head, x_enc, edge_index_mp)
-    gcn_raw_t, gcn_gamma_t = _routing_head_raw(gcn_head, x_enc, edge_index_mp)
+    if model_info.num_mp_heads == 2:
+        gin_head = layer0.mp_heads[gin_idx]
+        gcn_head = layer0.mp_heads[gcn_idx]
+        gin_raw_t, gin_gamma_t = _routing_head_raw(gin_head, x_enc, edge_index_mp)
+        gcn_raw_t, gcn_gamma_t = _routing_head_raw(gcn_head, x_enc, edge_index_mp)
+    elif model_info.num_mp_heads == 1:
+        only_head = layer0.mp_heads[0]
+        only_raw_t, only_gamma_t = _routing_head_raw(only_head, x_enc, edge_index_mp)
+        kind = model_info.active_head_kind or _head_kind_from_type(model_info.gin_name)
+        if kind == "gin":
+            gin_raw_t, gin_gamma_t = only_raw_t, only_gamma_t
+            gcn_raw_t = torch.zeros_like(only_raw_t)
+            gcn_gamma_t = torch.ones_like(only_gamma_t)
+        else:
+            gcn_raw_t, gcn_gamma_t = only_raw_t, only_gamma_t
+            gin_raw_t = torch.zeros_like(only_raw_t)
+            gin_gamma_t = torch.ones_like(only_gamma_t)
+    else:
+        raise ValueError(f"Unsupported num_mp_heads={model_info.num_mp_heads}")
+
     gin_out_t = gin_raw_t * gin_gamma_t
     gcn_out_t = gcn_raw_t * gcn_gamma_t
 
@@ -266,6 +313,11 @@ def trace_single_graph(
         prob_class1=prob,
         gin_head_name=gin_name,
         gcn_head_name=gcn_name,
+        model_name=model_info.model_name,
+        is_two_head=model_info.num_mp_heads == 2,
+        has_gates=model_info.has_gates,
+        has_node_encoder=model_info.has_node_encoder,
+        active_head_kind=model_info.active_head_kind,
     )
 
 
@@ -274,10 +326,7 @@ def _collect_examples(
     loader: Any,
     device: torch.device,
     *,
-    gin_idx: int,
-    gcn_idx: int,
-    gin_name: str,
-    gcn_name: str,
+    model_info: TraceModelInfo,
     data_cache: dict[int, Data],
     graph_offset: int = 0,
     found: Optional[dict[CaseKey, GraphForwardTrace]] = None,
@@ -305,10 +354,7 @@ def _collect_examples(
                 data,
                 device,
                 graph_idx=offset + g,
-                gin_idx=gin_idx,
-                gcn_idx=gcn_idx,
-                gin_name=gin_name,
-                gcn_name=gcn_name,
+                model_info=model_info,
             )
             tau = trace.tau
             key: CaseKey = (tau, "correct" if trace.correct else "incorrect")
@@ -503,6 +549,74 @@ def _key_node_indices(roles: np.ndarray) -> list[int]:
     return [i for i, r in enumerate(roles_1d) if r in (0, 1)]
 
 
+def _stage_table_spec(trace: GraphForwardTrace) -> tuple[list[str], list[list[str]], str]:
+    """Build dynamic column labels and rows for the forward table."""
+    key_nodes = _key_node_indices(trace.node_roles)
+    node_names = _node_labels(trace.node_roles)
+
+    col_specs: list[tuple[str, Any]] = [
+        ("node", lambda i: node_names[i]),
+        ("x₀", lambda i: _fmt(trace.x_raw[i, FEAT_SIGNAL])),
+        ("x₁", lambda i: _fmt(trace.x_raw[i, FEAT_TYPE])),
+    ]
+    if trace.has_node_encoder:
+        col_specs.extend(
+            [
+                ("h₀⁽⁰⁾", lambda i: _fmt(trace.x_encoded[i, 0])),
+                ("h₁⁽⁰⁾", lambda i: _fmt(trace.x_encoded[i, 1])),
+            ]
+        )
+    if trace.is_two_head:
+        show_gin = True
+        show_gcn = True
+    elif trace.active_head_kind == "gin":
+        show_gin = True
+        show_gcn = False
+    elif trace.active_head_kind == "gcn":
+        show_gin = False
+        show_gcn = True
+    else:
+        show_gin = _head_kind_from_type(trace.gin_head_name) == "gin"
+        show_gcn = _head_kind_from_type(trace.gcn_head_name) == "gcn"
+    if show_gin:
+        col_specs.append((f"{trace.gin_head_name} raw", lambda i: _fmt(trace.gin_raw[i, 0])))
+        if trace.has_gates:
+            col_specs.append(("γ_GIN", lambda i: _fmt(trace.gin_gamma[i, 0])))
+        col_specs.append(("GIN out", lambda i: _fmt(trace.gin_out[i, 0])))
+    if show_gcn:
+        col_specs.append((f"{trace.gcn_head_name} raw", lambda i: _fmt(trace.gcn_raw[i, 0])))
+        if trace.has_gates:
+            col_specs.append(("γ_GCN", lambda i: _fmt(trace.gcn_gamma[i, 0])))
+        col_specs.append(("GCN out", lambda i: _fmt(trace.gcn_out[i, 0])))
+    col_specs.extend(
+        [
+            ("z₀", lambda i: _fmt(trace.x_fused[i, 0])),
+            ("z₁", lambda i: _fmt(trace.x_fused[i, 1])),
+        ]
+    )
+
+    stage_cols = [name for name, _ in col_specs]
+    stage_rows = [
+        [formatter(i) for _, formatter in col_specs] for i in key_nodes
+    ]
+    encoder_note = (
+        "node encoder → "
+        if trace.has_node_encoder
+        else "no encoder (h=x) → "
+    )
+    if trace.is_two_head:
+        mp_note = "hybrid MP heads → fuse"
+    elif show_gin:
+        mp_note = "GIN routing MP → fuse"
+    else:
+        mp_note = "GCN routing MP → fuse"
+    title = (
+        "Forward trace (root r + signal neighbors uᵢ; dummy leaves omitted). "
+        f"Layer 0 = {encoder_note}{mp_note}."
+    )
+    return stage_cols, stage_rows, title
+
+
 def save_forward_trace_figure(
     data: Data,
     trace: GraphForwardTrace,
@@ -512,46 +626,13 @@ def save_forward_trace_figure(
 ) -> None:
     """Render one fully worked forward trace to PNG."""
     key_nodes = _key_node_indices(trace.node_roles)
-    node_names = _node_labels(trace.node_roles)
     highlight = {
         key_nodes.index(i)
         for i in key_nodes
         if int(np.atleast_1d(trace.node_roles)[i]) == 0
     }
 
-    def row_for_node(i: int) -> list[str]:
-        return [
-            node_names[i],
-            _fmt(trace.x_raw[i, FEAT_SIGNAL]),
-            _fmt(trace.x_raw[i, FEAT_TYPE]),
-            _fmt(trace.x_encoded[i, 0]),
-            _fmt(trace.x_encoded[i, 1]),
-            _fmt(trace.gin_raw[i, 0]),
-            _fmt(trace.gin_gamma[i, 0]),
-            _fmt(trace.gin_out[i, 0]),
-            _fmt(trace.gcn_raw[i, 0]),
-            _fmt(trace.gcn_gamma[i, 0]),
-            _fmt(trace.gcn_out[i, 0]),
-            _fmt(trace.x_fused[i, 0]),
-            _fmt(trace.x_fused[i, 1]),
-        ]
-
-    stage_rows = [row_for_node(i) for i in key_nodes]
-    stage_cols = [
-        "node",
-        "x₀",
-        "x₁",
-        "h₀⁽⁰⁾",
-        "h₁⁽⁰⁾",
-        f"{trace.gin_head_name} raw",
-        "γ_GIN",
-        "GIN out",
-        f"{trace.gcn_head_name} raw",
-        "γ_GCN",
-        "GCN out",
-        "z₀",
-        "z₁",
-    ]
+    stage_cols, stage_rows, table_title = _stage_table_spec(trace)
 
     readout_rows = [
         ["Root embedding z", ", ".join(_fmt(v) for v in trace.graph_embed)],
@@ -582,10 +663,7 @@ def save_forward_trace_figure(
     _draw_graph_panel(ax_graph, data, trace)
     _draw_table(
         ax_table,
-        title=(
-            "Forward trace (root r + signal neighbors uᵢ; dummy leaves omitted). "
-            "Layer 0 = node encoder → hybrid MP heads → fuse."
-        ),
+        title=table_title,
         col_labels=stage_cols,
         rows=stage_rows,
         highlight_rows=highlight,
@@ -598,7 +676,7 @@ def save_forward_trace_figure(
     )
 
     fig.suptitle(
-        f"GCN/GIN routing forward trace · graph #{trace.graph_idx}",
+        f"GCN/GIN routing forward trace · {trace.model_name} · graph #{trace.graph_idx}",
         fontsize=13,
         fontweight="bold",
     )
@@ -612,7 +690,7 @@ def _load_model_and_loaders(
     run_dir: Path,
     dataset_dir: str,
     device: torch.device,
-) -> tuple[torch.nn.Module, list[Any], RunRef, int, int, str, str]:
+) -> tuple[torch.nn.Module, list[Any], RunRef, TraceModelInfo]:
     """Load cfg, model checkpoint, and all split loaders."""
     run_ref = _run_ref_from_dir(run_dir)
     _load_cfg_for_run(run_ref, dataset_dir)
@@ -635,7 +713,25 @@ def _load_model_and_loaders(
     parts = [p.strip() for p in gnn_types.split(",") if p.strip()]
     gin_name = parts[gin_idx] if gin_idx < len(parts) else "GIN"
     gcn_name = parts[gcn_idx] if gcn_idx < len(parts) else "GCN"
-    return model, loaders, run_ref, gin_idx, gcn_idx, gin_name, gcn_name
+    num_mp_heads = int(getattr(hybrid, "num_gnn_heads", len(parts) or 1))
+    gate_mode = str(getattr(hybrid, "gate", "none")).lower()
+    has_gates = gate_mode not in ("none", "off") and num_mp_heads > 0
+    has_node_encoder = bool(getattr(cfg.dataset, "node_encoder", True))
+    active_head_kind: Optional[Literal["gin", "gcn"]] = None
+    if num_mp_heads == 1 and parts:
+        active_head_kind = _head_kind_from_type(parts[0])
+    model_info = TraceModelInfo(
+        model_name=run_ref.model,
+        gin_idx=gin_idx,
+        gcn_idx=gcn_idx,
+        gin_name=gin_name,
+        gcn_name=gcn_name,
+        num_mp_heads=num_mp_heads,
+        has_gates=has_gates,
+        has_node_encoder=has_node_encoder,
+        active_head_kind=active_head_kind,
+    )
+    return model, loaders, run_ref, model_info
 
 
 def main(argv: Optional[Sequence[str]] = None) -> None:
@@ -646,19 +742,18 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     out_dir = Path(args.out_dir)
     device = _select_device(args.device)
 
-    model, loaders, run_ref, gin_idx, gcn_idx, gin_name, gcn_name = _load_model_and_loaders(
+    model, loaders, run_ref, model_info = _load_model_and_loaders(
         run_dir,
         args.dataset_dir,
         device,
     )
     logging.info(
-        "Loaded %s epoch from %s (heads: %s idx=%d, %s idx=%d)",
+        "Loaded %s from %s (mp_heads=%d gates=%s encoder=%s)",
         run_ref.model,
         run_dir,
-        gin_name,
-        gin_idx,
-        gcn_name,
-        gcn_idx,
+        model_info.num_mp_heads,
+        model_info.has_gates,
+        model_info.has_node_encoder,
     )
 
     split_order = [args.split]
@@ -677,10 +772,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
             model,
             loaders[split_idx],
             device,
-            gin_idx=gin_idx,
-            gcn_idx=gcn_idx,
-            gin_name=gin_name,
-            gcn_name=gcn_name,
+            model_info=model_info,
             data_cache=data_cache,
             graph_offset=len(data_cache),
             found=found,
