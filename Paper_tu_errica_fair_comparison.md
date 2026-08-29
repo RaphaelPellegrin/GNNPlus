@@ -21,11 +21,42 @@ Fair comparison under [Errica et al. ICLR 2020](https://arxiv.org/pdf/1912.09893
 
 ## Our runs
 
-| Campaign | JOBID | Status | Notes |
-|----------|-------|--------|-------|
-| canonical (630) | | pending | 7 ds × GIN/SAGE/SiGMA × 10 folds × 3 seeds |
+**Last updated:** 2026-08-29 (smoke OK; SiGMA DD/REDDIT-B rerun submitted).
+
+| Campaign | JOBID | Status | Progress |
+|----------|-------|--------|----------|
+| canonical (630) | **42673425** | **done** | **570✅ / 60❌** — SiGMA DD + REDDIT-B OOM @ bs128 |
+| canonical rerun (60) | **42746310** | **running** | tasks **331–360, 511–540** · bs16 fix · 96h · 128GB |
+| rerun smoke (DD f0 s0) | **42746111** | **passed** | task 331 — training OK (epoch 2+ val ~75%) |
 | grid_select (GIN) | | optional | 7 × 64 HP × 10 folds = 4480 |
-| smoke | | | `TU_ERRICA_ARRAY=1` single GIN job |
+| smoke (SLURM GPU) | **42673389** | **done** | ENZYMES GIN fold0 seed0 |
+| smoke (login CPU) | n8t358kk | OK (ctrl-C) | W&B interactive; splits verified |
+| smoke (SLURM, broken) | 42672738 | FAILED | pre-fix HP emit; ignore |
+
+### Failure post-mortem (42673425)
+
+| Tasks | Dataset | Model | Cause |
+|------:|---------|-------|-------|
+| 331–360 | DD | SiGMA hetero | `CUDA OOM` — full-batch attention @ `batch_size=128` (~138GB GPU) |
+| 511–540 | REDDIT-BINARY | SiGMA hetero | same |
+
+**Fix (in `run_tu_errica_fair.sh`):** override `train.batch_size=16` for SiGMA on `dd` and
+`reddit-b` (same as [`run_tu_dd_sigma_retry.sh`](bash_interface/cluster/run_tu_dd_sigma_retry.sh)).
+
+**Resubmit (launched 2026-08-29):**
+
+```bash
+# Smoke: JOBID=42746111 task 331 — passed
+TU_ERRICA_ARRAY=331-360,511-540 TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:00:00 \
+  bash bash_interface/cluster/submit_tu_errica_fair.sh
+# → JOBID=42746310
+```
+
+Monitor:
+
+```bash
+sacct -j 42746310 -X --format=JobID,State,ExitCode,Elapsed -n | awk '{print $2}' | sort | uniq -c
+```
 
 ## Results (fill after W&B aggregate)
 
@@ -57,12 +88,20 @@ TU_ERRICA_CAMPAIGN=canonical TU_ERRICA_ARRAY=1 TU_ERRICA_NUM_FOLDS=1 \
 
 ## Aggregate
 
+Metrics live in **W&B** (`best_test_perf` / `best/test_accuracy`), not local `stats.json`.
+
 ```bash
-python scripts/tu_errica/aggregate_errica_results.py \
-  --root "${GNNPLUS_OUT_DIR}/tu_errica/canonical"
+# After git pull (aggregate script defaults to W&B)
+python scripts/tu_errica/aggregate_errica_results.py --source wandb --state finished
+
+# Or one group at a time
+python scripts/api_wanndb_query/aggregate_paper_repro.py \
+  --group tu_errica_enzymes_GIN_canonical_canonical \
+  --metric best_test_perf --state finished
 ```
 
-W&B groups: `tu_errica_<ds>_<model>_canonical_canonical`
+W&B groups: `tu_errica_<ds_tag>_<model>_canonical_canonical`  
+(`ds_tag` = `enzymes`, `proteins`, `nci1`, `dd`, `imdb-b`, `reddit-b`, `collab`)
 
 ## Code paths
 
