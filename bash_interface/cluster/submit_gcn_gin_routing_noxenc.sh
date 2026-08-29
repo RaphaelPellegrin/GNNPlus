@@ -18,8 +18,8 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${REPO_ROOT}"
 mkdir -p logs_gnnplus
 
-# shellcheck source=common_env.sh
-source "${SCRIPT_DIR}/common_env.sh"
+# Login-node submit only (no common_env / pip / torch import — same as
+# submit_plot_gcn_gin_routing_forward_trace.sh). Worker run script sources common_env.
 
 NUM_SEEDS="${GCN_GIN_NOXENC_NUM_SEEDS:-1}"
 NUM_LRS="${GCN_GIN_NOXENC_NUM_LRS:-1}"
@@ -36,9 +36,13 @@ if [ -z "${GNNPLUS_OUT_DIR:-}" ]; then
 fi
 if [ -z "${GNNPLUS_DATASET_DIR:-}" ]; then
   export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+  echo "[submit_gcn_gin_noxenc] GNNPLUS_DATASET_DIR unset → ${GNNPLUS_DATASET_DIR}"
 fi
 
-python scripts/synthetic/generate_gcn_gin_routing_configs.py --noxenc
+if [ ! -f "${GNNPLUS_DATASET_DIR}/GcnGinRouting/processed/train.pt" ]; then
+  echo "ERROR: dataset missing at ${GNNPLUS_DATASET_DIR}/GcnGinRouting"
+  exit 1
+fi
 
 missing=0
 for slug in a0g2_gated a0g2_ungated a0g1_gcn a0g1_gin; do
@@ -49,6 +53,7 @@ for slug in a0g2_gated a0g2_ungated a0g1_gcn a0g1_gin; do
   fi
 done
 if [ "${missing}" -ne 0 ]; then
+  echo "Run locally: python scripts/synthetic/generate_gcn_gin_routing_configs.py --noxenc"
   exit 1
 fi
 
