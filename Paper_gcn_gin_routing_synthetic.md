@@ -73,6 +73,27 @@ On-disk name: `gcn_gin_routing_v1` under `$GNNPLUS_DATASET_DIR/synthetic/` (or `
 Regenerate: `python scripts/synthetic/plot_gcn_gin_routing_examples.py`  
 Optional combined grid: add `--combined` → `fig_example_graphs.png`
 
+**Forward traces (trained model, one graph per τ × correctness):**  
+`results/gcn_gin_routing/analysis/forward_traces/`
+
+| Case | File |
+|------|------|
+| τ=0, correct | `fig_forward_tau0_correct.png` |
+| τ=0, incorrect | `fig_forward_tau0_incorrect.png` |
+| τ=1, correct | `fig_forward_tau1_correct.png` |
+| τ=1, incorrect | `fig_forward_tau1_incorrect.png` |
+
+Regenerate (needs a trained `a0g2_gated` run with checkpoints — **toy** track for incorrect examples):
+
+```bash
+python scripts/synthetic/plot_gcn_gin_routing_forward_trace.py \
+  --run-dir $GNNPLUS_OUT_DIR/gcn_gin_routing/toy/a0g2_gated_lr001_seed0 \
+  --dataset-dir $GNNPLUS_DATASET_DIR \
+  --out-dir results/gcn_gin_routing/analysis/forward_traces
+```
+
+Each figure shows: star graph · per-node features through encoder · GIN/GCN routing-head raw/γ/out · fused root embedding · logits vs analytic rule scores.
+
 ---
 
 ## Label rules
