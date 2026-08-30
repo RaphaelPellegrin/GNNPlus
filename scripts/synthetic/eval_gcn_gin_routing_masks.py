@@ -74,6 +74,9 @@ MASK_LABELS: dict[MaskMode, str] = {
     "mask_gin": "Mask GIN head",
     "mask_gcn": "Mask GCN head",
 }
+# Zoom y-axis so masked-head drops (e.g. τ=1 mask GIN → ~0.44) are visible.
+MASK_ABLATION_YMIN: float = 0.3
+MASK_ABLATION_YMAX: float = 1.02
 
 
 @dataclass(frozen=True)
@@ -146,6 +149,17 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         type=int,
         default=160,
         help="Figure DPI.",
+    )
+    parser.add_argument(
+        "--plot-only",
+        action="store_true",
+        help="Regenerate figures from existing mask_ablation_summary.csv (no GPU eval).",
+    )
+    parser.add_argument(
+        "--ymin",
+        type=float,
+        default=MASK_ABLATION_YMIN,
+        help="Lower y-axis limit for mask ablation bar chart.",
     )
     return parser.parse_args(argv)
 
@@ -396,6 +410,8 @@ def _plot_mask_ablation(
     out_path: Path,
     *,
     dpi: int,
+    ymin: float = MASK_ABLATION_YMIN,
+    ymax: float = MASK_ABLATION_YMAX,
 ) -> None:
     """Grouped bars: per-type accuracy under each mask condition."""
     lookup = _summary_lookup(summary)
@@ -428,7 +444,7 @@ def _plot_mask_ablation(
             )
         ax.set_xticks(x)
         ax.set_xticklabels([MASK_LABELS[m] for m in MASK_MODES], rotation=12, ha="right")
-        ax.set_ylim(0.5, 1.02)
+        ax.set_ylim(ymin, ymax)
         ax.set_ylabel("Test accuracy")
         ax.set_title("Toy (routing convs)" if track == "toy" else "Sigma (PyG GIN/GCN)")
         ax.grid(axis="y", alpha=0.22)
@@ -472,14 +488,89 @@ def _print_asymmetry_report(summary: Sequence[dict[str, object]]) -> None:
         print()
 
 
+def _load_mask_summary_csv(path: Path) -> list[dict[str, object]]:
+    """Load ``mask_ablation_summary.csv``."""
+    rows: list[dict[str, object]] = []
+    with path.open(encoding="utf-8", newline="") as fh:
+        for raw in csv.DictReader(fh):
+            rows.append(
+                {
+                    "track": raw["track"],
+                    "mask_mode": raw["mask_mode"],
+                    "metric": raw["metric"],
+                    "n_seeds": int(raw["n_seeds"]),
+                    "mean": float(raw["mean"]),
+                    "std": float(raw["std"]),
+                },
+            )
+    return rows
+
+
+def plot_mask_ablation_from_summary_csv(
+    summary_path: Path,
+    out_dir: Path,
+    *,
+    dpi: int,
+    ymin: float = MASK_ABLATION_YMIN,
+    model: str = "a0g2_gated",
+    lr_tag: str = "lr001",
+    tracks: Sequence[str] = ("toy", "sigma"),
+) -> None:
+    """Regenerate mask ablation bar chart + table from an existing summary CSV."""
+    summary = _load_mask_summary_csv(summary_path)
+    fig_path = out_dir / "fig_mask_ablation.png"
+    paper_fig_path = out_dir / "paper_figures" / "fig06_mask_ablation.png"
+
+    _plot_mask_ablation(summary, fig_path, dpi=dpi, ymin=ymin)
+    _plot_mask_ablation(summary, paper_fig_path, dpi=dpi, ymin=ymin)
+    _print_asymmetry_report(summary)
+
+    from scripts.synthetic.gcn_gin_routing_table_figures import (  # noqa: WPS433
+        plot_mask_ablation_table,
+    )
+
+    table_path = out_dir / "paper_figures" / "fig06_mask_ablation_table.png"
+    track_list = [t.strip() for t in tracks if t.strip()]
+    for track in track_list:
+        track_table = table_path if len(track_list) == 1 else table_path.with_name(
+            f"fig06_mask_ablation_table_{track}.png",
+        )
+        plot_mask_ablation_table(
+            summary_path,
+            track_table,
+            track=track,
+            model_label=model,
+            lr_tag=lr_tag,
+            dpi=dpi,
+        )
+
+
 def main(argv: Optional[Sequence[str]] = None) -> None:
     """Run mask ablation for all gated runs."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     args = _parse_args(argv)
-    results_root = Path(args.results_root)
     out_dir = Path(args.out_dir)
-    device = _select_device(args.device)
     tracks = [t.strip() for t in args.tracks.split(",") if t.strip()]
+
+    if args.plot_only:
+        summary_path = out_dir / "mask_ablation_summary.csv"
+        if not summary_path.is_file():
+            raise SystemExit(f"Missing {summary_path} (run full eval first)")
+        plot_mask_ablation_from_summary_csv(
+            summary_path,
+            out_dir,
+            dpi=args.dpi,
+            ymin=args.ymin,
+            model=args.model,
+            lr_tag=args.lr_tag,
+            tracks=tracks,
+        )
+        print(f"Wrote {out_dir / 'fig_mask_ablation.png'}")
+        print(f"Wrote {out_dir / 'paper_figures/fig06_mask_ablation.png'}")
+        return
+
+    results_root = Path(args.results_root)
+    device = _select_device(args.device)
 
     refs = [
         r
@@ -519,8 +610,8 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
 
     _write_per_run_csv(rows, per_run_path)
     _write_summary_csv(summary, summary_path)
-    _plot_mask_ablation(summary, fig_path, dpi=args.dpi)
-    _plot_mask_ablation(summary, paper_fig_path, dpi=args.dpi)
+    _plot_mask_ablation(summary, fig_path, dpi=args.dpi, ymin=args.ymin)
+    _plot_mask_ablation(summary, paper_fig_path, dpi=args.dpi, ymin=args.ymin)
     _print_asymmetry_report(summary)
 
     from scripts.synthetic.gcn_gin_routing_table_figures import (  # noqa: WPS433
