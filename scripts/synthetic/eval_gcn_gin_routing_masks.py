@@ -15,6 +15,7 @@ Outputs (under ``--out-dir``):
   - ``mask_ablation_summary.csv``
   - ``fig_mask_ablation.png`` / ``.pdf``
   - ``paper_figures/fig06_mask_ablation.png`` (copy for paper set)
+  - ``paper_figures/fig06_mask_ablation_table.png`` / ``.pdf``
 
 Example (cluster):
   python scripts/synthetic/eval_gcn_gin_routing_masks.py \\
@@ -521,6 +522,25 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     _plot_mask_ablation(summary, fig_path, dpi=args.dpi)
     _plot_mask_ablation(summary, paper_fig_path, dpi=args.dpi)
     _print_asymmetry_report(summary)
+
+    from scripts.synthetic.gcn_gin_routing_table_figures import (  # noqa: WPS433
+        plot_mask_ablation_table,
+    )
+
+    table_path = out_dir / "paper_figures" / "fig06_mask_ablation_table.png"
+    for track in tracks:
+        track_table = table_path if len(tracks) == 1 else table_path.with_name(
+            f"fig06_mask_ablation_table_{track}.png",
+        )
+        plot_mask_ablation_table(
+            summary_path,
+            track_table,
+            track=track,
+            model_label=args.model,
+            lr_tag=args.lr_tag,
+            dpi=args.dpi,
+        )
+        print(f"Wrote {track_table}")
 
     print(f"Wrote {per_run_path}")
     print(f"Wrote {summary_path}")

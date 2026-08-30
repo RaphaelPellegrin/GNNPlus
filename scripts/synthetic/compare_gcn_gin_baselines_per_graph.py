@@ -11,6 +11,7 @@ Outputs:
   - ``pairwise_baseline_per_graph.csv`` (one row per graph × seed)
   - ``pairwise_baseline_summary.csv`` (aggregated 4-way counts)
   - ``fig05_pairwise_baseline_comparison.png`` / ``.pdf``
+  - ``paper_figures/fig05_pairwise_baseline_table.png`` / ``.pdf``
 
 Example:
   python scripts/synthetic/compare_gcn_gin_baselines_per_graph.py \\
@@ -604,9 +605,17 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     _plot_pairwise_comparison(summary, fig_path, lr_tag=args.lr_tag, dpi=args.dpi)
     _print_report(summary)
 
+    from scripts.synthetic.gcn_gin_routing_table_figures import (  # noqa: WPS433
+        plot_pairwise_baseline_table,
+    )
+
+    table_path = out_dir / "paper_figures" / "fig05_pairwise_baseline_table.png"
+    plot_pairwise_baseline_table(summary_path, table_path, lr_tag=args.lr_tag, dpi=args.dpi)
+
     print(f"Wrote {per_graph_path}")
     print(f"Wrote {summary_path}")
     print(f"Wrote {fig_path}")
+    print(f"Wrote {table_path}")
 
 
 if __name__ == "__main__":

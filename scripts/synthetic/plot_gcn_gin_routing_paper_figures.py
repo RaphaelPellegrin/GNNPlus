@@ -523,6 +523,12 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
             dpi=args.dpi,
         )
 
+    from scripts.synthetic.gcn_gin_routing_table_figures import (  # noqa: WPS433
+        plot_all_table_figures,
+    )
+
+    plot_all_table_figures(analysis_dir, lr_tag=args.lr_tag, dpi=args.dpi)
+
     print(f"\nPaper figures written to: {out_dir.resolve()}")
     for name in (
         "fig01_baseline_per_type",
@@ -530,6 +536,8 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         "fig03_root_vs_neighbor_gates",
         "fig04_gated_accuracy_per_seed",
         "fig05_pairwise_baseline_comparison",
+        "fig05_pairwise_baseline_table",
+        "fig06_mask_ablation_table",
     ):
         png = out_dir / f"{name}.png"
         if png.is_file():
