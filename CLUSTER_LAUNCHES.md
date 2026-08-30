@@ -397,36 +397,47 @@ sbatch --job-name=cluster_push80_cluster --array=1-16%4 --mem=128GB --time=120:0
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  TO RUN  ·  GCN/GIN routing synthetic (rebuttal) · toy + sigma      ║
-║  🧪  4 models × 2 LRs × 5 seeds = 80 tasks/track (160 total)            ║
+║  ✅  DONE  ·  GCN/GIN routing synthetic · toy + sigma training         ║
+║  🔄  RUNNING  ·  forward traces + no-encoder ablation (2026-08-29)      ║
 ║  📄  Paper_gcn_gin_routing_synthetic.md                                  ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
+
+| Field | Value |
+|-------|-------|
+| **Main train toy** | ✅ **42432154** (`1-40%10`) |
+| **Main train sigma** | ✅ **42432155** (`1-40%10`) |
+| **Forward gated** | ✅ **42759900** — 3/4 PNGs in `forward_traces/` |
+| **Forward GCN-only** | 🔄 **42816151** → `forward_traces/gcn_only/` |
+| **Forward GIN-only** | 🔄 **42816156** → `forward_traces/gin_only/` |
+| **Noxenc toy train** | 🔄 **42816595** (`1-4%4`) — gated/ungated/gcn/gin |
+| **Next** | Pull figures · noxenc forward traces after **42816595** · τ=1 incorrect panel |
 
 ```bash
 source ~/.gnnplus_env
 export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
 export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-git pull
 
-# once (~1 min CPU)
-python scripts/synthetic/generate_gcn_gin_routing_dataset.py \
-  --root "$GNNPLUS_DATASET_DIR/GcnGinRouting"
+# Monitor
+squeue -u $USER | grep -E 'gcn_gin|fwd_trace'
+tail -f logs_gnnplus/gcn_gin_fwd_trace_42816151.log
+tail -f logs_gnnplus/gcn_gin_noxenc_42816595_*.log
 
-bash bash_interface/cluster/submit_gcn_gin_routing.sh both
-# 👉 paste toy + sigma JOBIDs into Paper_gcn_gin_routing_synthetic.md + here
+# After noxenc train
+GCN_GIN_FORWARD_RUN_DIR=$GNNPLUS_OUT_DIR/gcn_gin_routing/toy/a0g2_gated_noxenc_lr001_seed0 \
+GCN_GIN_FORWARD_OUT_DIR=$PWD/results/gcn_gin_routing/analysis/forward_traces/noxenc_gated \
+  bash bash_interface/cluster/submit_plot_gcn_gin_routing_forward_trace.sh
 ```
 
 | Field | Value |
 |-------|-------|
 | **Tracks** | toy (Track A routing convs) + sigma (PyG GIN/GCN) |
-| **Tasks** | `1-80%10` per track |
-| **Partition** | `mweber_gpu` · 4h · 32GB · 1 GPU |
+| **Partition** | `mweber_gpu` |
 | **W&B** | tag `gcn_gin_routing_synthetic` · `paper_gcn_gin_routing_{toy,sigma}_*` |
 | **Out** | `$GNNPLUS_OUT_DIR/gcn_gin_routing/<track>/` |
-| **toy JOBID** | 🛑 *paste after sbatch* |
-| **sigma JOBID** | 🛑 *paste after sbatch* |
+| **toy JOBID** | ✅ **42432154** |
+| **sigma JOBID** | ✅ **42432155** |
 
 ---
 
@@ -761,19 +772,76 @@ git pull
 
 | Tier | SLURM | Array | Parallel | Time | Contents |
 |------|------:|-------|---------:|------|----------|
-| **fast** | ✅ **`41709078`** (1–50 done) · rerun **`42412053`** (51–100; failed `42403449`) | `1-100%10` / `51-100%20` | 10 / 20 | 48h | PATTERN–MNIST ✅; Pep-*, MalNet rerun |
-| **slow** | ✅ **`41709082`** | `1-40%5` | 5 | 120h | CIFAR10, VOC |
-| **coco** | ✅ **`41709085`** | `1-10%2` | 2 | **14d** | COCO |
+| **fast** | ✅ **`41709078`** (1–50) · rerun **`42412053`** (**46/50**; 4 MalNet fail) | `1-100%10` / `51-100%20` | 10 / 20 | 48h | PATTERN–MNIST ✅; Pep-* ✅; MalNet 4 seeds left |
+| **slow** | ✅ **`41709082`** (**5/40**) | `1-40%5` | 5 | 120h | CIFAR `dh20` lr001 done; lr01 running |
+| **coco** | ✅ **`41709085`** (2 run · 2 TIMEOUT) | `1-10%2` | 2 | **2d** (tasks 3–4) | COCO; resubmit tasks 1–2 |
 | **Partition** | `mweber_gpu` (skipped `gpu_h200` Priority backlog) | | | | |
 | **LRs** | `{0.001, 0.01}` × 5 seeds — pick better per family | | | | |
 | **Worker** | `run_sigma_dh_matched.sh` (`SIGMA_DH_MATCHED_TIER=…`) | | | | |
-| **Docs** | [`Paper_sigma_dh_matched.md`](Paper_sigma_dh_matched.md) | | | | |
+| **Docs** | [`Paper_sigma_dh_matched.md`](Paper_sigma_dh_matched.md) · [`rebuttal.md`](rebuttal.md) | | | | |
 | **Out** | `$GNNPLUS_OUT_DIR/sigma_dh_matched/<fam>_<lr>_seed<s>/` | | | | |
 | **Logs** | `logs_gnnplus/sigma_dh_{fast,slow,coco}_<JOB>_<TASK>.log` | | | | |
 | **Fairshare** | Aug 23 EOD `mweber_lab: 0.749064` | | | | |
 | **Skip** | ZINC (main 450k already ≤500k) | | | | |
 
+**2026-08-28:** Fast tier **96/100** Slurm-complete. Pep-func `dh23` AP **0.7002±0.0084** vs paper 0.7080.
+Resubmit: `SIGMA_DH_MATCHED_ARRAY=91,94,96,99` (MalNet); `SIGMA_DH_MATCHED_ARRAY=1,2` (COCO timeout).
+
 Monitor: `squeue -u $USER -n sigma_dh_fast,sigma_dh_slow,sigma_dh_coco`
+
+```bash
+sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
+```
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
+║  🔄  RUNNING  ·  TU Errica hybrid (Option 3 — per-fold HP select)        ║
+║  🎯  Phase 1a: GIN grid_select 4480 · then SAGE → SiGMA → eval          ║
+║  📄  Paper_tu_errica_fair_comparison.md                                  ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+# ✅ Phase 1a GIN grid_select — 2026-08-29
+# TU_ERRICA_CAMPAIGN=grid_select TU_ERRICA_GRID_MODEL=gin \
+#   TU_ERRICA_PARALLEL=20 TU_ERRICA_TIME=48:00:00 \
+#   bash bash_interface/cluster/submit_tu_errica_fair.sh   # → 42750648
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🔄 **`42750648`** (GIN grid_select 1–4480) · smoke **`42750459`** ✅ |
+| **Health (2026-08-29 12:48)** | **873/4480** COMPLETED · 20 RUNNING · **0** Error/CUDA/Traceback logs |
+| **Parallel** | 20 · 48h · 32GB · `mweber_gpu` |
+| **Submit** | `bash_interface/cluster/submit_tu_errica_fair.sh` |
+| **Orchestrator** | `bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh` |
+| **Worker** | `bash_interface/cluster/run_tu_errica_fair.sh` |
+| **Logs** | `logs_gnnplus/tu_errica_grid_select_gin_<JOBID>_<TASK>.log` |
+| **W&B groups** | `tu_errica_<ds>_GIN_grid_select_hp<id>` |
+| **Next** | `aggregate_gin` → `grid_select_sage` (5040) |
+
+Monitor:
+
+```bash
+sacct -j 42750648 -X --format=State,ExitCode -n | awk '{print $1}' | sort | uniq -c
+squeue -u $USER -n tu_errica_grid_select_gin | head
+grep -l 'Error\|CUDA\|Traceback' logs_gnnplus/tu_errica_grid_select_gin_42750648_*.log 2>/dev/null | wc -l
+```
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
+║  ✅  DONE (exploratory)  ·  TU Errica canonical (fixed GIN_CANONICAL)  ║
+║  📄  Paper_tu_errica_fair_comparison.md — do not cite as final table     ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | ✅ **`42673425`** (630) · SiGMA OOM rerun **`42746310`** (60) |
+| **Progress** | 570/630 done · 60 OOM (DD/REDDIT-B bs128) |
+| **Out** | `$GNNPLUS_OUT_DIR/tu_errica/canonical/` |
 
 ---
 
@@ -838,5 +906,7 @@ bash bash_interface/sweeps/create_sweep.sh \
 | Table 6 COCO relaunch | ✅ mweber `34070245`; H200 twin `34098527` | `34070245` / `34098527` |
 | ENZYMES ogpkubk9 sweep | 🛑 TO RUN | — |
 | TU GCN vs SiGMA homo vs hetero | ✅ | `37434534` |
-| SiGMA d_h-matched Tab. 3/4 (3 tiers, 2 LRs) | ✅ fast/slow/coco on `mweber_gpu` | `41709078` / `41709082` / `41709085` |
+| SiGMA d_h-matched Tab. 3/4 (3 tiers, 2 LRs) | 🔄 fast **96/100** · slow **5/40** · coco 2 run | `41709078` / `42412053` / `41709082` / `41709085` |
+| TU Errica-fair canonical (630, exploratory) | ✅ 570/630 · 60 OOM | `42673425` · SiGMA rerun `42746310` |
+| TU Errica hybrid grid_select GIN (4480) | 🔄 **873/4480** · 0 err | `42750648` (smoke `42750459` ✅) |
 | GCN/GIN routing synthetic (toy + sigma) | 🛑 TO RUN | — |

@@ -73,15 +73,21 @@ On-disk name: `gcn_gin_routing_v1` under `$GNNPLUS_DATASET_DIR/synthetic/` (or `
 Regenerate: `python scripts/synthetic/plot_gcn_gin_routing_examples.py`  
 Optional combined grid: add `--combined` → `fig_example_graphs.png`
 
-**Forward traces (trained model, one graph per τ × correctness):**  
-`results/gcn_gin_routing/analysis/forward_traces/`
+**Forward traces (trained model, one graph per τ × correctness):**
 
-| Case | File |
+| Model / run | Output dir | Status |
+|-------------|------------|--------|
+| SiGMA gated `a0g2_gated_lr001_seed0` | `results/gcn_gin_routing/analysis/forward_traces/` | ✅ **42759900** — 3/4 PNGs (no τ=1 incorrect; ~100% acc) |
+| GCN-only `a0g1_gcn_lr001_seed0` | `.../forward_traces/gcn_only/` | 🔄 **42816151** — check logs |
+| GIN-only `a0g1_gin_lr001_seed0` | `.../forward_traces/gin_only/` | 🔄 **42816156** — check logs |
+| No-encoder gated (after train) | `.../forward_traces/noxenc_gated/` | ⏳ pending **42816595** train |
+
+| Case | File (gated baseline) |
 |------|------|
-| τ=0, correct | `fig_forward_tau0_correct.png` |
-| τ=0, incorrect | `fig_forward_tau0_incorrect.png` |
-| τ=1, correct | `fig_forward_tau1_correct.png` |
-| τ=1, incorrect | `fig_forward_tau1_incorrect.png` |
+| τ=0, correct | [`fig_forward_tau0_correct.png`](results/gcn_gin_routing/analysis/forward_traces/fig_forward_tau0_correct.png) |
+| τ=0, incorrect | [`fig_forward_tau0_incorrect.png`](results/gcn_gin_routing/analysis/forward_traces/fig_forward_tau0_incorrect.png) |
+| τ=1, correct | [`fig_forward_tau1_correct.png`](results/gcn_gin_routing/analysis/forward_traces/fig_forward_tau1_correct.png) |
+| τ=1, incorrect | `fig_forward_tau1_incorrect.png` — missing (use GCN-only or ungated for error example) |
 
 Regenerate (cluster — do not run python on login node):
 
@@ -91,12 +97,29 @@ export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
 export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
+
+# SiGMA gated (default)
 bash bash_interface/cluster/submit_plot_gcn_gin_routing_forward_trace.sh
+
+# GCN-only
+GCN_GIN_FORWARD_RUN_DIR=$GNNPLUS_OUT_DIR/gcn_gin_routing/toy/a0g1_gcn_lr001_seed0 \
+GCN_GIN_FORWARD_OUT_DIR=$PWD/results/gcn_gin_routing/analysis/forward_traces/gcn_only \
+  bash bash_interface/cluster/submit_plot_gcn_gin_routing_forward_trace.sh
+
+# GIN-only
+GCN_GIN_FORWARD_RUN_DIR=$GNNPLUS_OUT_DIR/gcn_gin_routing/toy/a0g1_gin_lr001_seed0 \
+GCN_GIN_FORWARD_OUT_DIR=$PWD/results/gcn_gin_routing/analysis/forward_traces/gin_only \
+  bash bash_interface/cluster/submit_plot_gcn_gin_routing_forward_trace.sh
+
+# No-encoder gated (after job 42816595 finishes)
+GCN_GIN_FORWARD_RUN_DIR=$GNNPLUS_OUT_DIR/gcn_gin_routing/toy/a0g2_gated_noxenc_lr001_seed0 \
+GCN_GIN_FORWARD_OUT_DIR=$PWD/results/gcn_gin_routing/analysis/forward_traces/noxenc_gated \
+  bash bash_interface/cluster/submit_plot_gcn_gin_routing_forward_trace.sh
 ```
 
-Optional: `GCN_GIN_FORWARD_RUN_DIR=$GNNPLUS_OUT_DIR/gcn_gin_routing/toy/a0g2_gated_lr01_seed0 bash ...`
+Pull to Mac: `bash bash_interface/local/pull_gcn_gin_routing_results.sh`
 
-Each figure shows: star graph · per-node features through encoder · GIN/GCN routing-head raw/γ/out · fused root embedding · logits vs analytic rule scores.
+Each figure shows: star graph · per-node features (with/without encoder h) · routing-head raw/γ/out · fused root embedding · logits vs analytic rule scores.
 
 ---
 
@@ -373,7 +396,9 @@ Document known mismatches between labels and production heads:
 - [x] `scripts/synthetic/analyze_gcn_gin_routing_results.py` — per-type acc + gate plots
 - [ ] `scripts/synthetic/plot_gcn_gin_routing_results.py` (superseded by analyze script)
 - [x] `bash_interface/cluster/submit_gcn_gin_routing.sh` + `run_gcn_gin_routing.sh`
-- [ ] Add row to [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md) when submitted (paste JOBIDs)
+- [x] `bash_interface/cluster/submit_plot_gcn_gin_routing_forward_trace.sh` + plot script
+- [x] `bash_interface/cluster/submit_gcn_gin_routing_noxenc.sh` — toy no-encoder pedagogy ablation
+- [x] Add row to [`CLUSTER_LAUNCHES.md`](CLUSTER_LAUNCHES.md) when submitted (paste JOBIDs)
 
 ---
 
@@ -400,6 +425,42 @@ bash bash_interface/cluster/submit_gcn_gin_routing.sh both
 |-----|------------:|-------|------:|--------|------|
 | toy (Track A) | **42432154** | `1-40%10` | 40 | ✅ done | `logs_gnnplus/gcn_gin_route_toy_42432154_<TASK>.log` |
 | sigma (Track B) | **42432155** | `1-40%10` | 40 | ✅ done | `logs_gnnplus/gcn_gin_route_sigma_42432155_<TASK>.log` |
+
+### Forward-trace plots (2026-08-29)
+
+| Job | SLURM JOBID | Run dir | Output | Status |
+|-----|------------:|---------|--------|--------|
+| SiGMA gated forward trace | **42759900** | `toy/a0g2_gated_lr001_seed0` | `analysis/forward_traces/` | ✅ 3/4 PNGs |
+| GCN-only forward trace | **42816151** | `toy/a0g1_gcn_lr001_seed0` | `analysis/forward_traces/gcn_only/` | 🔄 check |
+| GIN-only forward trace | **42816156** | `toy/a0g1_gin_lr001_seed0` | `analysis/forward_traces/gin_only/` | 🔄 check |
+| Failed (fixed) | 42759569 | — | — | ❌ `node_role` batch bug; fixed in 42759900 |
+
+Monitor: `squeue -j 42816151,42816156` · `tail logs_gnnplus/gcn_gin_fwd_trace_<JOBID>.log`
+
+### No-encoder toy ablation (2026-08-29)
+
+Pedagogy runs: `node_encoder: false` so MP aggregates raw **x₀** (clearer rule alignment; less faithful to main trained models).
+
+```bash
+bash bash_interface/cluster/submit_gcn_gin_routing_noxenc.sh
+# Login-node submit is lightweight (no common_env); configs committed under configs/synthetic/*_noxenc.yaml
+```
+
+| Job | SLURM JOBID | Array | Models | Status |
+|-----|------------:|-------|--------|--------|
+| no-encoder toy train | **42816595** | `1-4%4` | gated, ungated, gcn, gin × lr001 × seed0 | 🔄 running |
+
+Out: `$GNNPLUS_OUT_DIR/gcn_gin_routing/toy/<model>_noxenc_lr001_seed0/`
+
+After train → forward traces (gated example above); optional also `noxenc_gcn`, `noxenc_gin`.
+
+### Next checks (2026-08-29)
+
+- [ ] Confirm **42816151** / **42816156** completed → pull `gcn_only/` + `gin_only/` figures
+- [ ] Confirm **42816595** all 4 tasks done → submit noxenc forward-trace plots
+- [ ] Decide τ=1 incorrect panel: rerun forward trace on `a0g1_gcn` or `a0g2_ungated` if needed
+- [ ] Run analyze if not done: `bash bash_interface/cluster/submit_analyze_gcn_gin_routing_results.sh`
+- [ ] Compare with-encoder vs no-encoder forward tables for paper pedagogy panel
 
 **Analyze results** (per-type acc + root gates) — submit SLURM job (no python on login):
 
@@ -445,5 +506,7 @@ Tracker: add subsection here or link from [`Paper_heterogeneity.md`](Paper_heter
 
 | Date | Event |
 |------|--------|
+| 2026-08-29 | Forward traces: gated **42759900** (3/4); GCN/GIN baselines **42816151**/**42816156**; noxenc train **42816595** |
+| 2026-08-29 | Single-head + no-encoder forward-trace plot support; lightweight `submit_gcn_gin_routing_noxenc.sh` |
 | 2026-08-27 | Toy dataset module + 7-panel example figure (`fig_example_graphs.png`) |
 | 2026-08-27 | 8 configs, cluster scripts, local smoke (toy + sigma); `pair_id` collate fix |
