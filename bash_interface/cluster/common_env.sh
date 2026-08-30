@@ -66,6 +66,7 @@ if [ -n "${GNNPLUS_DATASET_DIR:-}" ]; then
 fi
 
 # Editable install (no model changes; ensures imports resolve)
+if [ "${GNNPLUS_LIGHTWEIGHT_ENV:-0}" != "1" ]; then
 python -m pip install -e . --no-deps --quiet 2>/dev/null || true
 if ! python -c "
 import traceback
@@ -84,4 +85,5 @@ except Exception:
 "; then
     log_message "GNNPlus import check failed (see traceback above)"
     exit 1
+fi
 fi
