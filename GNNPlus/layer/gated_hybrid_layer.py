@@ -6,7 +6,7 @@ Ported from Heterogeneity_Profile ``graph_moes.architectures.layers.gated_hybrid
 from __future__ import annotations
 
 import math
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union, cast
+from typing import Any, Dict, List, Literal, Optional, Sequence, Tuple, Union, cast
 
 import torch
 import torch.nn as nn
@@ -860,6 +860,7 @@ class GatedHybridGraphLayer(nn.Module):
         edge_attr_mp: Optional[Tensor] = None,
         return_gate_stats: bool = False,
         return_attn_weights: bool = False,
+        mp_head_mask: Optional[Sequence[bool]] = None,
     ) -> Union[Tensor, Tuple[Tensor, Dict[str, Any]]]:
         """Apply the hybrid block.
 
@@ -880,6 +881,7 @@ class GatedHybridGraphLayer(nn.Module):
             edge_attr_mp=edge_attr_mp,
             return_gate_stats=return_gate_stats,
             return_attn_weights=return_attn_weights,
+            mp_head_mask=mp_head_mask,
         )
         if not return_gate_stats and not return_attn_weights:
             return out
@@ -899,6 +901,7 @@ class GatedHybridGraphLayer(nn.Module):
         edge_attr_mp: Optional[Tensor],
         return_gate_stats: bool,
         return_attn_weights: bool,
+        mp_head_mask: Optional[Sequence[bool]] = None,
     ) -> Tuple[Tensor, Dict[str, Any]]:
         n = x.size(0)
         src: Tensor = x if self.block_bn else self.norm(x)
@@ -979,10 +982,14 @@ class GatedHybridGraphLayer(nn.Module):
         mp_outputs: List[Tensor] = []
         mp_gate_vals: List[Tensor] = []
 
-        for mp_head in self.mp_heads:
+        for head_i, mp_head in enumerate(self.mp_heads):
             out_h, gamma = cast(
                 Tuple[Tensor, Tensor], mp_head(src_mp, ei_mp, ea_mp)
             )
+            if mp_head_mask is not None and (
+                head_i >= len(mp_head_mask) or not mp_head_mask[head_i]
+            ):
+                out_h = torch.zeros_like(out_h)
             mp_outputs.append(out_h)
             mp_gate_vals.append(gamma)
 

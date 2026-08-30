@@ -392,7 +392,8 @@ Document known mismatches between labels and production heads:
 - [x] `configs/synthetic/gcn_gin_routing_sigma_a0g2_ungated.yaml`
 - [x] `configs/synthetic/gcn_gin_routing_sigma_a0g1_gcn.yaml` — **GCN-only baseline**
 - [x] `configs/synthetic/gcn_gin_routing_sigma_a0g1_gin.yaml` — **GIN-only baseline**
-- [ ] `scripts/synthetic/eval_gcn_gin_routing_masks.py` — head-masking eval
+- [x] `scripts/synthetic/eval_gcn_gin_routing_masks.py` — head-masking eval
+- [x] `bash_interface/cluster/submit_eval_gcn_gin_routing_masks.sh`
 - [x] `scripts/synthetic/analyze_gcn_gin_routing_results.py` — per-type acc + gate plots
 - [ ] `scripts/synthetic/plot_gcn_gin_routing_results.py` (superseded by analyze script)
 - [x] `bash_interface/cluster/submit_gcn_gin_routing.sh` + `run_gcn_gin_routing.sh`
@@ -458,6 +459,7 @@ After train → forward traces (gated example above); optional also `noxenc_gcn`
 
 - [ ] Confirm **42816151** / **42816156** completed → pull `gcn_only/` + `gin_only/` figures
 - [ ] Confirm **42816595** all 4 tasks done → submit noxenc forward-trace plots
+- [ ] Run mask ablation: `bash bash_interface/cluster/submit_eval_gcn_gin_routing_masks.sh`
 - [ ] Decide τ=1 incorrect panel: rerun forward trace on `a0g1_gcn` or `a0g2_ungated` if needed
 - [ ] Run analyze if not done: `bash bash_interface/cluster/submit_analyze_gcn_gin_routing_results.sh`
 - [ ] Compare with-encoder vs no-encoder forward tables for paper pedagogy panel
