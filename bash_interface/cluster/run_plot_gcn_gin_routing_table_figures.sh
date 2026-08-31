@@ -29,3 +29,4 @@ python scripts/synthetic/gcn_gin_routing_table_figures.py \
 
 echo "Table figures → ${analysis_dir}/paper_figures/fig05_pairwise_baseline_table.png"
 echo "Table figures → ${analysis_dir}/paper_figures/fig06_mask_ablation_table.png"
+echo "Table figures → ${analysis_dir}/paper_figures/fig07_opposite_sign_pair_table.png"

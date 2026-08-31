@@ -31,7 +31,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 SPLIT_NAMES = ("train", "val", "test")
-RUN_NAME_RE = re.compile(r"^a0g2_gated_lr")
+RUN_NAME_RE = re.compile(r"^a0g2_gated_lr\d+_seed\d+$")
 
 
 def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
@@ -171,7 +171,9 @@ def _iter_pt_files(results_root: Path) -> list[Path]:
     """Find ``gate_values_per_node.pt`` under gated run dirs."""
     paths: list[Path] = []
     for run_dir in sorted(results_root.iterdir()):
-        if not run_dir.is_dir() or not RUN_NAME_RE.match(run_dir.name):
+        if not run_dir.is_dir() or "_failed" in run_dir.name:
+            continue
+        if not RUN_NAME_RE.match(run_dir.name):
             continue
         pt = run_dir / "gate_values_per_node.pt"
         if pt.is_file():

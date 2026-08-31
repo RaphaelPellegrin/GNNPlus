@@ -43,9 +43,13 @@ MODEL_LABELS: dict[str, str] = {
     "a0g1_gcn": "GCN-only",
     "a0g1_gin": "GIN-only",
 }
+TRACK_SHORT_LABELS: dict[str, str] = {
+    "toy": "Toy (routing convs)",
+    "sigma": "Sigma (PyG GIN/GCN)",
+}
 TRACK_LABELS: dict[str, str] = {
-    "toy": "Toy (routing convs, $d_h{=}1$)",
-    "sigma": "Sigma (PyG GIN/GCN, $d_h{=}4$)",
+    "toy": r"Toy (routing convs, $d_h{=}1$)",
+    "sigma": r"Sigma (PyG GIN/GCN, $d_h{=}4$)",
 }
 PALETTE = {
     "tau0": "#4C72B0",
@@ -241,16 +245,46 @@ def _save_fig(fig: plt.Figure, out_path: Path, dpi: int) -> None:
     plt.close(fig)
 
 
+def _mean_minmax_yerr(values: Sequence[float]) -> tuple[float, float, float]:
+    """Return (mean, lower_err, upper_err) for min–max whiskers over seeds."""
+    if not values:
+        return float("nan"), 0.0, 0.0
+    m = float(mean(values))
+    lo = float(min(values))
+    hi = float(max(values))
+    return m, m - lo, hi - m
+
+
+def _minmax_yerr_batch(
+    value_groups: Sequence[Sequence[float]],
+) -> tuple[list[float], list[float], list[float]]:
+    """Batch helper: means plus asymmetric lower/upper errors."""
+    means: list[float] = []
+    lowers: list[float] = []
+    uppers: list[float] = []
+    for values in value_groups:
+        m, lo_err, hi_err = _mean_minmax_yerr(values)
+        means.append(m)
+        lowers.append(lo_err)
+        uppers.append(hi_err)
+    return means, lowers, uppers
+
+
 def plot_baseline_per_type(
     summary: Sequence[SummaryRow],
     out_path: Path,
     dpi: int,
     lr_tag: str = "lr001",
+    *,
+    per_run: Sequence[PerRunRow] | None = None,
+    ymin: float = 0.65,
+    title_suffix: str = "",
 ) -> None:
     """Grouped bar chart: per-type test accuracy (toy vs sigma)."""
     tracks = sorted({r.track for r in summary})
     fig, axes = plt.subplots(1, len(tracks), figsize=(5.8 * len(tracks), 4.8), squeeze=False)
     bar_w = 0.36
+    err_kw = {"elinewidth": 1.0, "capthick": 1.0, "ecolor": "#333333"}
 
     for ax, track in zip(axes[0], tracks, strict=True):
         subset = [r for r in summary if r.track == track and r.lr_tag == lr_tag]
@@ -258,36 +292,52 @@ def plot_baseline_per_type(
         models = [m for m in MODEL_ORDER if m in by_model]
         x = np.arange(len(models))
 
-        t0_vals = [by_model[m].acc_tau0_mean for m in models]
-        t1_vals = [by_model[m].acc_tau1_mean for m in models]
-        t0_err = [by_model[m].acc_tau0_std for m in models]
-        t1_err = [by_model[m].acc_tau1_std for m in models]
+        if per_run is not None:
+            t0_groups = [
+                [r.acc_tau0 for r in per_run if r.track == track and r.model == m and r.lr_tag == lr_tag]
+                for m in models
+            ]
+            t1_groups = [
+                [r.acc_tau1 for r in per_run if r.track == track and r.model == m and r.lr_tag == lr_tag]
+                for m in models
+            ]
+            t0_vals, t0_lo, t0_hi = _minmax_yerr_batch(t0_groups)
+            t1_vals, t1_lo, t1_hi = _minmax_yerr_batch(t1_groups)
+        else:
+            t0_vals = [by_model[m].acc_tau0_mean for m in models]
+            t1_vals = [by_model[m].acc_tau1_mean for m in models]
+            t0_lo = [by_model[m].acc_tau0_std for m in models]
+            t0_hi = t0_lo
+            t1_lo = [by_model[m].acc_tau1_std for m in models]
+            t1_hi = t1_lo
 
         ax.bar(
             x - bar_w / 2,
             t0_vals,
             width=bar_w,
-            yerr=t0_err,
+            yerr=[t0_lo, t0_hi],
             capsize=3,
             label=r"$\tau{=}0$ (GCN-type)",
             color=PALETTE["tau0"],
             edgecolor="white",
             linewidth=0.6,
+            error_kw=err_kw,
         )
         ax.bar(
             x + bar_w / 2,
             t1_vals,
             width=bar_w,
-            yerr=t1_err,
+            yerr=[t1_lo, t1_hi],
             capsize=3,
             label=r"$\tau{=}1$ (GIN-type)",
             color=PALETTE["tau1"],
             edgecolor="white",
             linewidth=0.6,
+            error_kw=err_kw,
         )
         ax.set_xticks(x)
         ax.set_xticklabels([MODEL_LABELS.get(m, m) for m in models], rotation=12, ha="right")
-        ax.set_ylim(0.65, 1.02)
+        ax.set_ylim(ymin, 1.02)
         ax.set_ylabel("Test accuracy")
         ax.set_title(TRACK_LABELS.get(track, track))
         ax.axhline(0.5, color="gray", linestyle=":", linewidth=0.8, alpha=0.7)
@@ -295,7 +345,7 @@ def plot_baseline_per_type(
 
     axes[0, 0].legend(loc="lower right", frameon=True, framealpha=0.92)
     fig.suptitle(
-        f"Per-type test accuracy (5-seed mean ± std, {lr_tag})",
+        f"Per-type test accuracy (5-seed mean, min–max whiskers, {lr_tag}){title_suffix}",
         y=1.02,
         fontsize=12,
     )
@@ -308,8 +358,10 @@ def plot_gate_routing_delta(
     out_path: Path,
     dpi: int,
     lr_tag: str = "lr001",
+    *,
+    title_suffix: str = "",
 ) -> None:
-    """Per-seed routing contrast: Δγ at root for gated model."""
+    """Mean root routing contrast (gated model) with min–max whiskers over seeds."""
     gated = [
         r
         for r in per_run
@@ -318,51 +370,86 @@ def plot_gate_routing_delta(
     if not gated:
         return
 
-    tracks = sorted({r.track for r in gated})
-    fig, axes = plt.subplots(1, len(tracks), figsize=(5.2 * len(tracks), 4.6), squeeze=False)
+    track_order = [t for t in ("sigma", "toy") if any(r.track == t for r in gated)]
+    track_order.extend(
+        sorted({r.track for r in gated} - set(track_order)),
+    )
 
-    for ax, track in zip(axes[0], tracks, strict=True):
-        subset = sorted([r for r in gated if r.track == track], key=lambda r: r.seed)
-        seeds = [r.seed for r in subset]
+    gin_means: list[float] = []
+    gin_lo: list[float] = []
+    gin_hi: list[float] = []
+    gcn_means: list[float] = []
+    gcn_lo: list[float] = []
+    gcn_hi: list[float] = []
+    for track in track_order:
+        subset = [r for r in gated if r.track == track]
         delta_gin = [r.gin_gate_tau1 - r.gin_gate_tau0 for r in subset]
         delta_gcn = [r.gcn_gate_tau0 - r.gcn_gate_tau1 for r in subset]
+        m_gin, lo_gin, hi_gin = _mean_minmax_yerr(delta_gin)
+        m_gcn, lo_gcn, hi_gcn = _mean_minmax_yerr(delta_gcn)
+        gin_means.append(m_gin)
+        gin_lo.append(lo_gin)
+        gin_hi.append(hi_gin)
+        gcn_means.append(m_gcn)
+        gcn_lo.append(lo_gcn)
+        gcn_hi.append(hi_gcn)
 
-        x = np.arange(len(seeds))
-        w = 0.35
-        ax.bar(
-            x - w / 2,
-            delta_gin,
-            width=w,
-            label=r"$\Delta\gamma_{\mathrm{GIN}} = \bar{\gamma}_{\tau1} - \bar{\gamma}_{\tau0}$",
-            color=PALETTE["gin"],
-            edgecolor="black",
-            linewidth=0.4,
-        )
-        ax.bar(
-            x + w / 2,
-            delta_gcn,
-            width=w,
-            label=r"$\Delta\gamma_{\mathrm{GCN}} = \bar{\gamma}_{\tau0} - \bar{\gamma}_{\tau1}$",
-            color=PALETTE["gcn"],
-            edgecolor="black",
-            linewidth=0.4,
-            alpha=0.85,
-        )
-        ax.set_xticks(x)
-        ax.set_xticklabels([f"seed {s}" for s in seeds])
-        ax.set_ylim(0.0, 1.05)
-        ax.set_ylabel(r"Root gate contrast")
-        ax.set_title(TRACK_LABELS.get(track, track))
-        ax.axhline(1.0, color="gray", linestyle="--", linewidth=0.8, alpha=0.6)
-        ax.grid(axis="y", alpha=0.22)
+    fig, ax = plt.subplots(figsize=(5.8, 4.8))
+    x = np.arange(len(track_order))
+    bar_w = 0.34
+    err_kw = {"elinewidth": 1.0, "capthick": 1.0, "ecolor": "#333333"}
 
-    axes[0, 0].legend(loc="upper right", fontsize=8.5)
+    ax.bar(
+        x - bar_w / 2,
+        gin_means,
+        width=bar_w,
+        yerr=[gin_lo, gin_hi],
+        capsize=3,
+        label=r"$\Delta\gamma_{\mathrm{GIN}} = \bar{\gamma}_{\tau1} - \bar{\gamma}_{\tau0}$",
+        color=PALETTE["gin"],
+        edgecolor="black",
+        linewidth=0.4,
+        error_kw=err_kw,
+    )
+    ax.bar(
+        x + bar_w / 2,
+        gcn_means,
+        width=bar_w,
+        yerr=[gcn_lo, gcn_hi],
+        capsize=3,
+        label=r"$\Delta\gamma_{\mathrm{GCN}} = \bar{\gamma}_{\tau0} - \bar{\gamma}_{\tau1}$",
+        color=PALETTE["gcn"],
+        edgecolor="black",
+        linewidth=0.4,
+        alpha=0.85,
+        error_kw=err_kw,
+    )
+    ax.set_xticks(x)
+    ax.set_xticklabels(
+        [TRACK_SHORT_LABELS.get(t, t) for t in track_order],
+        rotation=0,
+        ha="center",
+    )
+    ax.set_ylim(0.0, 1.05)
+    ax.set_ylabel(r"Root gate contrast")
+    ax.axhline(1.0, color="gray", linestyle="--", linewidth=0.8, alpha=0.6)
+    ax.grid(axis="y", alpha=0.22)
+
+    ax.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.14),
+        ncol=1,
+        fontsize=8.5,
+        frameon=True,
+        framealpha=0.92,
+    )
     fig.suptitle(
-        f"SiGMA gated — per-seed root routing contrast ({lr_tag}, test)",
-        y=1.02,
+        f"SiGMA gated — root routing contrast (5-seed mean, min–max whiskers, {lr_tag}, test)"
+        f"{title_suffix}",
+        y=0.98,
         fontsize=12,
     )
-    fig.tight_layout()
+    fig.tight_layout(rect=(0.0, 0.12, 1.0, 0.94))
     _save_fig(fig, out_path, dpi)
 
 
@@ -372,41 +459,56 @@ def plot_root_vs_neighbor_gates(
     dpi: int,
     lr_tag: str = "lr001",
 ) -> None:
-    """Root vs neighbor mean gates (gated, one LR)."""
+    """Root vs neighbor mean gates (gated, one LR), with min–max whiskers over seeds."""
     rows = [r for r in gate_rows if r.lr_tag == lr_tag]
     if not rows:
         return
 
     tracks = sorted({r.track for r in rows})
     fig, axes = plt.subplots(2, len(tracks), figsize=(5.0 * len(tracks), 7.0), squeeze=False)
+    err_kw = {"elinewidth": 1.0, "capthick": 1.0, "ecolor": "#333333"}
 
     for col, track in enumerate(tracks):
         subset = [r for r in rows if r.track == track]
-        gin_root_t0 = mean(r.gin_root_tau0 for r in subset)
-        gin_root_t1 = mean(r.gin_root_tau1 for r in subset)
-        gcn_root_t0 = mean(r.gcn_root_tau0 for r in subset)
-        gcn_root_t1 = mean(r.gcn_root_tau1 for r in subset)
-        gin_nbr_t0 = mean(r.gin_nbr_tau0 for r in subset)
-        gin_nbr_t1 = mean(r.gin_nbr_tau1 for r in subset)
-        gcn_nbr_t0 = mean(r.gcn_nbr_tau0 for r in subset)
-        gcn_nbr_t1 = mean(r.gcn_nbr_tau1 for r in subset)
+        row_specs = (
+            (
+                "Root node",
+                ("gin_root_tau0", "gin_root_tau1", "gcn_root_tau0", "gcn_root_tau1"),
+            ),
+            (
+                "Neighbors (mean)",
+                ("gin_nbr_tau0", "gin_nbr_tau1", "gcn_nbr_tau0", "gcn_nbr_tau1"),
+            ),
+        )
 
-        for row_idx, (title, t0_gin, t1_gin, t0_gcn, t1_gcn) in enumerate(
-            [
-                ("Root node", gin_root_t0, gin_root_t1, gcn_root_t0, gcn_root_t1),
-                ("Neighbors (mean)", gin_nbr_t0, gin_nbr_t1, gcn_nbr_t0, gcn_nbr_t1),
-            ],
-        ):
+        for row_idx, (title, attrs) in enumerate(row_specs):
+            vals: list[float] = []
+            lo_errs: list[float] = []
+            hi_errs: list[float] = []
+            for attr in attrs:
+                m, lo, hi = _mean_minmax_yerr([getattr(r, attr) for r in subset])
+                vals.append(m)
+                lo_errs.append(lo)
+                hi_errs.append(hi)
+
             ax = axes[row_idx, col]
             labels = [r"$\tau{=}0$ GIN", r"$\tau{=}1$ GIN", r"$\tau{=}0$ GCN", r"$\tau{=}1$ GCN"]
-            vals = [t0_gin, t1_gin, t0_gcn, t1_gcn]
             colors = [
                 to_rgba(PALETTE["gin"], 1.0),
                 to_rgba(PALETTE["gin"], 0.55),
                 to_rgba(PALETTE["gcn"], 1.0),
                 to_rgba(PALETTE["gcn"], 0.55),
             ]
-            ax.bar(range(4), vals, color=colors, edgecolor="black", linewidth=0.5)
+            ax.bar(
+                range(4),
+                vals,
+                yerr=[lo_errs, hi_errs],
+                capsize=3,
+                color=colors,
+                edgecolor="black",
+                linewidth=0.5,
+                error_kw=err_kw,
+            )
             ax.set_xticks(range(4))
             ax.set_xticklabels(labels, rotation=18, ha="right", fontsize=8.5)
             ax.set_ylim(0.0, 1.05)
@@ -417,7 +519,7 @@ def plot_root_vs_neighbor_gates(
             ax.grid(axis="y", alpha=0.22)
 
     fig.suptitle(
-        f"Root vs neighbor gates (5-seed mean, {lr_tag}, test)",
+        f"Root vs neighbor gates (5-seed mean, min–max whiskers, {lr_tag}, test)",
         y=1.01,
         fontsize=12,
     )
@@ -490,6 +592,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         out_dir / "fig01_baseline_per_type.png",
         dpi=args.dpi,
         lr_tag=args.lr_tag,
+        per_run=per_run,
     )
     plot_gate_routing_delta(
         per_run,

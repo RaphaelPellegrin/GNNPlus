@@ -41,31 +41,35 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import torch
-from torch_geometric.data import Batch
-from torch_geometric.graphgym.checkpoint import load_ckpt
-from torch_geometric.graphgym.config import cfg
-from torch_geometric.graphgym.loader import create_loader
-from torch_geometric.graphgym.loss import compute_loss
-from torch_geometric.graphgym.model_builder import create_model
-from torch_geometric.graphgym.utils.device import auto_select_device
-from torch_geometric import seed_everything
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-import GNNPlus  # noqa: F401
+_PLOT_ONLY = "--plot-only" in sys.argv
 
-from GNNPlus.gcn_gin_routing_gate_tracking import hybrid_head_indices
-from GNNPlus.hybrid_gate_tracking import _unwrap_model
-from scripts.synthetic.analyze_gcn_gin_routing_results import (  # noqa: E402
-    RunRef,
-    _load_cfg_for_run,
-    _pick_best_epoch,
-    _pred_labels_from_score,
-    discover_run_refs,
-    iter_run_refs,
-)
+if not _PLOT_ONLY:
+    from torch_geometric.data import Batch
+    from torch_geometric.graphgym.checkpoint import load_ckpt
+    from torch_geometric.graphgym.config import cfg
+    from torch_geometric.graphgym.loader import create_loader
+    from torch_geometric.graphgym.loss import compute_loss
+    from torch_geometric.graphgym.model_builder import create_model
+    from torch_geometric.graphgym.utils.device import auto_select_device
+    from torch_geometric import seed_everything
+
+    import GNNPlus  # noqa: F401
+
+    from GNNPlus.gcn_gin_routing_gate_tracking import hybrid_head_indices
+    from GNNPlus.hybrid_gate_tracking import _unwrap_model
+    from scripts.synthetic.analyze_gcn_gin_routing_results import (  # noqa: E402
+        RunRef,
+        _load_cfg_for_run,
+        _pick_best_epoch,
+        _pred_labels_from_score,
+        discover_run_refs,
+        iter_run_refs,
+    )
 
 MaskMode = Literal["none", "mask_gin", "mask_gcn"]
 MASK_MODES: tuple[MaskMode, ...] = ("none", "mask_gin", "mask_gcn")
@@ -399,22 +403,93 @@ def _summary_lookup(
     summary: Sequence[dict[str, object]],
 ) -> dict[tuple[str, MaskMode, str], float]:
     """Map (track, mask, metric) → mean."""
-    out: dict[tuple[str, MaskMode, str], float] = {}
+    means, _ = _summary_mean_std_lookups(summary)
+    return means
+
+
+def _summary_mean_std_lookups(
+    summary: Sequence[dict[str, object]],
+) -> tuple[
+    dict[tuple[str, MaskMode, str], float],
+    dict[tuple[str, MaskMode, str], float],
+]:
+    """Map (track, mask, metric) → (mean, seed std)."""
+    means: dict[tuple[str, MaskMode, str], float] = {}
+    stds: dict[tuple[str, MaskMode, str], float] = {}
     for row in summary:
-        out[(str(row["track"]), row["mask_mode"], str(row["metric"]))] = float(row["mean"])  # type: ignore[index]
-    return out
+        key = (str(row["track"]), row["mask_mode"], str(row["metric"]))
+        means[key] = float(row["mean"])  # type: ignore[index]
+        stds[key] = float(row["std"])  # type: ignore[index]
+    return means, stds
+
+
+def _minmax_lookup_from_per_run(
+    rows: Sequence[MaskEvalRow],
+) -> tuple[
+    dict[tuple[str, MaskMode, str], float],
+    dict[tuple[str, MaskMode, str], float],
+    dict[tuple[str, MaskMode, str], float],
+]:
+    """Map (track, mask, metric) → (mean, lower_err, upper_err) over seeds."""
+    grouped: dict[tuple[str, MaskMode, str], list[float]] = {}
+    for row in rows:
+        for metric in ("acc_all", "acc_tau0", "acc_tau1"):
+            key = (row.track, row.mask_mode, metric)
+            grouped.setdefault(key, []).append(float(getattr(row, metric)))
+    means: dict[tuple[str, MaskMode, str], float] = {}
+    lowers: dict[tuple[str, MaskMode, str], float] = {}
+    uppers: dict[tuple[str, MaskMode, str], float] = {}
+    for key, vals in grouped.items():
+        m = float(mean(vals))
+        lo = float(min(vals))
+        hi = float(max(vals))
+        means[key] = m
+        lowers[key] = m - lo
+        uppers[key] = hi - m
+    return means, lowers, uppers
+
+
+def _load_mask_per_run_csv(path: Path) -> list[MaskEvalRow]:
+    """Load ``mask_ablation_per_run.csv``."""
+    rows: list[MaskEvalRow] = []
+    with path.open(encoding="utf-8", newline="") as fh:
+        for raw in csv.DictReader(fh):
+            rows.append(
+                MaskEvalRow(
+                    track=str(raw["track"]),
+                    model=str(raw["model"]),
+                    lr_tag=str(raw["lr_tag"]),
+                    seed=int(raw["seed"]),
+                    mask_mode=raw["mask_mode"],  # type: ignore[arg-type]
+                    run_dir=str(raw["run_dir"]),
+                    epoch=int(raw["epoch"]),
+                    n_all=int(raw["n_all"]),
+                    n_tau0=int(raw["n_tau0"]),
+                    n_tau1=int(raw["n_tau1"]),
+                    acc_all=float(raw["acc_all"]),
+                    acc_tau0=float(raw["acc_tau0"]),
+                    acc_tau1=float(raw["acc_tau1"]),
+                ),
+            )
+    return rows
 
 
 def _plot_mask_ablation(
     summary: Sequence[dict[str, object]],
     out_path: Path,
     *,
+    per_run: Sequence[MaskEvalRow] | None = None,
     dpi: int,
     ymin: float = MASK_ABLATION_YMIN,
     ymax: float = MASK_ABLATION_YMAX,
 ) -> None:
     """Grouped bars: per-type accuracy under each mask condition."""
-    lookup = _summary_lookup(summary)
+    if per_run:
+        lookup, lower_lookup, upper_lookup = _minmax_lookup_from_per_run(per_run)
+    else:
+        lookup, std_lookup = _summary_mean_std_lookups(summary)
+        lower_lookup = std_lookup
+        upper_lookup = std_lookup
     tracks = sorted({str(r["track"]) for r in summary})
     tau_specs = (
         ("acc_tau0", r"$\tau{=}0$ (GCN-type)"),
@@ -422,7 +497,7 @@ def _plot_mask_ablation(
     )
     colors = {"acc_tau0": "#4C72B0", "acc_tau1": "#DD8452"}
 
-    fig, axes = plt.subplots(1, len(tracks), figsize=(5.8 * len(tracks), 5.0), squeeze=False)
+    fig, axes = plt.subplots(1, len(tracks), figsize=(5.8 * len(tracks), 5.2), squeeze=False)
     x = list(range(len(MASK_MODES)))
     bar_w = 0.34
 
@@ -433,14 +508,25 @@ def _plot_mask_ablation(
                 lookup.get((track, mode, metric), float("nan"))
                 for mode in MASK_MODES
             ]
+            lo_errs = [
+                lower_lookup.get((track, mode, metric), 0.0)
+                for mode in MASK_MODES
+            ]
+            hi_errs = [
+                upper_lookup.get((track, mode, metric), 0.0)
+                for mode in MASK_MODES
+            ]
             ax.bar(
                 offsets,
                 vals,
                 width=bar_w,
+                yerr=[lo_errs, hi_errs],
+                capsize=3,
                 label=tau_label,
                 color=colors[metric],
                 edgecolor="white",
                 linewidth=0.6,
+                error_kw={"elinewidth": 1.0, "capthick": 1.0, "ecolor": "#333333"},
             )
         ax.set_xticks(x)
         ax.set_xticklabels([MASK_LABELS[m] for m in MASK_MODES], rotation=12, ha="right")
@@ -449,14 +535,23 @@ def _plot_mask_ablation(
         ax.set_title("Toy (routing convs)" if track == "toy" else "Sigma (PyG GIN/GCN)")
         ax.grid(axis="y", alpha=0.22)
 
-    axes[0, 0].legend(loc="lower left", frameon=True, framealpha=0.92)
+    handles, labels = axes[0, 0].get_legend_handles_labels()
+    fig.legend(
+        handles,
+        labels,
+        loc="upper center",
+        bbox_to_anchor=(0.5, 0.02),
+        ncol=2,
+        frameon=True,
+        framealpha=0.92,
+    )
     fig.suptitle(
-        "SiGMA gated — MP head masking at eval (5-seed mean, lr001)",
-        y=1.02,
+        "SiGMA gated — MP head masking at eval (5-seed mean, min–max whiskers, lr001)",
+        y=0.98,
         fontsize=12,
         fontweight="bold",
     )
-    fig.tight_layout()
+    fig.tight_layout(rect=(0.0, 0.08, 1.0, 0.94))
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=dpi, bbox_inches="tight")
     fig.savefig(out_path.with_suffix(".pdf"), bbox_inches="tight")
@@ -518,11 +613,13 @@ def plot_mask_ablation_from_summary_csv(
 ) -> None:
     """Regenerate mask ablation bar chart + table from an existing summary CSV."""
     summary = _load_mask_summary_csv(summary_path)
+    per_run_path = summary_path.parent / "mask_ablation_per_run.csv"
+    per_run = _load_mask_per_run_csv(per_run_path) if per_run_path.is_file() else None
     fig_path = out_dir / "fig_mask_ablation.png"
     paper_fig_path = out_dir / "paper_figures" / "fig06_mask_ablation.png"
 
-    _plot_mask_ablation(summary, fig_path, dpi=dpi, ymin=ymin)
-    _plot_mask_ablation(summary, paper_fig_path, dpi=dpi, ymin=ymin)
+    _plot_mask_ablation(summary, fig_path, per_run=per_run, dpi=dpi, ymin=ymin)
+    _plot_mask_ablation(summary, paper_fig_path, per_run=per_run, dpi=dpi, ymin=ymin)
     _print_asymmetry_report(summary)
 
     from scripts.synthetic.gcn_gin_routing_table_figures import (  # noqa: WPS433
@@ -610,8 +707,8 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
 
     _write_per_run_csv(rows, per_run_path)
     _write_summary_csv(summary, summary_path)
-    _plot_mask_ablation(summary, fig_path, dpi=args.dpi, ymin=args.ymin)
-    _plot_mask_ablation(summary, paper_fig_path, dpi=args.dpi, ymin=args.ymin)
+    _plot_mask_ablation(summary, fig_path, per_run=rows, dpi=args.dpi, ymin=args.ymin)
+    _plot_mask_ablation(summary, paper_fig_path, per_run=rows, dpi=args.dpi, ymin=args.ymin)
     _print_asymmetry_report(summary)
 
     from scripts.synthetic.gcn_gin_routing_table_figures import (  # noqa: WPS433

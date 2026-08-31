@@ -14,6 +14,7 @@ import argparse
 import re
 import sys
 import textwrap
+from dataclasses import dataclass
 from pathlib import Path
 
 import matplotlib
@@ -39,6 +40,33 @@ CAPTION_WRAP_WIDTH: int = 88
 CAPTION_FONT_SIZE: float = 9.0
 CAPTION_LINE_HEIGHT: float = 0.115
 TABLE_FONT_SIZE: float = 8.5
+
+
+@dataclass(frozen=True)
+class GraphDrawStyle:
+    """Visual sizing for star-graph panels."""
+
+    root_node_size: float = 900.0
+    signal_node_size: float = 650.0
+    dummy_node_size: float = 220.0
+    root_label_font: float = 9.0
+    signal_label_font: float = 9.0
+    title_font: float = 10.5
+    edge_width: float = 1.2
+    compact_layout: bool = False
+
+
+GRAPH_STYLE_DEFAULT = GraphDrawStyle()
+GRAPH_STYLE_COMPACT = GraphDrawStyle(
+    root_node_size=820.0,
+    signal_node_size=580.0,
+    dummy_node_size=28.0,
+    root_label_font=8.5,
+    signal_label_font=6.8,
+    title_font=10.0,
+    edge_width=1.0,
+    compact_layout=True,
+)
 
 FEATURE_TABLE_TITLE: str = "Node features"
 FEATURE_COL_LABELS: tuple[str, ...] = (
@@ -84,6 +112,35 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Also write the multi-panel grid fig_example_graphs.png.",
     )
+    parser.add_argument(
+        "--graph-only",
+        action="store_true",
+        help="Write only the star-graph panel (no tables/caption).",
+    )
+    parser.add_argument(
+        "--test-idx",
+        type=int,
+        default=None,
+        help="Load test-split graph by index (requires --dataset-dir).",
+    )
+    parser.add_argument(
+        "--dataset-dir",
+        type=str,
+        default="results/gcn_gin_routing/data/GcnGinRouting",
+        help="GcnGinRouting root when using --test-idx.",
+    )
+    parser.add_argument(
+        "--out-name",
+        type=str,
+        default="",
+        help="Output stem under examples/ (default: auto from --test-idx or slug).",
+    )
+    parser.add_argument(
+        "--example-id",
+        type=int,
+        default=None,
+        help="1-based curated example index (1–7) for --graph-only.",
+    )
     return parser.parse_args()
 
 
@@ -98,7 +155,11 @@ def _wrap_caption(caption: str, width: int = CAPTION_WRAP_WIDTH) -> str:
     return "\n".join(textwrap.wrap(caption, width=width, break_long_words=False))
 
 
-def _star_layout(data) -> dict[int, tuple[float, float]]:
+def _star_layout(
+    data,
+    *,
+    compact: bool = False,
+) -> dict[int, tuple[float, float]]:
     """Place root at center, neighbors on a ring, dummies on short spokes."""
     roles = data.node_role.cpu().numpy()
     root = int(data.root_index.item())
@@ -106,7 +167,7 @@ def _star_layout(data) -> dict[int, tuple[float, float]]:
 
     neighbors = [i for i, r in enumerate(roles) if r == 1]
     k = len(neighbors)
-    radius = 1.35
+    radius = 1.55 if compact else 1.35
     for j, u in enumerate(neighbors):
         angle = 2.0 * np.pi * j / k
         pos[u] = (radius * np.cos(angle), radius * np.sin(angle))
@@ -122,12 +183,18 @@ def _star_layout(data) -> dict[int, tuple[float, float]]:
     for u, leaves in dummy_by_neighbor.items():
         ux, uy = pos[u]
         base_angle = np.arctan2(uy, ux)
-        spread = 0.22
-        leaf_radius = 0.55
         n_leaves = len(leaves)
+        if n_leaves == 0:
+            continue
+
+        # Single arc at fixed radius from each signal neighbor (same orbit).
+        leaf_radius = 0.55
+        arc = min(1.45, max(0.30, 0.17 * n_leaves))
         for li, leaf in enumerate(leaves):
-            offset = (li - (n_leaves - 1) / 2.0) * spread
-            ang = base_angle + offset
+            if n_leaves == 1:
+                ang = base_angle
+            else:
+                ang = base_angle - arc / 2.0 + li * arc / (n_leaves - 1)
             pos[leaf] = (
                 ux + leaf_radius * np.cos(ang),
                 uy + leaf_radius * np.sin(ang),
@@ -135,11 +202,26 @@ def _star_layout(data) -> dict[int, tuple[float, float]]:
     return pos
 
 
+def _graph_panel_title(data) -> str:
+    """Compact title: type, label, and analytic scores."""
+    tau = int(data.tau.item())
+    y = int(data.y.item())
+    gcn_s = float(data.gcn_score.item())
+    gin_s = float(data.gin_score.item())
+    rule = "GCN" if tau == 0 else "GIN"
+    return (
+        f"Type τ={tau} ({rule}), y={y}, "
+        f"s_GCN={gcn_s:+.3f}, s_GIN={gin_s:+.3f}"
+    )
+
+
 def _draw_graph(
     ax: plt.Axes,
     data,
     *,
     title: str,
+    use_compact_title: bool = False,
+    style: GraphDrawStyle = GRAPH_STYLE_DEFAULT,
 ) -> None:
     """Draw the star graph and header (no caption box)."""
     roles = data.node_role.cpu().numpy()
@@ -154,10 +236,10 @@ def _draw_graph(
     for src, dst in edge_index.T:
         g.add_edge(int(src), int(dst))
 
-    pos = _star_layout(data)
+    pos = _star_layout(data, compact=style.compact_layout)
     ax.set_aspect("equal")
     ax.axis("off")
-    ax.margins(0.18)
+    ax.margins(0.22 if style.compact_layout else 0.18)
 
     node_colors: list[str] = []
     node_sizes: list[float] = []
@@ -166,19 +248,26 @@ def _draw_graph(
         role = int(roles[i])
         if role == 0:
             node_colors.append("#4C78A8")
-            node_sizes.append(900.0)
+            node_sizes.append(style.root_node_size)
             labels[i] = f"r\nτ={tau}"
         elif role == 1:
             node_colors.append("#F58518" if signals[i] > 0 else "#E45756")
-            node_sizes.append(650.0)
+            node_sizes.append(style.signal_node_size)
             deg = g.degree[i]
             labels[i] = f"{int(signals[i]):+d}\nd={deg}"
         else:
             node_colors.append("#BAB0AC")
-            node_sizes.append(220.0)
+            node_sizes.append(style.dummy_node_size)
             labels[i] = ""
 
-    nx.draw_networkx_edges(g, pos, ax=ax, width=1.2, alpha=0.65, edge_color="#666666")
+    nx.draw_networkx_edges(
+        g,
+        pos,
+        ax=ax,
+        width=style.edge_width,
+        alpha=0.65,
+        edge_color="#666666",
+    )
     nx.draw_networkx_nodes(
         g,
         pos,
@@ -188,22 +277,34 @@ def _draw_graph(
         linewidths=1.0,
         edgecolors="#333333",
     )
-    nx.draw_networkx_labels(
-        g,
-        pos,
-        labels=labels,
-        ax=ax,
-        font_size=9,
-        font_weight="bold",
-    )
+    for i, label in labels.items():
+        if not label:
+            continue
+        role = int(roles[i])
+        font_size = style.root_label_font if role == 0 else style.signal_label_font
+        x_pos, y_pos = pos[i]
+        ax.text(
+            x_pos,
+            y_pos,
+            label,
+            ha="center",
+            va="center",
+            fontsize=font_size,
+            fontweight="bold",
+            color="white" if role in (0, 1) else "#333333",
+            zorder=4,
+        )
 
-    rule = "GCN" if tau == 0 else "GIN"
-    header = (
-        f"{title}\n"
-        f"type τ={tau} ({rule})  ·  y={y}  ·  "
-        f"s_GCN={gcn_s:+.2f}  ·  s_GIN={gin_s:+.0f}"
-    )
-    ax.set_title(header, fontsize=10.5, fontweight="bold", loc="left", pad=10)
+    if use_compact_title:
+        header = _graph_panel_title(data)
+    else:
+        rule = "GCN" if tau == 0 else "GIN"
+        header = (
+            f"{title}\n"
+            f"type τ={tau} ({rule})  ·  y={y}  ·  "
+            f"s_GCN={gcn_s:+.2f}  ·  s_GIN={gin_s:+.0f}"
+        )
+    ax.set_title(header, fontsize=style.title_font, fontweight="bold", loc="left", pad=10)
 
 
 def _caption_height_lines(wrapped: str) -> int:
@@ -389,6 +490,22 @@ def _figure_heights(n_caption_lines: int) -> tuple[float, float, float, float]:
     return fig_h, graph_ratio, ref_ratio, caption_ratio
 
 
+def save_graph_only(
+    data,
+    *,
+    out_path: Path,
+    dpi: int,
+    style: GraphDrawStyle = GRAPH_STYLE_COMPACT,
+) -> None:
+    """Save only the star-graph panel (top section of full example figures)."""
+    fig, ax = plt.subplots(figsize=(6.8, 5.2))
+    _draw_graph(ax, data, title="", use_compact_title=True, style=style)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=dpi, bbox_inches="tight", pad_inches=0.12)
+    fig.savefig(out_path.with_suffix(".pdf"), bbox_inches="tight", pad_inches=0.12)
+    plt.close(fig)
+
+
 def save_single_example(
     data,
     *,
@@ -487,6 +604,69 @@ def main() -> None:
     out_dir = Path(args.out_dir)
     examples_dir = out_dir / "examples"
 
+    if args.test_idx is not None:
+        from GNNPlus.loader.dataset.gcn_gin_routing import GcnGinRoutingDataset
+
+        ds = GcnGinRoutingDataset(str(args.dataset_dir), split="test")
+        idx = int(args.test_idx)
+        if idx < 0 or idx >= len(ds):
+            raise ValueError(f"test-idx={idx} out of range for split size {len(ds)}")
+        data = ds[idx]
+        stem = args.out_name or f"fig_test_{idx:04d}_graph_only"
+        out_path = examples_dir / f"{stem}.png"
+        if args.graph_only:
+            save_graph_only(data, out_path=out_path, dpi=args.dpi)
+        else:
+            tau = int(data.tau.item())
+            y = int(data.y.item())
+            save_single_example(
+                data,
+                title=f"Test graph {idx}",
+                caption=(
+                    f"Test index {idx}: τ={tau}, y={y}, "
+                    f"s_GCN={float(data.gcn_score):+.3f}, "
+                    f"s_GIN={float(data.gin_score):+.3f}."
+                ),
+                out_path=out_path,
+                dpi=args.dpi,
+            )
+        print(f"Wrote {out_path}")
+        return
+
+    slugs = [
+        "easy_aligned_gcn",
+        "easy_gin_vote",
+        "medium_degree_imbalance",
+        "hard_opposite_sign_gcn",
+        "hard_opposite_sign_gin",
+        "hard_near_threshold",
+        "medium_many_neighbors",
+    ]
+    specs = curated_example_specs()
+
+    if args.example_id is not None:
+        panel_idx = int(args.example_id)
+        if panel_idx < 1 or panel_idx > len(specs):
+            raise ValueError(f"example-id must be 1..{len(specs)}")
+        spec, caption = specs[panel_idx - 1]
+        slug = slugs[panel_idx - 1]
+        data = build_star_graph(spec)
+        stem = args.out_name or f"fig_example_{panel_idx:02d}_{slug}_graph_only"
+        out_path = examples_dir / f"{stem}.png"
+        if args.graph_only:
+            save_graph_only(data, out_path=out_path, dpi=args.dpi)
+        else:
+            diff = str(spec.difficulty).replace("_", " ").title()
+            save_single_example(
+                data,
+                title=f"Example {panel_idx} — {diff}",
+                caption=caption,
+                out_path=out_path,
+                dpi=args.dpi,
+            )
+        print(f"Wrote {out_path}")
+        return
+
     slugs = [
         "easy_aligned_gcn",
         "easy_gin_vote",
@@ -509,13 +689,16 @@ def main() -> None:
         panels.append((data, title, caption))
 
         out_path = examples_dir / f"fig_example_{panel_idx:02d}_{slug}.png"
-        save_single_example(
-            data,
-            title=title,
-            caption=caption,
-            out_path=out_path,
-            dpi=args.dpi,
-        )
+        if args.graph_only:
+            save_graph_only(data, out_path=out_path, dpi=args.dpi)
+        else:
+            save_single_example(
+                data,
+                title=title,
+                caption=caption,
+                out_path=out_path,
+                dpi=args.dpi,
+            )
         print(f"Wrote {out_path}")
 
     if args.combined:

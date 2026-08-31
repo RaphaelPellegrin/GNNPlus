@@ -167,6 +167,8 @@ def build_star_graph(spec: RoutingGraphSpec) -> Data:
     data.root_index = torch.tensor([0], dtype=torch.long)
     data.node_role = torch.tensor(node_roles, dtype=torch.long)
     data.difficulty = spec.difficulty
+    pair_id_value = -1 if spec.pair_id is None else spec.pair_id
+    data.pair_id = torch.tensor([pair_id_value], dtype=torch.long)
     return data
 
 

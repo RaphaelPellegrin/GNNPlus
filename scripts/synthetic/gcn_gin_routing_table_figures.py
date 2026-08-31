@@ -287,6 +287,130 @@ def plot_mask_ablation_table(
     )
 
 
+@dataclass(frozen=True)
+class OppositeSignPairSummaryRow:
+    """One row of ``opposite_sign_pair_summary.csv``."""
+
+    track: str
+    lr_tag: str
+    seed: int
+    model: str
+    n_pairs: int
+    both_correct: int
+    only_tau0: int
+    only_tau1: int
+    both_wrong: int
+
+
+def _load_opposite_sign_pair_summary(path: Path) -> list[OppositeSignPairSummaryRow]:
+    """Load ``opposite_sign_pair_summary.csv``."""
+    rows: list[OppositeSignPairSummaryRow] = []
+    with path.open(encoding="utf-8", newline="") as fh:
+        for raw in csv.DictReader(fh):
+            rows.append(
+                OppositeSignPairSummaryRow(
+                    track=raw["track"],
+                    lr_tag=raw["lr_tag"],
+                    seed=int(raw["seed"]),
+                    model=raw["model"],
+                    n_pairs=int(raw["n_pairs"]),
+                    both_correct=int(raw["both_correct"]),
+                    only_tau0=int(raw["only_tau0"]),
+                    only_tau1=int(raw["only_tau1"]),
+                    both_wrong=int(raw["both_wrong"]),
+                ),
+            )
+    return rows
+
+
+_OPPOSITE_SIGN_MODEL_LABELS: dict[str, str] = {
+    "oracle_gcn_rule": "Oracle GCN rule",
+    "oracle_gin_rule": "Oracle GIN rule",
+    "gcn_only": "GCN-only",
+    "gin_only": "GIN-only",
+    "gated": "SiGMA gated",
+}
+
+_OPPOSITE_SIGN_MODEL_ORDER: tuple[str, ...] = (
+    "oracle_gcn_rule",
+    "oracle_gin_rule",
+    "gcn_only",
+    "gin_only",
+    "gated",
+)
+
+
+def opposite_sign_pair_table_rows(
+    summary: Sequence[OppositeSignPairSummaryRow],
+    *,
+    lr_tag: str = "lr001",
+) -> list[list[str]]:
+    """Build table rows for opposite-sign pair outcomes (5-seed mean)."""
+    filtered = [r for r in summary if r.lr_tag == lr_tag]
+    if not filtered:
+        raise ValueError(f"No opposite-sign rows for lr_tag={lr_tag}")
+
+    grouped: dict[tuple[str, str], list[OppositeSignPairSummaryRow]] = {}
+    for row in filtered:
+        grouped.setdefault((row.track, row.model), []).append(row)
+
+    track_order = sorted({r.track for r in filtered}, key=lambda t: (t != "sigma", t))
+    rows: list[list[str]] = []
+    for track in track_order:
+        for model in _OPPOSITE_SIGN_MODEL_ORDER:
+            subset = grouped.get((track, model))
+            if not subset:
+                continue
+            n_pairs = subset[0].n_pairs
+            means = {
+                key: sum(getattr(r, key) / r.n_pairs for r in subset) / len(subset)
+                for key in ("both_correct", "only_tau0", "only_tau1", "both_wrong")
+            }
+            rows.append(
+                [
+                    track,
+                    _OPPOSITE_SIGN_MODEL_LABELS.get(model, model),
+                    str(n_pairs),
+                    f"{100 * means['both_correct']:.1f}%",
+                    f"{100 * means['only_tau0']:.1f}%",
+                    f"{100 * means['only_tau1']:.1f}%",
+                    f"{100 * means['both_wrong']:.1f}%",
+                ],
+            )
+    return rows
+
+
+def plot_opposite_sign_pair_table(
+    summary_path: Path,
+    out_path: Path,
+    *,
+    lr_tag: str = "lr001",
+    dpi: int = 200,
+) -> None:
+    """Render fig07 table from ``opposite_sign_pair_summary.csv``."""
+    summary = _load_opposite_sign_pair_summary(summary_path)
+    rows = opposite_sign_pair_table_rows(summary, lr_tag=lr_tag)
+    _save_table_figure(
+        title="Opposite-sign τ pairs — per-pair specialist outcomes",
+        subtitle=(
+            f"Matched twins (shared topology, τ∈{{0,1}}); 5-seed mean on test ({lr_tag})"
+        ),
+        col_labels=[
+            "Track",
+            "Model",
+            "Pairs",
+            "Both correct",
+            "Only τ=0",
+            "Only τ=1",
+            "Both wrong",
+        ],
+        rows=rows,
+        out_path=out_path,
+        dpi=dpi,
+        col_widths=[0.12, 0.22, 0.10, 0.14, 0.12, 0.12, 0.12],
+    )
+
+
 def plot_all_table_figures(
     analysis_dir: Path,
     *,
@@ -294,7 +418,7 @@ def plot_all_table_figures(
     mask_track: str = "toy",
     dpi: int = 200,
 ) -> list[Path]:
-    """Generate both table figures; return paths written."""
+    """Generate table figures; return paths written."""
     paper_dir = analysis_dir / "paper_figures"
     written: list[Path] = []
 
@@ -308,6 +432,12 @@ def plot_all_table_figures(
     if mask_csv.is_file():
         out = paper_dir / "fig06_mask_ablation_table.png"
         plot_mask_ablation_table(mask_csv, out, track=mask_track, lr_tag=lr_tag, dpi=dpi)
+        written.append(out)
+
+    opposite_csv = analysis_dir / "opposite_sign_pair_summary.csv"
+    if opposite_csv.is_file():
+        out = paper_dir / "fig07_opposite_sign_pair_table.png"
+        plot_opposite_sign_pair_table(opposite_csv, out, lr_tag=lr_tag, dpi=dpi)
         written.append(out)
 
     return written

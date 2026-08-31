@@ -9,15 +9,34 @@ Example:
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from GNNPlus.loader.dataset.gcn_gin_routing import GcnGinRoutingDataset  # noqa: E402
+
+def _load_dataset_class() -> Any:
+    """Load ``GcnGinRoutingDataset`` without importing full ``GNNPlus`` package.
+
+    Login-node prep must not trigger GraphGym ``cfg`` initialization via
+    ``GNNPlus/__init__.py``.
+    """
+    module_path = _REPO_ROOT / "GNNPlus" / "loader" / "dataset" / "gcn_gin_routing.py"
+    spec = importlib.util.spec_from_file_location(
+        "gcn_gin_routing_dataset",
+        module_path,
+    )
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load dataset module from {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module.GcnGinRoutingDataset
 
 
 def _parse_args() -> argparse.Namespace:
@@ -54,7 +73,8 @@ def main() -> None:
         json.dump(spec, fh, indent=2)
 
     for split in ("train", "val", "test"):
-        ds = GcnGinRoutingDataset(str(root), split=split)  # type: ignore[arg-type]
+        gcn_gin_routing_dataset = _load_dataset_class()
+        ds = gcn_gin_routing_dataset(str(root), split=split)  # type: ignore[arg-type]
         print(f"{split}: {len(ds)} graphs -> {ds.processed_paths[0]}")
 
 
