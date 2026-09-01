@@ -1,4 +1,8 @@
-"""Errica GIN / GraphSAGE hyperparameter grids from gnn-comparison YAML configs."""
+"""Errica TU hyperparameter grids from gnn-comparison YAML configs.
+
+GIN and GraphSAGE grids mirror diningphil/gnn-comparison. GCN and GAT use
+GIN-isomorphic grids (Errica does not publish separate GCN/GAT configs).
+"""
 
 from __future__ import annotations
 
@@ -51,6 +55,48 @@ SAGE_CANONICAL: dict[str, Any] = {
     "early_stop_use_loss": False,
 }
 
+# GIN-isomorphic grid (64 combos) — Errica has no published GCN recipe.
+GCN_GRID: dict[str, list[Any]] = {
+    "batch_size": [32, 128],
+    "base_lr": [0.01],
+    "layers_mp": [4],
+    "dim_inner": [64, 32],
+    "graph_pooling": ["add", "mean"],
+    "dropout": [0.5, 0.0],
+    "early_stop_use_loss": [False, True],
+}
+
+GCN_CANONICAL: dict[str, Any] = {
+    "batch_size": 128,
+    "base_lr": 0.01,
+    "layers_mp": 4,
+    "dim_inner": 64,
+    "graph_pooling": "add",
+    "dropout": 0.5,
+    "early_stop_use_loss": False,
+}
+
+# GIN-isomorphic grid (64 combos) — Errica has no published GAT recipe.
+GAT_GRID: dict[str, list[Any]] = {
+    "batch_size": [32, 128],
+    "base_lr": [0.01],
+    "layers_mp": [4],
+    "dim_inner": [64, 32],
+    "graph_pooling": ["add", "mean"],
+    "dropout": [0.5, 0.0],
+    "early_stop_use_loss": [False, True],
+}
+
+GAT_CANONICAL: dict[str, Any] = {
+    "batch_size": 128,
+    "base_lr": 0.01,
+    "layers_mp": 4,
+    "dim_inner": 64,
+    "graph_pooling": "add",
+    "dropout": 0.5,
+    "early_stop_use_loss": False,
+}
+
 # Reduced SiGMA grid (Errica has no published SiGMA recipe).
 SIGMA_GRID: dict[str, list[Any]] = {
     "batch_size": [32, 128],
@@ -87,6 +133,8 @@ DS_TAG_TO_NAME: dict[str, str] = {
 MODEL_TAG_BY_KEY: dict[str, str] = {
     "gin": "GIN",
     "graphsage": "GraphSAGE",
+    "gcn": "GCN",
+    "gat": "GAT",
     "sigma_hetero": "SiGMA_hetero",
 }
 
@@ -136,6 +184,10 @@ def write_grid_json(model: str, out_dir: Path) -> Path:
         canonical, grid = GIN_CANONICAL, expand_grid(GIN_GRID)
     elif model == "graphsage":
         canonical, grid = SAGE_CANONICAL, expand_grid(SAGE_GRID)
+    elif model == "gcn":
+        canonical, grid = GCN_CANONICAL, expand_grid(GCN_GRID)
+    elif model == "gat":
+        canonical, grid = GAT_CANONICAL, expand_grid(GAT_GRID)
     elif model == "sigma_hetero":
         canonical, grid = SIGMA_CANONICAL, expand_grid(SIGMA_GRID)
     else:
@@ -167,5 +219,5 @@ def load_hp_config(model: str, hp_id: int, *, canonical_only: bool = False) -> d
 
 if __name__ == "__main__":
     root = Path(__file__).resolve().parents[2] / "configs" / "tu_errica"
-    for family in ("gin", "graphsage", "sigma_hetero"):
+    for family in ("gin", "graphsage", "gcn", "gat", "sigma_hetero"):
         write_grid_json(family, root)

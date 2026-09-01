@@ -90,7 +90,7 @@ def load_sigma_grid_hp(grid_file: Path, hp_id: int) -> dict[str, Any]:
 def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", choices=["gin", "graphsage", "sigma_hetero"])
+    parser.add_argument("--model", choices=["gin", "graphsage", "gcn", "gat", "sigma_hetero"])
     parser.add_argument("--hp-id", type=int, default=-1)
     parser.add_argument("--canonical", action="store_true")
     parser.add_argument("--selection-file", type=Path, default=None)

@@ -4,6 +4,8 @@
 # Phase 1 — classical model selection:
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_select_gin
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_select_sage
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_select_gcn
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_select_gat
 #
 # Phase 2 — aggregate + build SiGMA grids:
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_gin
@@ -17,6 +19,8 @@
 # Phase 4 — classical eval (3 seeds):
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_eval_gin
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_eval_sage
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_eval_gcn
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_eval_gat
 
 set -euo pipefail
 
@@ -39,11 +43,25 @@ case "${phase}" in
         TU_ERRICA_CAMPAIGN=grid_select TU_ERRICA_GRID_MODEL=graphsage \
             bash bash_interface/cluster/submit_tu_errica_fair.sh
         ;;
+    grid_select_gcn)
+        TU_ERRICA_CAMPAIGN=grid_select TU_ERRICA_GRID_MODEL=gcn \
+            bash bash_interface/cluster/submit_tu_errica_fair.sh
+        ;;
+    grid_select_gat)
+        TU_ERRICA_CAMPAIGN=grid_select TU_ERRICA_GRID_MODEL=gat \
+            bash bash_interface/cluster/submit_tu_errica_fair.sh
+        ;;
     aggregate_gin)
         python scripts/tu_errica/aggregate_hp_selection.py --model gin
         ;;
     aggregate_sage)
         python scripts/tu_errica/aggregate_hp_selection.py --model graphsage
+        ;;
+    aggregate_gcn)
+        python scripts/tu_errica/aggregate_hp_selection.py --model gcn
+        ;;
+    aggregate_gat)
+        python scripts/tu_errica/aggregate_hp_selection.py --model gat
         ;;
     generate_sigma_grids)
         python scripts/tu_errica/generate_sigma_errica_grids.py
@@ -61,6 +79,14 @@ case "${phase}" in
         ;;
     grid_eval_sage)
         TU_ERRICA_CAMPAIGN=grid_eval TU_ERRICA_EVAL_MODEL=graphsage \
+            bash bash_interface/cluster/submit_tu_errica_fair.sh
+        ;;
+    grid_eval_gcn)
+        TU_ERRICA_CAMPAIGN=grid_eval TU_ERRICA_EVAL_MODEL=gcn \
+            bash bash_interface/cluster/submit_tu_errica_fair.sh
+        ;;
+    grid_eval_gat)
+        TU_ERRICA_CAMPAIGN=grid_eval TU_ERRICA_EVAL_MODEL=gat \
             bash bash_interface/cluster/submit_tu_errica_fair.sh
         ;;
     sigma_grid_eval)

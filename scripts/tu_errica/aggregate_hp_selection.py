@@ -150,7 +150,7 @@ def select_best_per_fold(
 def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", required=True, choices=["gin", "graphsage"])
+    parser.add_argument("--model", required=True, choices=["gin", "graphsage", "gcn", "gat"])
     parser.add_argument("--entity", default=DEFAULT_ENTITY)
     parser.add_argument("--project", default=DEFAULT_PROJECT)
     parser.add_argument(

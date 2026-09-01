@@ -12,7 +12,7 @@ Fair comparison under [Errica et al. ICLR 2020](https://arxiv.org/pdf/1912.09893
 
 > Under Errica's 10-fold protocol with **per-dataset / per-fold hyperparameter selection**
 > from their published grids, **SiGMA hetero (a2g4)** matches or exceeds the best classical
-> GNN (GIN / GraphSAGE) on **X/7** datasets and matches or exceeds Errica's reported GIN on
+> GNN (GIN / GraphSAGE / GCN / GAT) on **X/7** datasets and matches or exceeds Errica's reported GIN on
 > **Y/7**, with **SiGMA params ≤ GIN winner params** on bio datasets (budget-matched `d_h`).
 
 ## Errica GIN reference (Table 3/4, degree social)
@@ -27,21 +27,45 @@ Fair comparison under [Errica et al. ICLR 2020](https://arxiv.org/pdf/1912.09893
 | REDDIT-BINARY | 89.9 ± 1.9 |
 | COLLAB | 75.6 ± 2.3 |
 
+## Classical baselines
+
+| Model | HP grid source | Grid size | grid_select jobs |
+|-------|----------------|-----------|------------------|
+| GIN | Errica `config_GIN.yml` | 64 | 7 × 64 × 10 = **4,480** |
+| GraphSAGE | Errica `config_GraphSAGE.yml` | 72 | 7 × 72 × 10 = **5,040** |
+| GCN | GIN-isomorphic† | 32 | 7 × 32 × 10 = **2,240** |
+| GAT | GIN-isomorphic† | 32 | 7 × 32 × 10 = **2,240** |
+| SiGMA hetero | hybrid Option 3 | per-fold | see `sigma_grids/manifest.json` |
+
+†Errica's [gnn-comparison](https://github.com/diningphil/gnn-comparison) repo has no `config_GCN.yml` /
+`config_GAT.yml`. GCN/GAT use the same **protocol** (splits, early stop, Adam+StepLR) with a
+GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
+
 ## Campaign status
 
-**Last updated:** 2026-08-29
+**Last updated:** 2026-08-30
 
 | Phase | Campaign | Status | Notes |
 |-------|----------|--------|-------|
 | 0 smoke | `canonical` **42673425** | done | Pipeline OK; **not** final table (fixed HP) |
-| 0b | SiGMA OOM rerun **42746310** | running | DD/REDDIT-B @ bs16 |
-| **1a** | `grid_select` GIN | **todo** | 7 × 64 × 10 = **4,480** jobs |
-| **1b** | `grid_select` GraphSAGE | **todo** | ~7 × 64 × 10 |
-| **2a** | `aggregate_hp_selection` GIN/SAGE | **todo** | → `selections/*_per_fold.json` |
+| **1a** | `grid_select` GIN **42750648** | **done** | 4480/4480 COMPLETED · 6 log errors |
+| **1b** | `grid_select` GraphSAGE **43116245** | **running** | 7 × 72 × 10 = **5,040** jobs |
+| **1c** | `grid_select` GCN | **todo** | 7 × 32 × 10 = **2,240** jobs |
+| **1d** | `grid_select` GAT | **todo** | 7 × 32 × 10 = **2,240** jobs |
+| **2a** | `aggregate_hp_selection` GIN/SAGE/GCN/GAT | **todo** | → `selections/*_per_fold.json` |
 | **2b** | `generate_sigma_errica_grids` | **todo** | hybrid SiGMA grids + manifest |
 | **3a** | `sigma_grid_select` | **todo** | bio: L/H from GIN winner + micro grid; social: full grid |
 | **3b** | `aggregate_sigma_hp_selection` | **todo** | → `selections/sigma_per_fold.json` |
-| **4** | `grid_eval` GIN/SAGE + `sigma_grid_eval` | **todo** | 3 seeds × 10 folds × 7 ds per model |
+| **4** | `grid_eval` GIN/SAGE/GCN/GAT + `sigma_grid_eval` | **todo** | 3 seeds × 10 folds × 7 ds per model |
+
+### Active SLURM (2026-08-30)
+
+| JOBID | Campaign | Tasks | Status |
+|-------|----------|-------|--------|
+| **42750648** | GIN `grid_select` | 1–4480 | ✅ COMPLETED |
+| **43116245** | GraphSAGE `grid_select` | 1–5040 | 🔄 running |
+
+Logs: `logs_gnnplus/tu_errica_grid_select_gin_<JOBID>_<TASK>.log` (not `.out`).
 
 ### Canonical exploratory results (W&B, do not cite as final)
 
@@ -69,7 +93,7 @@ Fixed `GIN_CANONICAL` — useful signal only:
 Scripts:
 - `scripts/tu_errica/param_budget.py` — param counting + `d_h` under budget
 - `scripts/tu_errica/generate_sigma_errica_grids.py` — builds `configs/tu_errica/sigma_grids/`
-- `scripts/tu_errica/aggregate_hp_selection.py` — GIN/SAGE winners from W&B
+- `scripts/tu_errica/aggregate_hp_selection.py` — GIN/SAGE/GCN/GAT winners from W&B
 - `scripts/tu_errica/aggregate_sigma_hp_selection.py` — SiGMA winners
 
 ## Launch (cluster)
@@ -87,19 +111,36 @@ bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_select_gin
 bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_gin
 bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_select_sage
 bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sage
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_select_gcn
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_gcn
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_select_gat
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_gat
 bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh generate_sigma_grids
 bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_select
 bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma
 bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_eval_gin
 bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_eval_sage
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_eval_gcn
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_eval_gat
 bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval
 ```
 
-Or manual:
+Or manual (with parallelism / walltime):
 
 ```bash
 TU_ERRICA_CAMPAIGN=grid_select TU_ERRICA_GRID_MODEL=gin \
+  TU_ERRICA_PARALLEL=20 TU_ERRICA_TIME=48:00:00 \
   bash bash_interface/cluster/submit_tu_errica_fair.sh
+# → 42750648 (full GIN grid_select)
+```
+
+Monitor:
+
+```bash
+sacct -j 42750648 -X --format=State,ExitCode -n | awk '{print $1}' | sort | uniq -c
+squeue -u $USER -n tu_errica_grid_select_gin | head
+grep -l 'Error\|CUDA\|Traceback' logs_gnnplus/tu_errica_grid_select_gin_42750648_*.log 2>/dev/null | wc -l
+tail -30 logs_gnnplus/tu_errica_grid_select_gin_42750648_1.log
 ```
 
 ## Aggregate final table

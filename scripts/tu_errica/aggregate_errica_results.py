@@ -33,7 +33,7 @@ ERRICA_DATASETS: list[tuple[str, str]] = [
     ("collab", "COLLAB"),
 ]
 
-ERRICA_MODELS: list[str] = ["GIN", "GraphSAGE", "SiGMA_hetero"]
+ERRICA_MODELS: list[str] = ["GIN", "GraphSAGE", "GCN", "GAT", "SiGMA_hetero"]
 
 WANDB_METRIC_KEYS: tuple[str, ...] = (
     "best_test_perf",

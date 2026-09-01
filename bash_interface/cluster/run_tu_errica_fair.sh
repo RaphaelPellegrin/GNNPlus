@@ -4,7 +4,7 @@
 #
 # Campaigns (TU_ERRICA_CAMPAIGN):
 #   canonical          — fixed HP smoke (630 jobs); not for final rebuttal table
-#   grid_select        — Errica HP grid × folds × 1 seed (GIN or GraphSAGE)
+#   grid_select        — Errica HP grid × folds × 1 seed (GIN, GraphSAGE, GCN, or GAT)
 #   grid_eval          — selected HP × 3 seeds (one model; needs selection JSON)
 #   sigma_grid_select  — hybrid SiGMA search (bio: L/H-matched; social: full grid)
 #   sigma_grid_eval    — selected SiGMA HP × 3 seeds
@@ -84,7 +84,9 @@ case "${campaign}" in
         case "${hp_model}" in
             gin) cfg="configs/tu_errica/gin-errica-base.yaml"; model_tag="GIN" ;;
             graphsage) cfg="configs/tu_errica/graphsage-errica-base.yaml"; model_tag="GraphSAGE" ;;
-            *) log_message "grid_select supports gin|graphsage only"; exit 1 ;;
+            gcn) cfg="configs/tu_errica/gcn-errica-base.yaml"; model_tag="GCN" ;;
+            gat) cfg="configs/tu_errica/gat-errica-base.yaml"; model_tag="GAT" ;;
+            *) log_message "grid_select supports gin|graphsage|gcn|gat"; exit 1 ;;
         esac
         model_key="${hp_model}"
         seed=$((seed_offset))
@@ -96,12 +98,14 @@ case "${campaign}" in
         emit_extra=(--model "${model_key}" --hp-id="${hp_id}")
         ;;
     grid_eval)
-        eval_model="${TU_ERRICA_EVAL_MODEL:?set TU_ERRICA_EVAL_MODEL=gin|graphsage}"
+        eval_model="${TU_ERRICA_EVAL_MODEL:?set TU_ERRICA_EVAL_MODEL=gin|graphsage|gcn|gat}"
         selection_file="${TU_ERRICA_SELECTION_FILE:-configs/tu_errica/selections/${eval_model}_per_fold.json}"
         case "${eval_model}" in
             gin) cfg="configs/tu_errica/gin-errica-base.yaml"; model_tag="GIN"; model_key="gin" ;;
             graphsage) cfg="configs/tu_errica/graphsage-errica-base.yaml"; model_tag="GraphSAGE"; model_key="graphsage" ;;
-            *) log_message "grid_eval supports gin|graphsage"; exit 1 ;;
+            gcn) cfg="configs/tu_errica/gcn-errica-base.yaml"; model_tag="GCN"; model_key="gcn" ;;
+            gat) cfg="configs/tu_errica/gat-errica-base.yaml"; model_tag="GAT"; model_key="gat" ;;
+            *) log_message "grid_eval supports gin|graphsage|gcn|gat"; exit 1 ;;
         esac
         seed=$((seed_offset + (idx % num_seeds)))
         rest=$((idx / num_seeds))

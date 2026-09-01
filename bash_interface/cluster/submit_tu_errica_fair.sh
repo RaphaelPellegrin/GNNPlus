@@ -5,7 +5,10 @@
 #   TU_ERRICA_CAMPAIGN=grid_select TU_ERRICA_GRID_MODEL=gin \
 #     bash bash_interface/cluster/submit_tu_errica_fair.sh
 #
-#   TU_ERRICA_CAMPAIGN=grid_eval TU_ERRICA_EVAL_MODEL=gin \
+#   TU_ERRICA_CAMPAIGN=grid_select TU_ERRICA_GRID_MODEL=gcn \
+#     bash bash_interface/cluster/submit_tu_errica_fair.sh
+#
+#   TU_ERRICA_CAMPAIGN=grid_eval TU_ERRICA_EVAL_MODEL=gcn \
 #     bash bash_interface/cluster/submit_tu_errica_fair.sh
 #
 #   TU_ERRICA_CAMPAIGN=sigma_grid_select \
