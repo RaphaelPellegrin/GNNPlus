@@ -28,6 +28,13 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${REPO_ROOT}"
 
+# shellcheck source=common_env.sh
+source "${SCRIPT_DIR}/common_env.sh"
+
+_run_python() {
+    python "$@"
+}
+
 phase="${1:-}"
 if [ -z "${phase}" ]; then
     echo "Usage: $0 <phase>"
@@ -52,26 +59,26 @@ case "${phase}" in
             bash bash_interface/cluster/submit_tu_errica_fair.sh
         ;;
     aggregate_gin)
-        python scripts/tu_errica/aggregate_hp_selection.py --model gin
+        _run_python scripts/tu_errica/aggregate_hp_selection.py --model gin
         ;;
     aggregate_sage)
-        python scripts/tu_errica/aggregate_hp_selection.py --model graphsage
+        _run_python scripts/tu_errica/aggregate_hp_selection.py --model graphsage
         ;;
     aggregate_gcn)
-        python scripts/tu_errica/aggregate_hp_selection.py --model gcn
+        _run_python scripts/tu_errica/aggregate_hp_selection.py --model gcn
         ;;
     aggregate_gat)
-        python scripts/tu_errica/aggregate_hp_selection.py --model gat
+        _run_python scripts/tu_errica/aggregate_hp_selection.py --model gat
         ;;
     generate_sigma_grids)
-        python scripts/tu_errica/generate_sigma_errica_grids.py
+        bash bash_interface/cluster/run_generate_sigma_errica_grids.sh
         ;;
     sigma_grid_select)
         TU_ERRICA_CAMPAIGN=sigma_grid_select TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:00:00 \
             bash bash_interface/cluster/submit_tu_errica_fair.sh
         ;;
     aggregate_sigma)
-        python scripts/tu_errica/aggregate_sigma_hp_selection.py
+        _run_python scripts/tu_errica/aggregate_sigma_hp_selection.py
         ;;
     grid_eval_gin)
         TU_ERRICA_CAMPAIGN=grid_eval TU_ERRICA_EVAL_MODEL=gin \

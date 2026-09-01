@@ -43,29 +43,76 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 
 ## Campaign status
 
-**Last updated:** 2026-08-30
+**Last updated:** 2026-08-31 ~23:20 ET
 
-| Phase | Campaign | Status | Notes |
-|-------|----------|--------|-------|
-| 0 smoke | `canonical` **42673425** | done | Pipeline OK; **not** final table (fixed HP) |
-| **1a** | `grid_select` GIN **42750648** | **done** | 4480/4480 COMPLETED · 6 log errors |
-| **1b** | `grid_select` GraphSAGE **43116245** | **running** | 7 × 72 × 10 = **5,040** jobs |
-| **1c** | `grid_select` GCN | **todo** | 7 × 32 × 10 = **2,240** jobs |
-| **1d** | `grid_select` GAT | **todo** | 7 × 32 × 10 = **2,240** jobs |
-| **2a** | `aggregate_hp_selection` GIN/SAGE/GCN/GAT | **todo** | → `selections/*_per_fold.json` |
-| **2b** | `generate_sigma_errica_grids` | **todo** | hybrid SiGMA grids + manifest |
-| **3a** | `sigma_grid_select` | **todo** | bio: L/H from GIN winner + micro grid; social: full grid |
-| **3b** | `aggregate_sigma_hp_selection` | **todo** | → `selections/sigma_per_fold.json` |
-| **4** | `grid_eval` GIN/SAGE/GCN/GAT + `sigma_grid_eval` | **todo** | 3 seeds × 10 folds × 7 ds per model |
+| Phase | Campaign | JOBID | Status | Notes |
+|-------|----------|-------|--------|-------|
+| 0 smoke | `canonical` | **42673425** | ✅ done | fixed HP; **not** final table |
+| **1a** | `grid_select` **GIN** | **42750648** | ✅ **done** | **4480/4480** COMPLETED · 6 log errors |
+| **1b** | `grid_select` **GraphSAGE** | **43116245** | 🔄 **~95%** | **4768/5040** COMPLETED at last check · 12 RUNNING · 1 PENDING |
+| **1c** | `grid_select` **GCN** | **43434937** | 🔄 **running** | **2240** tasks · submitted 2026-08-31 after `7046d65` |
+| **1d** | `grid_select` **GAT** | **43434950** | 🔄 **running** | **2240** tasks · submitted 2026-08-31 after `7046d65` |
+| **2a** | `aggregate_hp_selection` | — | **todo** | GIN first → `selections/*_per_fold.json` |
+| **2b** | `generate_sigma_errica_grids` | — | **todo** | needs `gin_per_fold.json` |
+| **3a** | `sigma_grid_select` | — | **todo** | bio: L/H from GIN winner; social: full grid |
+| **3b** | `aggregate_sigma_hp_selection` | — | **todo** | → `selections/sigma_per_fold.json` |
+| **4** | `grid_eval` + `sigma_grid_eval` | — | **todo** | 210 jobs per model (3 seeds × 10 folds × 7 ds) |
 
-### Active SLURM (2026-08-30)
+### grid_select progress summary
 
-| JOBID | Campaign | Tasks | Status |
-|-------|----------|-------|--------|
-| **42750648** | GIN `grid_select` | 1–4480 | ✅ COMPLETED |
-| **43116245** | GraphSAGE `grid_select` | 1–5040 | 🔄 running |
+| Model | JOBID | Target | Last `sacct` snapshot |
+|-------|-------|--------|------------------------|
+| GIN | 42750648 | 4,480 | ✅ 4480 COMPLETED |
+| GraphSAGE | 43116245 | 5,040 | 4768 COMPLETED · 12 RUNNING · 1 PENDING |
+| GCN | 43434937 | 2,240 | submitted 2026-08-31 |
+| GAT | 43434950 | 2,240 | submitted 2026-08-31 |
 
-Logs: `logs_gnnplus/tu_errica_grid_select_gin_<JOBID>_<TASK>.log` (not `.out`).
+**Total grid_select jobs (all four):** 14,000
+
+### Active SLURM — monitor
+
+```bash
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+
+# Running now
+squeue -u $USER | grep tu_errica
+
+# Per-job completion (replace nothing — use real IDs)
+for j in 42750648 43116245 43434937 43434950; do
+  echo "=== $j ==="
+  sacct -j $j -X --format=State,ExitCode -n | awk '{print $1}' | sort | uniq -c
+done
+
+# Error scan (per campaign)
+for pat in gin graphsage gcn gat; do
+  j=$(case $pat in gin) echo 42750648;; graphsage) echo 43116245;; gcn) echo 43434937;; gat) echo 43434950;; esac)
+  n=$(grep -l 'Error\|CUDA\|Traceback' logs_gnnplus/tu_errica_grid_select_${pat}_${j}_*.log 2>/dev/null | wc -l)
+  echo "${pat} (${j}): ${n} error logs"
+done
+```
+
+Logs: `logs_gnnplus/tu_errica_grid_select_<model>_<JOBID>_<TASK>.log`
+
+W&B groups: `tu_errica_<ds>_<Model>_grid_select_hp<id>` (e.g. `tu_errica_enzymes_GCN_grid_select_hp0`)
+
+### Next actions (while grid_select finishes)
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+
+# Can run now (GIN done)
+python scripts/tu_errica/aggregate_hp_selection.py --model gin
+
+# After each grid_select completes
+python scripts/tu_errica/aggregate_hp_selection.py --model graphsage
+python scripts/tu_errica/aggregate_hp_selection.py --model gcn
+python scripts/tu_errica/aggregate_hp_selection.py --model gat
+
+# Then SiGMA pipeline
+python scripts/tu_errica/generate_sigma_errica_grids.py
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_select
+```
 
 ### Canonical exploratory results (W&B, do not cite as final)
 
@@ -137,10 +184,12 @@ TU_ERRICA_CAMPAIGN=grid_select TU_ERRICA_GRID_MODEL=gin \
 Monitor:
 
 ```bash
-sacct -j 42750648 -X --format=State,ExitCode -n | awk '{print $1}' | sort | uniq -c
-squeue -u $USER -n tu_errica_grid_select_gin | head
-grep -l 'Error\|CUDA\|Traceback' logs_gnnplus/tu_errica_grid_select_gin_42750648_*.log 2>/dev/null | wc -l
-tail -30 logs_gnnplus/tu_errica_grid_select_gin_42750648_1.log
+# All four grid_select jobs
+for j in 42750648 43116245 43434937 43434950; do
+  echo "=== $j ==="
+  sacct -j $j -X --format=State,ExitCode -n | awk '{print $1}' | sort | uniq -c
+done
+squeue -u $USER | grep tu_errica
 ```
 
 ## Aggregate final table

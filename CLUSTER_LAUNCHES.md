@@ -798,36 +798,46 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║  🔄  RUNNING  ·  TU Errica hybrid (Option 3 — per-fold HP select)        ║
-║  🎯  Phase 1a: GIN grid_select 4480 · then SAGE → SiGMA → eval          ║
+║  🎯  Phase 1: GIN ✅ · SAGE ~95% · GCN+GAT running · then SiGMA → eval   ║
 ║  📄  Paper_tu_errica_fair_comparison.md                                  ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
+| Model | JOBID | Tasks | Status (2026-08-31) |
+|-------|-------|-------|------------------------|
+| **GIN** | **42750648** | 4,480 | ✅ **4480/4480 COMPLETED** (6 log errors) |
+| **GraphSAGE** | **43116245** | 5,040 | 🔄 **4768 done** · 12 RUNNING · 1 PENDING |
+| **GCN** | **43434937** | 2,240 | 🔄 submitted after `7046d65` |
+| **GAT** | **43434950** | 2,240 | 🔄 submitted after `7046d65` |
+
 ```bash
-# ✅ Phase 1a GIN grid_select — 2026-08-29
+# Submit examples (already launched for Phase 1):
 # TU_ERRICA_CAMPAIGN=grid_select TU_ERRICA_GRID_MODEL=gin \
-#   TU_ERRICA_PARALLEL=20 TU_ERRICA_TIME=48:00:00 \
 #   bash bash_interface/cluster/submit_tu_errica_fair.sh   # → 42750648
+# TU_ERRICA_CAMPAIGN=grid_select TU_ERRICA_GRID_MODEL=graphsage \
+#   bash bash_interface/cluster/submit_tu_errica_fair.sh   # → 43116245
+# bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_select_gcn  # → 43434937
+# bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_select_gat  # → 43434950
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🔄 **`42750648`** (GIN grid_select 1–4480) · smoke **`42750459`** ✅ |
-| **Health (2026-08-29 12:48)** | **873/4480** COMPLETED · 20 RUNNING · **0** Error/CUDA/Traceback logs |
-| **Parallel** | 20 · 48h · 32GB · `mweber_gpu` |
+| **Parallel** | 12 default · 48h · 32GB · `mweber_gpu` |
 | **Submit** | `bash_interface/cluster/submit_tu_errica_fair.sh` |
 | **Orchestrator** | `bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh` |
 | **Worker** | `bash_interface/cluster/run_tu_errica_fair.sh` |
-| **Logs** | `logs_gnnplus/tu_errica_grid_select_gin_<JOBID>_<TASK>.log` |
-| **W&B groups** | `tu_errica_<ds>_GIN_grid_select_hp<id>` |
-| **Next** | `aggregate_gin` → `grid_select_sage` (5040) |
+| **Logs** | `logs_gnnplus/tu_errica_grid_select_<model>_<JOBID>_<TASK>.log` |
+| **W&B groups** | `tu_errica_<ds>_<Model>_grid_select_hp<id>` |
+| **Next** | `aggregate_gin` (now) → `aggregate_sage/gcn/gat` → `generate_sigma_grids` |
 
 Monitor:
 
 ```bash
-sacct -j 42750648 -X --format=State,ExitCode -n | awk '{print $1}' | sort | uniq -c
-squeue -u $USER -n tu_errica_grid_select_gin | head
-grep -l 'Error\|CUDA\|Traceback' logs_gnnplus/tu_errica_grid_select_gin_42750648_*.log 2>/dev/null | wc -l
+for j in 42750648 43116245 43434937 43434950; do
+  echo "=== $j ==="
+  sacct -j $j -X --format=State,ExitCode -n | awk '{print $1}' | sort | uniq -c
+done
+squeue -u $USER | grep tu_errica
 ```
 
 ```text
