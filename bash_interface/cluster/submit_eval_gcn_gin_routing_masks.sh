@@ -22,7 +22,9 @@ fi
 
 results_root="${GCN_GIN_MASK_RESULTS_ROOT:-${GNNPLUS_OUT_DIR}/gcn_gin_routing}"
 out_dir="${GCN_GIN_MASK_OUT_DIR:-${REPO_ROOT}/results/gcn_gin_routing/analysis}"
-tracks="${GCN_GIN_MASK_TRACKS:-toy,sigma}"
+tracks_display="${GCN_GIN_MASK_TRACKS:-toy,sigma}"
+# sbatch --export splits on commas; use semicolons in the exported value.
+tracks_export="${tracks_display//,/\;}"
 lr_tag="${GCN_GIN_MASK_LR_TAG:-lr001}"
 
 if [ ! -f "${GNNPLUS_DATASET_DIR}/GcnGinRouting/processed/train.pt" ]; then
@@ -41,7 +43,7 @@ export_list+=",GNNPLUS_OUT_DIR=${GNNPLUS_OUT_DIR}"
 export_list+=",GNNPLUS_DATASET_DIR=${GNNPLUS_DATASET_DIR}"
 export_list+=",GCN_GIN_MASK_RESULTS_ROOT=${results_root}"
 export_list+=",GCN_GIN_MASK_OUT_DIR=${out_dir}"
-export_list+=",GCN_GIN_MASK_TRACKS=${tracks}"
+export_list+=",GCN_GIN_MASK_TRACKS=${tracks_export}"
 export_list+=",GCN_GIN_MASK_LR_TAG=${lr_tag}"
 
 job_id="$(
@@ -60,10 +62,11 @@ cat <<EOF
 
 === GCN/GIN routing mask ablation submitted ===
   JOBID:     ${job_id}
-  Model:     a0g2_gated (${lr_tag}, both tracks)
+  Model:     a0g2_gated (${lr_tag}, tracks: ${tracks_display})
   Masks:     none | mask_gin | mask_gcn
   Output:    ${out_dir}/mask_ablation_*.csv
   Figure:    ${out_dir}/fig_mask_ablation.png
   Logs:      logs_gnnplus/gcn_gin_mask_${job_id}.log
+  Note:      sbatch export uses tracks=${tracks_export} (semicolons)
 
 EOF
