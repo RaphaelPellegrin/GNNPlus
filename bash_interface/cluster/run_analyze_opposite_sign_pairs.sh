@@ -42,13 +42,14 @@ cmd=(
 if [[ -f "${from_csv}" ]]; then
   log_message "opposite-sign pairs from CSV ${from_csv}"
   cmd+=(--from-per-graph-csv "${from_csv}")
-else
-  log_message "opposite-sign pairs from checkpoints results_root=${results_root}"
-  cmd+=(--results-root "${results_root}")
 fi
 
 if [[ "${include_gated}" == "1" ]]; then
-  cmd+=(--include-gated)
+  log_message "SiGMA eval (gated + ungated) results_root=${results_root}"
+  cmd+=(--results-root "${results_root}" --include-gated)
+elif [[ ! -f "${from_csv}" ]]; then
+  log_message "opposite-sign pairs from checkpoints results_root=${results_root}"
+  cmd+=(--results-root "${results_root}")
 fi
 
 log_message "Running: ${cmd[*]}"

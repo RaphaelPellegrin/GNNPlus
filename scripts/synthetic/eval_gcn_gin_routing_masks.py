@@ -81,6 +81,16 @@ MASK_LABELS: dict[MaskMode, str] = {
 # Zoom y-axis so masked-head drops (e.g. τ=1 mask GIN → ~0.44) are visible.
 MASK_ABLATION_YMIN: float = 0.3
 MASK_ABLATION_YMAX: float = 1.02
+TRACK_ORDER: tuple[str, ...] = ("toy", "sigma")
+TRACK_LABELS: dict[str, str] = {
+    "toy": r"Track A (Toy, $d_h{=}1$)",
+    "sigma": r"Track B (SiGMA, PyG GIN/GCN, $d_h{=}4$)",
+}
+METRIC_PALETTE: dict[str, str] = {
+    "acc_all": "#E45756",
+    "acc_tau0": "#4C72B0",
+    "acc_tau1": "#DD8452",
+}
 
 
 @dataclass(frozen=True)
@@ -474,6 +484,14 @@ def _load_mask_per_run_csv(path: Path) -> list[MaskEvalRow]:
     return rows
 
 
+def _format_lr_tag(lr_tag: str) -> str:
+    """Format ``lr001`` as ``$\\mathrm{LR}=10^{-3}$`` for figure titles."""
+    if lr_tag.startswith("lr") and lr_tag[2:].isdigit():
+        exponent = -len(lr_tag[2:])
+        return rf"$\mathrm{{LR}}=10^{{{exponent}}}$"
+    return rf"$\mathrm{{LR}}={lr_tag}$"
+
+
 def _plot_mask_ablation(
     summary: Sequence[dict[str, object]],
     out_path: Path,
@@ -482,28 +500,37 @@ def _plot_mask_ablation(
     dpi: int,
     ymin: float = MASK_ABLATION_YMIN,
     ymax: float = MASK_ABLATION_YMAX,
+    lr_tag: str = "lr001",
 ) -> None:
-    """Grouped bars: per-type accuracy under each mask condition."""
+    """Grouped bars: all + per-type accuracy under each mask (fig01 style)."""
+    import numpy as np
+
     if per_run:
         lookup, lower_lookup, upper_lookup = _minmax_lookup_from_per_run(per_run)
     else:
         lookup, std_lookup = _summary_mean_std_lookups(summary)
         lower_lookup = std_lookup
         upper_lookup = std_lookup
-    tracks = sorted({str(r["track"]) for r in summary})
-    tau_specs = (
+
+    summary_tracks = {str(r["track"]) for r in summary}
+    tracks = [t for t in TRACK_ORDER if t in summary_tracks]
+    tracks.extend(sorted(summary_tracks - set(tracks)))
+
+    metric_specs = (
+        ("acc_all", "All graphs"),
         ("acc_tau0", r"$\tau{=}0$ (GCN-type)"),
         ("acc_tau1", r"$\tau{=}1$ (GIN-type)"),
     )
-    colors = {"acc_tau0": "#4C72B0", "acc_tau1": "#DD8452"}
+    bar_w = 0.24
+    offsets = (-bar_w, 0.0, bar_w)
 
-    fig, axes = plt.subplots(1, len(tracks), figsize=(5.8 * len(tracks), 5.2), squeeze=False)
-    x = list(range(len(MASK_MODES)))
-    bar_w = 0.34
+    fig, axes = plt.subplots(1, len(tracks), figsize=(6.8 * len(tracks), 5.0), squeeze=False)
+    legend_handles: list = []
+    legend_labels: list[str] = []
 
-    for ax, track in zip(axes[0], tracks, strict=True):
-        for j, (metric, tau_label) in enumerate(tau_specs):
-            offsets = [xi + (j - 0.5) * bar_w for xi in x]
+    for ax_idx, (ax, track) in enumerate(zip(axes[0], tracks, strict=True)):
+        x = np.arange(len(MASK_MODES))
+        for offset, (metric, label) in zip(offsets, metric_specs, strict=True):
             vals = [
                 lookup.get((track, mode, metric), float("nan"))
                 for mode in MASK_MODES
@@ -516,42 +543,44 @@ def _plot_mask_ablation(
                 upper_lookup.get((track, mode, metric), 0.0)
                 for mode in MASK_MODES
             ]
-            ax.bar(
-                offsets,
+            bars = ax.bar(
+                x + offset,
                 vals,
                 width=bar_w,
                 yerr=[lo_errs, hi_errs],
                 capsize=3,
-                label=tau_label,
-                color=colors[metric],
+                label=label,
+                color=METRIC_PALETTE[metric],
                 edgecolor="white",
                 linewidth=0.6,
                 error_kw={"elinewidth": 1.0, "capthick": 1.0, "ecolor": "#333333"},
             )
+            if ax_idx == 0:
+                legend_handles.append(bars[0])
+                legend_labels.append(label)
+
         ax.set_xticks(x)
         ax.set_xticklabels([MASK_LABELS[m] for m in MASK_MODES], rotation=12, ha="right")
         ax.set_ylim(ymin, ymax)
         ax.set_ylabel("Test accuracy")
-        ax.set_title("Toy (routing convs)" if track == "toy" else "Sigma (PyG GIN/GCN)")
+        ax.set_title(TRACK_LABELS.get(track, track))
         ax.grid(axis="y", alpha=0.22)
 
-    handles, labels = axes[0, 0].get_legend_handles_labels()
     fig.legend(
-        handles,
-        labels,
+        legend_handles,
+        legend_labels,
         loc="upper center",
-        bbox_to_anchor=(0.5, 0.02),
-        ncol=2,
+        bbox_to_anchor=(0.5, -0.02),
+        ncol=3,
         frameon=True,
-        framealpha=0.92,
+        framealpha=0.95,
     )
     fig.suptitle(
-        "SiGMA gated — MP head masking at eval (5-seed mean, min–max whiskers, lr001)",
-        y=0.98,
+        f"MP head masking at eval (5-seed mean, min–max whiskers, {_format_lr_tag(lr_tag)})",
+        y=1.02,
         fontsize=12,
-        fontweight="bold",
     )
-    fig.tight_layout(rect=(0.0, 0.08, 1.0, 0.94))
+    fig.tight_layout(rect=(0.0, 0.06, 1.0, 0.98))
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=dpi, bbox_inches="tight")
     fig.savefig(out_path.with_suffix(".pdf"), bbox_inches="tight")
@@ -618,8 +647,8 @@ def plot_mask_ablation_from_summary_csv(
     fig_path = out_dir / "fig_mask_ablation.png"
     paper_fig_path = out_dir / "paper_figures" / "fig06_mask_ablation.png"
 
-    _plot_mask_ablation(summary, fig_path, per_run=per_run, dpi=dpi, ymin=ymin)
-    _plot_mask_ablation(summary, paper_fig_path, per_run=per_run, dpi=dpi, ymin=ymin)
+    _plot_mask_ablation(summary, fig_path, per_run=per_run, dpi=dpi, ymin=ymin, lr_tag=lr_tag)
+    _plot_mask_ablation(summary, paper_fig_path, per_run=per_run, dpi=dpi, ymin=ymin, lr_tag=lr_tag)
     _print_asymmetry_report(summary)
 
     from scripts.synthetic.gcn_gin_routing_table_figures import (  # noqa: WPS433
@@ -707,8 +736,8 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
 
     _write_per_run_csv(rows, per_run_path)
     _write_summary_csv(summary, summary_path)
-    _plot_mask_ablation(summary, fig_path, per_run=rows, dpi=args.dpi, ymin=args.ymin)
-    _plot_mask_ablation(summary, paper_fig_path, per_run=rows, dpi=args.dpi, ymin=args.ymin)
+    _plot_mask_ablation(summary, fig_path, per_run=rows, dpi=args.dpi, ymin=args.ymin, lr_tag=args.lr_tag)
+    _plot_mask_ablation(summary, paper_fig_path, per_run=rows, dpi=args.dpi, ymin=args.ymin, lr_tag=args.lr_tag)
     _print_asymmetry_report(summary)
 
     from scripts.synthetic.gcn_gin_routing_table_figures import (  # noqa: WPS433

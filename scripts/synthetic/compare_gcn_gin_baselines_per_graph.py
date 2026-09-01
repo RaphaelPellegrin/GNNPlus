@@ -60,6 +60,98 @@ from scripts.synthetic.analyze_gcn_gin_routing_results import (  # noqa: E402
 )
 
 OutcomeKind = Literal["both_correct", "gcn_only", "gin_only", "both_wrong"]
+SignStratum = Literal["all", "agree", "disagree"]
+
+TRACK_ORDER: tuple[str, ...] = ("toy", "sigma")
+TRACK_LABELS: dict[str, str] = {
+    "toy": r"Track A (Toy, $d_h{=}1$)",
+    "sigma": r"Track B (SiGMA, PyG GIN/GCN, $d_h{=}4$)",
+}
+STRATUM_ORDER: tuple[SignStratum, ...] = ("all", "agree", "disagree")
+BAR_SPECS: tuple[tuple[int, SignStratum], ...] = (
+    (0, "all"),
+    (0, "agree"),
+    (0, "disagree"),
+    (1, "all"),
+    (1, "agree"),
+    (1, "disagree"),
+)
+BAR_LABELS: dict[tuple[int, SignStratum], str] = {
+    (0, "all"): r"$\tau{=}0$ (all)",
+    (0, "agree"): r"$\tau{=}0$, $\mathbb{1}(s{>}0)$ agree",
+    (0, "disagree"): r"$\tau{=}0$, $\mathbb{1}(s{>}0)$ disagree",
+    (1, "all"): r"$\tau{=}1$ (all)",
+    (1, "agree"): r"$\tau{=}1$, $\mathbb{1}(s{>}0)$ agree",
+    (1, "disagree"): r"$\tau{=}1$, $\mathbb{1}(s{>}0)$ disagree",
+}
+
+
+def _indicator_scores_agree(gcn_score: float, gin_score: float) -> bool:
+    """Whether analytic score signs agree: $\\mathbb{1}(s_{\\mathrm{GCN}}{>}0)=\\mathbb{1}(s_{\\mathrm{GIN}}{>}0)$."""
+    return (gcn_score > 0.0) == (gin_score > 0.0)
+
+
+def _load_indicator_agree_lookup(dataset_dir: str) -> dict[int, bool]:
+    """Map test ``graph_idx`` → whether $\\mathbb{1}(s{>}0)$ agrees for GCN vs GIN scores."""
+    from scripts.synthetic.analyze_opposite_sign_pairs import load_test_graph_meta  # noqa: WPS433
+
+    meta = load_test_graph_meta(dataset_dir)
+    return {
+        record.graph_idx: _indicator_scores_agree(record.gcn_score, record.gin_score)
+        for record in meta
+    }
+
+
+def _attach_indicator_agree(
+    rows: Sequence[GraphPairOutcome],
+    dataset_dir: str,
+) -> list[GraphPairOutcome]:
+    """Fill ``indicator_agree`` on per-graph rows when missing."""
+    if rows and rows[0].indicator_agree is not None:
+        return list(rows)
+    lookup = _load_indicator_agree_lookup(dataset_dir)
+    enriched: list[GraphPairOutcome] = []
+    for row in rows:
+        agree = lookup.get(row.graph_idx)
+        if agree is None:
+            raise KeyError(f"Missing test metadata for graph_idx={row.graph_idx}")
+        enriched.append(
+            GraphPairOutcome(
+                track=row.track,
+                lr_tag=row.lr_tag,
+                seed=row.seed,
+                graph_idx=row.graph_idx,
+                tau=row.tau,
+                label=row.label,
+                pred_gcn=row.pred_gcn,
+                pred_gin=row.pred_gin,
+                correct_gcn=row.correct_gcn,
+                correct_gin=row.correct_gin,
+                indicator_agree=agree,
+            ),
+        )
+    return enriched
+
+
+def _row_matches_stratum(row: GraphPairOutcome, tau: int, stratum: SignStratum) -> bool:
+    """Return whether a graph belongs to a (τ, stratum) bucket."""
+    if row.tau != tau:
+        return False
+    if stratum == "all":
+        return True
+    if row.indicator_agree is None:
+        raise ValueError("indicator_agree required for agree/disagree strata")
+    if stratum == "agree":
+        return row.indicator_agree
+    return not row.indicator_agree
+
+
+def _format_lr_tag(lr_tag: str) -> str:
+    """Format ``lr001`` as ``$\\mathrm{LR}=10^{-3}$`` for figure titles."""
+    if lr_tag.startswith("lr") and lr_tag[2:].isdigit():
+        exponent = -len(lr_tag[2:])
+        return rf"$\mathrm{{LR}}=10^{{{exponent}}}$"
+    return rf"$\mathrm{{LR}}={lr_tag}$"
 
 
 @dataclass(frozen=True)
@@ -76,6 +168,7 @@ class GraphPairOutcome:
     pred_gin: int
     correct_gcn: bool
     correct_gin: bool
+    indicator_agree: Optional[bool] = None
 
     @property
     def outcome(self) -> OutcomeKind:
@@ -244,6 +337,7 @@ def _compare_pair(
     results_root: Path,
     dataset_dir: str,
     device: torch.device,
+    indicator_lookup: dict[int, bool],
 ) -> list[GraphPairOutcome]:
     """Compare GCN-only vs GIN-only on the same test graphs."""
     gcn_ref = RunRef(
@@ -278,6 +372,8 @@ def _compare_pair(
     ):
         if tau_g != tau_i or y_g != y_i:
             raise RuntimeError(f"Graph {idx} label/tau mismatch between models.")
+        if idx not in indicator_lookup:
+            raise KeyError(f"Missing indicator metadata for test graph_idx={idx}")
         out.append(
             GraphPairOutcome(
                 track=track,
@@ -290,6 +386,7 @@ def _compare_pair(
                 pred_gin=p_i,
                 correct_gcn=p_g == y_g,
                 correct_gin=p_i == y_i,
+                indicator_agree=indicator_lookup[idx],
             ),
         )
     return out
@@ -339,6 +436,7 @@ def _write_per_graph_csv(rows: Sequence[GraphPairOutcome], path: Path) -> None:
         "pred_gin",
         "correct_gcn",
         "correct_gin",
+        "indicator_agree",
         "outcome",
     ]
     with path.open("w", encoding="utf-8", newline="") as fh:
@@ -357,6 +455,9 @@ def _write_per_graph_csv(rows: Sequence[GraphPairOutcome], path: Path) -> None:
                     "pred_gin": r.pred_gin,
                     "correct_gcn": int(r.correct_gcn),
                     "correct_gin": int(r.correct_gin),
+                    "indicator_agree": (
+                        "" if r.indicator_agree is None else int(r.indicator_agree)
+                    ),
                     "outcome": r.outcome,
                 },
             )
@@ -427,16 +528,71 @@ def _mean_summary_across_seeds(
     return out
 
 
-def _plot_pairwise_comparison(
+def _mean_stratified_across_seeds(
+    rows: Sequence[GraphPairOutcome],
+    *,
+    lr_tag: str,
+) -> dict[tuple[str, int, SignStratum], dict[str, float]]:
+    """Mean outcome fractions across seeds for each (track, τ, stratum)."""
+    grouped: dict[tuple[str, int, SignStratum, int], list[GraphPairOutcome]] = {}
+    for row in rows:
+        if row.lr_tag != lr_tag:
+            continue
+        for tau, stratum in BAR_SPECS:
+            if not _row_matches_stratum(row, tau, stratum):
+                continue
+            grouped.setdefault((row.track, tau, stratum, row.seed), []).append(row)
+
+    out: dict[tuple[str, int, SignStratum], dict[str, float]] = {}
+    by_bucket: dict[tuple[str, int, SignStratum], list[GraphPairOutcome]] = {}
+    for (track, tau, stratum, _seed), seed_rows in grouped.items():
+        by_bucket.setdefault((track, tau, stratum), []).extend(seed_rows)
+
+    for key, bucket_rows in by_bucket.items():
+        seeds = sorted({r.seed for r in bucket_rows})
+        per_seed_fracs: dict[str, list[float]] = {
+            "both_correct": [],
+            "gcn_only": [],
+            "gin_only": [],
+            "both_wrong": [],
+        }
+        for seed in seeds:
+            seed_rows = [r for r in bucket_rows if r.seed == seed]
+            n = len(seed_rows)
+            if n == 0:
+                continue
+            per_seed_fracs["both_correct"].append(
+                sum(1 for r in seed_rows if r.outcome == "both_correct") / n,
+            )
+            per_seed_fracs["gcn_only"].append(
+                sum(1 for r in seed_rows if r.outcome == "gcn_only") / n,
+            )
+            per_seed_fracs["gin_only"].append(
+                sum(1 for r in seed_rows if r.outcome == "gin_only") / n,
+            )
+            per_seed_fracs["both_wrong"].append(
+                sum(1 for r in seed_rows if r.outcome == "both_wrong") / n,
+            )
+        out[key] = {
+            kind: float(np.mean(vals)) if vals else 0.0
+            for kind, vals in per_seed_fracs.items()
+        }
+    return out
+
+
+def _plot_pairwise_comparison_legacy(
     summary: Sequence[PairwiseSummaryRow],
     out_path: Path,
     *,
     lr_tag: str,
     dpi: int,
+    title_suffix: str = "",
 ) -> None:
-    """Stacked bar chart of 4-way pairwise outcomes by track and τ."""
+    """Legacy 2-bar plot from aggregated summary rows (pairs-only fallback)."""
     means = _mean_summary_across_seeds(summary)
-    tracks = sorted({s.track for s in summary})
+    summary_tracks = {s.track for s in summary}
+    tracks = [t for t in TRACK_ORDER if t in summary_tracks]
+    tracks.extend(sorted(summary_tracks - set(tracks)))
     tau_labels = {0: r"$\tau{=}0$ (GCN-type)", 1: r"$\tau{=}1$ (GIN-type)"}
     colors = {
         "both_correct": "#B8B8B8",
@@ -452,15 +608,17 @@ def _plot_pairwise_comparison(
     }
     order: tuple[OutcomeKind, ...] = ("both_correct", "gcn_only", "gin_only", "both_wrong")
 
-    fig, axes = plt.subplots(1, len(tracks), figsize=(5.5 * len(tracks), 5.0), squeeze=False)
+    fig, axes = plt.subplots(len(tracks), 1, figsize=(6.8, 5.0 * len(tracks)), squeeze=False)
     x = np.array([0, 1])
     bar_w = 0.55
+    legend_handles: list = []
+    legend_labels: list[str] = []
 
-    for ax, track in zip(axes[0], tracks, strict=True):
+    for ax_idx, (ax, track) in enumerate(zip(axes[:, 0], tracks, strict=True)):
         bottom = np.zeros(2)
         for kind in order:
             vals = np.array([means.get((track, tau), {}).get(kind, 0.0) for tau in (0, 1)])
-            ax.bar(
+            bars = ax.bar(
                 x,
                 vals,
                 bar_w,
@@ -483,27 +641,195 @@ def _plot_pairwise_comparison(
                         fontweight="bold",
                     )
             bottom += vals
+            if ax_idx == 0:
+                legend_handles.append(bars[0])
+                legend_labels.append(labels[kind])
 
         ax.set_xticks(x)
         ax.set_xticklabels([tau_labels[t] for t in (0, 1)])
         ax.set_ylim(0, 1.02)
         ax.set_ylabel("Fraction of test graphs")
-        ax.set_title("Toy (routing convs)" if track == "toy" else "Sigma (PyG GIN/GCN)")
+        ax.set_title(TRACK_LABELS.get(track, track))
         ax.grid(axis="y", alpha=0.22)
 
-    handles, legend_labels = axes[0, 0].get_legend_handles_labels()
-    fig.legend(handles, legend_labels, loc="upper center", ncol=4, bbox_to_anchor=(0.5, 1.02), frameon=False)
-    fig.suptitle(
-        f"GCN-only vs GIN-only per-graph outcomes (5-seed mean, {lr_tag}, test)",
-        y=1.08,
-        fontsize=12,
-        fontweight="bold",
+    fig.legend(
+        legend_handles,
+        legend_labels,
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.02),
+        ncol=4,
+        frameon=True,
+        framealpha=0.95,
     )
-    fig.tight_layout()
+    fig.suptitle(
+        f"GCN-only vs GIN-only per-graph outcomes (5-seed mean, "
+        f"{_format_lr_tag(lr_tag)}, test){title_suffix}",
+        y=1.02,
+        fontsize=12,
+    )
+    fig.tight_layout(rect=(0.0, 0.06, 1.0, 0.98))
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=dpi, bbox_inches="tight")
     fig.savefig(out_path.with_suffix(".pdf"), bbox_inches="tight")
     plt.close(fig)
+
+
+def _plot_pairwise_comparison(
+    data: Sequence[GraphPairOutcome] | Sequence[PairwiseSummaryRow],
+    out_path: Path,
+    *,
+    lr_tag: str,
+    dpi: int,
+    title_suffix: str = "",
+) -> None:
+    """Stacked bar chart of 4-way pairwise outcomes with τ × sign-stratum bars."""
+    if data and isinstance(data[0], PairwiseSummaryRow):
+        _plot_pairwise_comparison_legacy(
+            data,  # type: ignore[arg-type]
+            out_path,
+            lr_tag=lr_tag,
+            dpi=dpi,
+            title_suffix=title_suffix,
+        )
+        return
+
+    per_graph = data  # type: ignore[assignment]
+    means = _mean_stratified_across_seeds(per_graph, lr_tag=lr_tag)
+    summary_tracks = {r.track for r in per_graph}
+    tracks = [t for t in TRACK_ORDER if t in summary_tracks]
+    tracks.extend(sorted(summary_tracks - set(tracks)))
+    colors = {
+        "both_correct": "#B8B8B8",
+        "gcn_only": "#4C72B0",
+        "gin_only": "#55A868",
+        "both_wrong": "#C44E52",
+    }
+    labels = {
+        "both_correct": "Both correct",
+        "gcn_only": "Only GCN correct",
+        "gin_only": "Only GIN correct",
+        "both_wrong": "Both wrong",
+    }
+    order: tuple[OutcomeKind, ...] = ("both_correct", "gcn_only", "gin_only", "both_wrong")
+
+    n_bars = len(BAR_SPECS)
+    fig, axes = plt.subplots(
+        len(tracks),
+        1,
+        figsize=(9.0, 5.0 * len(tracks)),
+        squeeze=False,
+    )
+    x = np.arange(n_bars)
+    bar_w = 0.72
+    legend_handles: list = []
+    legend_labels: list[str] = []
+
+    for ax_idx, (ax, track) in enumerate(zip(axes[:, 0], tracks, strict=True)):
+        bottom = np.zeros(n_bars)
+        for kind in order:
+            vals = np.array(
+                [
+                    means.get((track, tau, stratum), {}).get(kind, 0.0)
+                    for tau, stratum in BAR_SPECS
+                ],
+            )
+            bars = ax.bar(
+                x,
+                vals,
+                bar_w,
+                bottom=bottom,
+                label=labels[kind],
+                color=colors[kind],
+                edgecolor="white",
+                linewidth=0.5,
+            )
+            for i, v in enumerate(vals):
+                if v >= 0.04:
+                    ax.text(
+                        x[i],
+                        bottom[i] + v / 2,
+                        f"{100 * v:.0f}%",
+                        ha="center",
+                        va="center",
+                        fontsize=7,
+                        color="white" if kind != "both_correct" else "black",
+                        fontweight="bold",
+                    )
+            bottom += vals
+            if ax_idx == 0:
+                legend_handles.append(bars[0])
+                legend_labels.append(labels[kind])
+
+        ax.set_xticks(x)
+        ax.set_xticklabels(
+            [BAR_LABELS[(tau, stratum)] for tau, stratum in BAR_SPECS],
+            rotation=28,
+            ha="right",
+            fontsize=8,
+        )
+        ax.set_ylim(0, 1.02)
+        ax.set_ylabel("Fraction of test graphs")
+        ax.set_title(TRACK_LABELS.get(track, track))
+        ax.axvline(2.5, color="gray", linestyle=":", linewidth=0.8, alpha=0.6)
+        ax.grid(axis="y", alpha=0.22)
+
+    fig.legend(
+        legend_handles,
+        legend_labels,
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.02),
+        ncol=4,
+        frameon=True,
+        framealpha=0.95,
+    )
+    fig.suptitle(
+        f"GCN-only vs GIN-only per-graph outcomes (5-seed mean, "
+        f"{_format_lr_tag(lr_tag)}, test; stratified by "
+        r"$\mathbb{1}(s_{\mathrm{GCN}}{>}0)$ vs $\mathbb{1}(s_{\mathrm{GIN}}{>}0)$)"
+        f"{title_suffix}",
+        y=1.01,
+        fontsize=12,
+    )
+    fig.tight_layout(rect=(0.0, 0.08, 1.0, 0.98))
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_path, dpi=dpi, bbox_inches="tight")
+    fig.savefig(out_path.with_suffix(".pdf"), bbox_inches="tight")
+    plt.close(fig)
+
+
+def _load_per_graph_csv(
+    path: Path,
+    *,
+    lr_tag: str | None = None,
+) -> list[GraphPairOutcome]:
+    """Load ``pairwise_baseline_per_graph.csv``."""
+    rows: list[GraphPairOutcome] = []
+    with path.open(encoding="utf-8", newline="") as fh:
+        for raw in csv.DictReader(fh):
+            if lr_tag is not None and raw["lr_tag"] != lr_tag:
+                continue
+            indicator_raw = raw.get("indicator_agree", "")
+            indicator_agree: Optional[bool]
+            if indicator_raw == "":
+                indicator_agree = None
+            else:
+                indicator_agree = bool(int(indicator_raw))
+            rows.append(
+                GraphPairOutcome(
+                    track=str(raw["track"]),
+                    lr_tag=str(raw["lr_tag"]),
+                    seed=int(raw["seed"]),
+                    graph_idx=int(raw["graph_idx"]),
+                    tau=int(raw["tau"]),
+                    label=int(raw["label"]),
+                    pred_gcn=int(raw["pred_gcn"]),
+                    pred_gin=int(raw["pred_gin"]),
+                    correct_gcn=bool(int(raw["correct_gcn"])),
+                    correct_gin=bool(int(raw["correct_gin"])),
+                    indicator_agree=indicator_agree,
+                ),
+            )
+    return rows
 
 
 def _load_summary_csv(path: Path) -> list[PairwiseSummaryRow]:
@@ -533,12 +859,26 @@ def plot_from_summary_csv(
     *,
     lr_tag: str = "lr001",
     dpi: int = 160,
+    dataset_dir: str | None = None,
 ) -> None:
-    """Regenerate fig05 from an existing summary CSV."""
-    summary = [r for r in _load_summary_csv(summary_path) if r.lr_tag == lr_tag]
-    if not summary:
-        raise FileNotFoundError(f"No rows for lr_tag={lr_tag} in {summary_path}")
-    _plot_pairwise_comparison(summary, out_path, lr_tag=lr_tag, dpi=dpi)
+    """Regenerate stratified fig05 from per-graph CSV (+ test score metadata)."""
+    per_graph_path = summary_path.parent / "pairwise_baseline_per_graph.csv"
+    if not per_graph_path.is_file():
+        summary = [r for r in _load_summary_csv(summary_path) if r.lr_tag == lr_tag]
+        if not summary:
+            raise FileNotFoundError(f"No rows for lr_tag={lr_tag} in {summary_path}")
+        _plot_pairwise_comparison_legacy(summary, out_path, lr_tag=lr_tag, dpi=dpi)
+        return
+
+    resolved_dataset_dir = dataset_dir or os.environ.get(
+        "GNNPLUS_DATASET_DIR",
+        "results/gcn_gin_routing/data",
+    )
+    per_graph = _load_per_graph_csv(per_graph_path, lr_tag=lr_tag)
+    if not per_graph:
+        raise FileNotFoundError(f"No per-graph rows for lr_tag={lr_tag} in {per_graph_path}")
+    per_graph = _attach_indicator_agree(per_graph, resolved_dataset_dir)
+    _plot_pairwise_comparison(per_graph, out_path, lr_tag=lr_tag, dpi=dpi)
 
 
 def _print_report(summary: Sequence[PairwiseSummaryRow]) -> None:
@@ -581,6 +921,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     seeds = [int(s.strip()) for s in args.seeds.split(",") if s.strip()]
 
     all_rows: list[GraphPairOutcome] = []
+    indicator_lookup = _load_indicator_agree_lookup(args.dataset_dir)
     for track in tracks:
         for seed in seeds:
             logging.info("Comparing track=%s seed=%d lr=%s", track, seed, args.lr_tag)
@@ -592,6 +933,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
                     results_root,
                     args.dataset_dir,
                     device,
+                    indicator_lookup,
                 ),
             )
 
@@ -602,7 +944,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
 
     _write_per_graph_csv(all_rows, per_graph_path)
     _write_summary_csv(summary, summary_path)
-    _plot_pairwise_comparison(summary, fig_path, lr_tag=args.lr_tag, dpi=args.dpi)
+    _plot_pairwise_comparison(all_rows, fig_path, lr_tag=args.lr_tag, dpi=args.dpi)
     _print_report(summary)
 
     from scripts.synthetic.gcn_gin_routing_table_figures import (  # noqa: WPS433

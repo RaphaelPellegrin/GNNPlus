@@ -6,7 +6,7 @@
 #   export GNNPLUS_DATASET_DIR=...
 #   bash bash_interface/cluster/submit_analyze_opposite_sign_pairs.sh
 #
-# Include SiGMA gated eval (GPU):
+# Include SiGMA gated + ungated eval (GPU; uses CSV for GCN/GIN baselines):
 #   export GCN_GIN_OPPOSITE_INCLUDE_GATED=1
 
 set -euo pipefail
@@ -71,7 +71,7 @@ cat <<EOF
 === Opposite-sign τ pair analysis submitted ===
   JOBID:     ${job_id}
   CSV:       ${from_csv}
-  Gated:     ${include_gated}
+  Gated:     ${include_gated} (1 = SiGMA gated + ungated)
   Output:    ${out_dir}/opposite_sign_pair_summary.csv
   Figure:    ${out_dir}/paper_figures/fig07_opposite_sign_pair_outcomes.png
   Table:     ${out_dir}/paper_figures/fig07_opposite_sign_pair_table.png

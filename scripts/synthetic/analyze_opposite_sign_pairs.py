@@ -57,7 +57,13 @@ ModelKind = Literal[
     "gcn_only",
     "gin_only",
     "gated",
+    "ungated",
 ]
+
+_SIGMA_MODEL_SLUGS: dict[ModelKind, str] = {
+    "gated": "a0g2_gated",
+    "ungated": "a0g2_ungated",
+}
 
 
 @dataclass(frozen=True)
@@ -159,7 +165,12 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument(
         "--include-gated",
         action="store_true",
-        help="Also evaluate SiGMA gated (a0g2_gated); requires --results-root.",
+        help="Evaluate SiGMA gated + ungated (a0g2_*); requires --results-root.",
+    )
+    parser.add_argument(
+        "--include-ungated",
+        action="store_true",
+        help="Evaluate SiGMA ungated only (with --include-gated for both).",
     )
     parser.add_argument(
         "--tracks",
@@ -177,7 +188,13 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         "--seeds",
         type=str,
         default="0,1,2,3,4",
-        help="Comma-separated seeds.",
+        help="Comma-separated seeds for oracle / GCN / GIN (from pairwise CSV).",
+    )
+    parser.add_argument(
+        "--sigma-seeds",
+        type=str,
+        default="0,2,3,4,5",
+        help="Comma-separated seeds for SiGMA gated/ungated checkpoint eval.",
     )
     parser.add_argument(
         "--device",
@@ -331,15 +348,19 @@ def _select_device(choice: str) -> torch.device:
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def _collect_gated_predictions(
+def _collect_sigma_predictions(
     track: str,
     lr_tag: str,
     seed: int,
     results_root: Path,
     dataset_dir: str,
     device: torch.device,
-) -> list[int]:
-    """Return gated model predictions per test graph (loader order)."""
+    *,
+    model: ModelKind,
+) -> Optional[list[int]]:
+    """Return SiGMA hybrid predictions per test graph (loader order)."""
+    if model not in _SIGMA_MODEL_SLUGS:
+        raise ValueError(f"Not a SiGMA model kind: {model}")
     import GNNPlus  # noqa: F401
     from scripts.synthetic.analyze_gcn_gin_routing_results import (  # noqa: E402
         RunRef,
@@ -355,17 +376,18 @@ def _collect_gated_predictions(
     from torch_geometric.graphgym.utils.device import auto_select_device
     from torch_geometric import seed_everything
 
-    lr_num = lr_tag.removeprefix("lr")
-    run_dir = results_root / track / f"a0g2_gated_{lr_tag}_seed{seed}"
+    model_slug = _SIGMA_MODEL_SLUGS[model]
+    run_dir = results_root / track / f"{model_slug}_{lr_tag}_seed{seed}"
     run_ref = RunRef(
         track=track,
         run_dir=run_dir,
-        model="a0g2_gated",
+        model=model_slug,
         lr_tag=lr_tag,
         seed=seed,
     )
     if not run_dir.is_dir():
-        raise FileNotFoundError(f"Missing gated run dir: {run_dir}")
+        logging.warning("Missing SiGMA run dir: %s", run_dir)
+        return None
 
     _load_cfg_for_run(run_ref, dataset_dir)
     seed_everything(int(cfg.seed))
@@ -403,7 +425,7 @@ def _evaluate_pairs_for_model(
     pairs: Sequence[OppositeSignPair],
     model: ModelKind,
     per_graph_lookup: Optional[dict[tuple[str, str, int, int], dict[str, int]]],
-    gated_preds: Optional[Sequence[int]],
+    sigma_preds: Optional[Sequence[int]],
 ) -> list[PairEvalRow]:
     """Evaluate one model on all opposite-sign pairs."""
     rows: list[PairEvalRow] = []
@@ -412,11 +434,11 @@ def _evaluate_pairs_for_model(
             rule = "gcn" if model == "oracle_gcn_rule" else "gin"
             correct_tau0 = _oracle_rule_correct(pair, rule=rule, tau_member=0)
             correct_tau1 = _oracle_rule_correct(pair, rule=rule, tau_member=1)
-        elif model == "gated":
-            if gated_preds is None:
-                raise ValueError("gated_preds required for gated model")
-            pred_tau0 = gated_preds[pair.tau0_idx]
-            pred_tau1 = gated_preds[pair.tau1_idx]
+        elif model in ("gated", "ungated"):
+            if sigma_preds is None:
+                raise ValueError(f"sigma_preds required for {model}")
+            pred_tau0 = sigma_preds[pair.tau0_idx]
+            pred_tau1 = sigma_preds[pair.tau1_idx]
             correct_tau0 = pred_tau0 == pair.label_tau0
             correct_tau1 = pred_tau1 == pair.label_tau1
         else:
@@ -575,7 +597,8 @@ _MODEL_LABELS: dict[ModelKind, str] = {
     "oracle_gin_rule": "Oracle GIN rule",
     "gcn_only": "GCN-only (trained)",
     "gin_only": "GIN-only (trained)",
-    "gated": "SiGMA gated",
+    "gated": "SiGMA",
+    "ungated": "SiGMA ungated",
 }
 
 _MODEL_ORDER: tuple[ModelKind, ...] = (
@@ -584,7 +607,14 @@ _MODEL_ORDER: tuple[ModelKind, ...] = (
     "gcn_only",
     "gin_only",
     "gated",
+    "ungated",
 )
+
+TRACK_ORDER: tuple[str, ...] = ("toy", "sigma")
+TRACK_LABELS: dict[str, str] = {
+    "toy": r"Track A (Toy, $d_h{=}1$)",
+    "sigma": r"Track B (SiGMA, PyG GIN/GCN, $d_h{=}4$)",
+}
 
 _OUTCOME_COLORS = {
     "both_correct": "#55A868",
@@ -610,18 +640,20 @@ def _plot_pair_outcomes(
 ) -> None:
     """Stacked bar chart of pair-level outcomes by track and model."""
     means = _mean_summary_fractions(summary)
-    tracks = sorted({s.track for s in summary}, key=lambda t: (t != "sigma", t))
+    summary_tracks = {s.track for s in summary}
+    tracks = [t for t in TRACK_ORDER if t in summary_tracks]
+    tracks.extend(sorted(summary_tracks - set(tracks)))
     models = [m for m in _MODEL_ORDER if any((t, m) in means for t in tracks)]
     if not models:
         raise ValueError("No summary rows to plot.")
 
-    fig_w = max(8.0, 2.2 * len(models))
-    fig, axes = plt.subplots(1, len(tracks), figsize=(fig_w, 5.2), squeeze=False)
+    fig_w = max(9.0, 1.35 * len(models))
+    fig, axes = plt.subplots(len(tracks), 1, figsize=(fig_w, 5.0 * len(tracks)), squeeze=False)
     x = np.arange(len(models))
     bar_w = 0.62
     order: tuple[PairOutcome, ...] = ("both_correct", "only_tau0", "only_tau1", "both_wrong")
 
-    for ax, track in zip(axes[0], tracks, strict=True):
+    for ax, track in zip(axes[:, 0], tracks, strict=True):
         bottom = np.zeros(len(models))
         for outcome in order:
             vals = np.array([means.get((track, model), {}).get(outcome, 0.0) for model in models])
@@ -653,18 +685,25 @@ def _plot_pair_outcomes(
         ax.set_xticklabels([_MODEL_LABELS[m] for m in models], rotation=28, ha="right")
         ax.set_ylim(0, 1.02)
         ax.set_ylabel("Fraction of opposite-sign pairs")
-        ax.set_title("Toy (routing convs)" if track == "toy" else "Sigma (PyG GIN/GCN)")
+        ax.set_title(TRACK_LABELS.get(track, track))
         ax.grid(axis="y", alpha=0.22)
 
     handles, labels = axes[0, 0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="upper center", ncol=4, bbox_to_anchor=(0.5, 1.02), frameon=False)
-    fig.suptitle(
-        f"Opposite-sign τ pairs: per-pair outcomes (5-seed mean, {lr_tag}, n≈200 pairs/test)",
-        y=1.08,
-        fontsize=12,
-        fontweight="bold",
+    fig.legend(
+        handles,
+        labels,
+        loc="upper center",
+        ncol=4,
+        bbox_to_anchor=(0.5, -0.02),
+        frameon=True,
+        framealpha=0.95,
     )
-    fig.tight_layout()
+    fig.suptitle(
+        f"Opposite-sign τ pairs: per-pair outcomes (5-seed mean, {lr_tag}, n≈228 pairs/test)",
+        y=1.01,
+        fontsize=12,
+    )
+    fig.tight_layout(rect=(0.0, 0.08, 1.0, 0.98))
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=dpi, bbox_inches="tight")
     fig.savefig(out_path.with_suffix(".pdf"), bbox_inches="tight")
@@ -678,7 +717,7 @@ def _print_report(
     """Print human-readable verification summary."""
     means = _mean_summary_fractions(summary)
     print(f"\n=== Opposite-sign pairs (n={len(pairs)} per track, test split) ===\n")
-    for track in sorted({s.track for s in summary}, key=lambda t: (t != "sigma", t)):
+    for track in [t for t in TRACK_ORDER if t in {s.track for s in summary}]:
         print(f"Track: {track}")
         for model in _MODEL_ORDER:
             m = means.get((track, model))
@@ -701,6 +740,8 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     out_dir = Path(args.out_dir)
     tracks = [t.strip() for t in args.tracks.split(",") if t.strip()]
     seeds = [int(s.strip()) for s in args.seeds.split(",") if s.strip()]
+    sigma_seeds = [int(s.strip()) for s in args.sigma_seeds.split(",") if s.strip()]
+    eval_seeds = sorted(set(seeds) | set(sigma_seeds))
     device = _select_device(args.device)
 
     meta = load_test_graph_meta(args.dataset_dir)
@@ -723,46 +764,63 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     if per_graph_lookup is None:
         baseline_models = ()
 
+    sigma_models: tuple[ModelKind, ...] = ()
+    if args.include_gated or args.include_ungated:
+        if args.results_root is None:
+            raise ValueError("SiGMA eval requires --results-root")
+        if args.include_gated:
+            sigma_models = ("gated", "ungated")
+        elif args.include_ungated:
+            sigma_models = ("ungated",)
+
     all_rows: list[PairEvalRow] = []
     for track in tracks:
-        for seed in seeds:
-            gated_preds: Optional[list[int]] = None
-            if args.include_gated:
-                if args.results_root is None:
-                    raise ValueError("--include-gated requires --results-root")
-                logging.info("Evaluating gated track=%s seed=%d", track, seed)
-                gated_preds = _collect_gated_predictions(
-                    track,
-                    args.lr_tag,
-                    seed,
-                    Path(args.results_root),
-                    args.dataset_dir,
-                    device,
-                )
+        for seed in eval_seeds:
+            sigma_preds_by_model: dict[ModelKind, list[int]] = {}
+            if seed in sigma_seeds:
+                for sigma_model in sigma_models:
+                    logging.info(
+                        "Evaluating SiGMA %s track=%s seed=%d",
+                        sigma_model,
+                        track,
+                        seed,
+                    )
+                    preds = _collect_sigma_predictions(
+                        track,
+                        args.lr_tag,
+                        seed,
+                        Path(args.results_root),  # type: ignore[arg-type]
+                        args.dataset_dir,
+                        device,
+                        model=sigma_model,
+                    )
+                    if preds is not None:
+                        sigma_preds_by_model[sigma_model] = preds
 
-            for model in ("oracle_gcn_rule", "oracle_gin_rule", *baseline_models):
+            if seed in seeds:
+                for model in ("oracle_gcn_rule", "oracle_gin_rule", *baseline_models):
+                    all_rows.extend(
+                        _evaluate_pairs_for_model(
+                            track=track,
+                            lr_tag=args.lr_tag,
+                            seed=seed,
+                            pairs=pairs,
+                            model=model,  # type: ignore[arg-type]
+                            per_graph_lookup=per_graph_lookup,
+                            sigma_preds=None,
+                        ),
+                    )
+
+            for sigma_model, preds in sigma_preds_by_model.items():
                 all_rows.extend(
                     _evaluate_pairs_for_model(
                         track=track,
                         lr_tag=args.lr_tag,
                         seed=seed,
                         pairs=pairs,
-                        model=model,  # type: ignore[arg-type]
+                        model=sigma_model,
                         per_graph_lookup=per_graph_lookup,
-                        gated_preds=None,
-                    ),
-                )
-
-            if args.include_gated and gated_preds is not None:
-                all_rows.extend(
-                    _evaluate_pairs_for_model(
-                        track=track,
-                        lr_tag=args.lr_tag,
-                        seed=seed,
-                        pairs=pairs,
-                        model="gated",
-                        per_graph_lookup=per_graph_lookup,
-                        gated_preds=gated_preds,
+                        sigma_preds=preds,
                     ),
                 )
 

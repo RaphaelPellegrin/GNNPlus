@@ -328,7 +328,8 @@ _OPPOSITE_SIGN_MODEL_LABELS: dict[str, str] = {
     "oracle_gin_rule": "Oracle GIN rule",
     "gcn_only": "GCN-only",
     "gin_only": "GIN-only",
-    "gated": "SiGMA gated",
+    "gated": "SiGMA",
+    "ungated": "SiGMA ungated",
 }
 
 _OPPOSITE_SIGN_MODEL_ORDER: tuple[str, ...] = (
@@ -337,7 +338,13 @@ _OPPOSITE_SIGN_MODEL_ORDER: tuple[str, ...] = (
     "gcn_only",
     "gin_only",
     "gated",
+    "ungated",
 )
+
+_OPPOSITE_SIGN_TRACK_LABELS: dict[str, str] = {
+    "toy": "Track A (toy)",
+    "sigma": "Track B (σ)",
+}
 
 
 def opposite_sign_pair_table_rows(
@@ -354,9 +361,11 @@ def opposite_sign_pair_table_rows(
     for row in filtered:
         grouped.setdefault((row.track, row.model), []).append(row)
 
-    track_order = sorted({r.track for r in filtered}, key=lambda t: (t != "sigma", t))
+    track_order = [t for t in ("toy", "sigma") if any(r.track == t for r in filtered)]
+    track_order.extend(sorted({r.track for r in filtered} - set(track_order)))
     rows: list[list[str]] = []
     for track in track_order:
+        track_label = _OPPOSITE_SIGN_TRACK_LABELS.get(track, track)
         for model in _OPPOSITE_SIGN_MODEL_ORDER:
             subset = grouped.get((track, model))
             if not subset:
@@ -368,7 +377,7 @@ def opposite_sign_pair_table_rows(
             }
             rows.append(
                 [
-                    track,
+                    track_label,
                     _OPPOSITE_SIGN_MODEL_LABELS.get(model, model),
                     str(n_pairs),
                     f"{100 * means['both_correct']:.1f}%",

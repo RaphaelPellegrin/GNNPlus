@@ -560,30 +560,66 @@ def _plot_baseline_per_type(
     plt.close(fig)
 
 
-def _plot_gates_by_type(rows: Sequence[RunMetrics], out_path: Path) -> None:
-    """Box-style bar plot of root gates for gated models (mean per run, grouped)."""
-    gated = [r for r in rows if r.model == "a0g2_gated" and r.has_gates]
+TRACK_ORDER: tuple[str, ...] = ("toy", "sigma")
+GATE_BY_TYPE_TRACK_LABELS: dict[str, str] = {
+    "toy": r"Track A (Toy, $d_h{=}1$)",
+    "sigma": r"Track B (SiGMA, PyG GIN/GCN, $d_h{=}4$)",
+}
+# GIN / GCN head colors (τ=0 full, τ=1 lighter) — unchanged from original figure.
+GATE_BAR_COLORS: tuple[str, ...] = ("#55A868", "#55A868", "#4C72B0", "#4C72B0")
+GATE_BAR_ALPHAS: tuple[float, ...] = (1.0, 0.55, 1.0, 0.55)
+
+
+def _format_lr_tag(lr_tag: str) -> str:
+    """Format ``lr001`` as ``$\\mathrm{LR}=10^{-3}$`` for figure titles."""
+    if lr_tag.startswith("lr") and lr_tag[2:].isdigit():
+        exponent = -len(lr_tag[2:])
+        return rf"$\mathrm{{LR}}=10^{{{exponent}}}$"
+    return rf"$\mathrm{{LR}}={lr_tag}$"
+
+
+def _plot_gates_by_type(
+    rows: Sequence[RunMetrics],
+    out_path: Path,
+    *,
+    lr_tag: str = "lr001",
+    dpi: int = 160,
+) -> None:
+    """Bar plot of root gates for gated models (mean ± std over seeds)."""
+    gated = [
+        r
+        for r in rows
+        if r.model == "a0g2_gated" and r.has_gates and r.lr_tag == lr_tag
+    ]
     if not gated:
         logging.warning("No gated runs with gate stats — skipping gate figure.")
         return
 
-    tracks = sorted({r.track for r in gated})
-    fig, axes = plt.subplots(1, len(tracks), figsize=(5.0 * len(tracks), 4.2), squeeze=False)
+    available = {r.track for r in gated}
+    tracks = [t for t in TRACK_ORDER if t in available]
+    tracks.extend(sorted(available - set(tracks)))
+
+    fig, axes = plt.subplots(1, len(tracks), figsize=(6.8 * len(tracks), 5.0), squeeze=False)
+    labels = [
+        r"$\tau{=}0$ GIN $\gamma$",
+        r"$\tau{=}1$ GIN $\gamma$",
+        r"$\tau{=}0$ GCN $\gamma$",
+        r"$\tau{=}1$ GCN $\gamma$",
+    ]
+    keys = [(0, "GIN"), (1, "GIN"), (0, "GCN"), (1, "GCN")]
+    bar_colors = [
+        to_rgba(c, a)
+        for c, a in zip(GATE_BAR_COLORS, GATE_BAR_ALPHAS, strict=True)
+    ]
 
     for ax, track in zip(axes[0], tracks, strict=True):
         subset = [r for r in gated if r.track == track]
-        # Mean over seeds for each (tau, head) combination.
         series = {
             (0, "GIN"): [r.gin_gate_tau0 for r in subset],
             (1, "GIN"): [r.gin_gate_tau1 for r in subset],
             (0, "GCN"): [r.gcn_gate_tau0 for r in subset],
             (1, "GCN"): [r.gcn_gate_tau1 for r in subset],
         }
-        labels = [r"$\tau=0$ GIN $\gamma$", r"$\tau=1$ GIN $\gamma$", r"$\tau=0$ GCN $\gamma$", r"$\tau=1$ GCN $\gamma$"]
-        keys = [(0, "GIN"), (1, "GIN"), (0, "GCN"), (1, "GCN")]
-        colors = ["#55A868", "#55A868", "#4C72B0", "#4C72B0"]
-        alphas = [1.0, 0.55, 1.0, 0.55]
-        bar_colors = [to_rgba(c, a) for c, a in zip(colors, alphas, strict=True)]
         x = list(range(len(keys)))
         means = [float(mean(series[k])) if series[k] else float("nan") for k in keys]
         stds = [
@@ -597,18 +633,23 @@ def _plot_gates_by_type(rows: Sequence[RunMetrics], out_path: Path) -> None:
             color=bar_colors,
             edgecolor="black",
             linewidth=0.6,
+            error_kw={"elinewidth": 1.0, "capthick": 1.0, "ecolor": "#333333"},
         )
         ax.set_xticks(x)
         ax.set_xticklabels(labels, rotation=20, ha="right", fontsize=9)
         ax.set_ylim(0.0, 1.05)
         ax.set_ylabel(r"Root gate $\gamma$ (layer 0)")
-        ax.set_title(f"Track {track} — SiGMA gated")
-        ax.grid(axis="y", alpha=0.25)
+        ax.set_title(GATE_BY_TYPE_TRACK_LABELS.get(track, track))
+        ax.grid(axis="y", alpha=0.22)
 
-    fig.suptitle("Mean root MP gate by graph type (seed mean ± std)", y=1.02, fontsize=12)
-    fig.tight_layout()
+    fig.suptitle(
+        f"Mean root MP gate by graph type (5-seed mean ± std, {_format_lr_tag(lr_tag)})",
+        y=1.02,
+        fontsize=12,
+    )
+    fig.tight_layout(rect=(0.0, 0.0, 1.0, 0.98))
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out_path, dpi=160, bbox_inches="tight")
+    fig.savefig(out_path, dpi=dpi, bbox_inches="tight")
     fig.savefig(out_path.with_suffix(".pdf"), bbox_inches="tight")
     plt.close(fig)
 
@@ -639,7 +680,11 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         summary = _summarize_runs(metrics)
         logging.info("Loaded %d runs from %s (plots only)", len(metrics), per_run_csv)
         _plot_baseline_per_type(summary, out_dir / "fig_baseline_per_type.png")
-        _plot_gates_by_type(metrics, out_dir / "fig_gate_by_type.png")
+        _plot_gates_by_type(
+            metrics,
+            out_dir / "fig_gate_by_type.png",
+            lr_tag=args.lr_tag or "lr001",
+        )
         logging.info("Wrote figures to %s", out_dir)
         return
 
@@ -697,7 +742,11 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         _write_csv(out_dir / "summary_by_model.csv", summary, summary_fields)
 
     _plot_baseline_per_type(summary, out_dir / "fig_baseline_per_type.png")
-    _plot_gates_by_type(metrics, out_dir / "fig_gate_by_type.png")
+    _plot_gates_by_type(
+        metrics,
+        out_dir / "fig_gate_by_type.png",
+        lr_tag=args.lr_tag or "lr001",
+    )
 
     logging.info("Wrote analysis to %s", out_dir)
     print(f"\nAnalysis saved to: {out_dir.resolve()}")
