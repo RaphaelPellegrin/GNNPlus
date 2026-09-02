@@ -40,7 +40,9 @@ seed_offset="${PAPER_T5_CLUSTER_SEED_OFFSET:-0}"
 include_sigma="${PAPER_T5_CLUSTER_INCLUDE_SIGMA:-0}"
 
 if [ -n "${PAPER_T5_CLUSTER_VARIANT_INDICES:-}" ]; then
-    IFS=',' read -r -a variant_list <<< "${PAPER_T5_CLUSTER_VARIANT_INDICES}"
+    # sbatch --export splits on commas; submit scripts pass hyphen-separated indices.
+    variant_indices_norm="$(echo "${PAPER_T5_CLUSTER_VARIANT_INDICES}" | tr ',;' '-')"
+    IFS='-' read -r -a variant_list <<< "${variant_indices_norm}"
 elif [ "${include_sigma}" = "1" ]; then
     variant_list=(0 1 2 3 4 5)
 else
@@ -56,7 +58,12 @@ fi
 
 idx=$((task_id - 1))
 seed=$((seed_offset + (idx % num_seeds)))
-variant_idx="${variant_list[$((idx / num_seeds))]}"
+variant_slot=$((idx / num_seeds))
+if [ "${variant_slot}" -ge "${num_variants}" ]; then
+    log_message "task_id=${task_id}: variant slot ${variant_slot} out of range (num_variants=${num_variants}, indices=${PAPER_T5_CLUSTER_VARIANT_INDICES:-default})"
+    exit 1
+fi
+variant_idx="${variant_list[variant_slot]}"
 
 ds_tag="cluster"
 cfg="configs/gated_hybrid/cluster-hybrid-ht9bntg2-anchor.yaml"
