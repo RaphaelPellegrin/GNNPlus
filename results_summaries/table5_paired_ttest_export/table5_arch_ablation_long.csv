@@ -1,0 +1,206 @@
+dataset_key,dataset_label,model_key,model_label,is_sigma_baseline,higher_better,display_unit,seed,metric_raw,metric_display,wandb_group,wandb_run_id,wandb_run_name
+peptides_func,Peptides-func,SiGMA,SiGMA,True,True,AP,0,0.71771,0.71771,paper_T6_peptides_func_Homog_MP,n3beo5px,paper_T6_peptides_func_Homog_MP_seed0_job32717625_6
+peptides_func,Peptides-func,SiGMA,SiGMA,True,True,AP,1,0.70656,0.70656,paper_T6_peptides_func_Homog_MP,3ml8knbb,paper_T6_peptides_func_Homog_MP_seed1_job32717625_7
+peptides_func,Peptides-func,SiGMA,SiGMA,True,True,AP,2,0.70008,0.70008,paper_T6_peptides_func_Homog_MP,arwwdn0h,paper_T6_peptides_func_Homog_MP_seed2_job32717625_8
+peptides_func,Peptides-func,SiGMA,SiGMA,True,True,AP,3,0.70684,0.70684,paper_T6_peptides_func_Homog_MP,x0o2k4og,paper_T6_peptides_func_Homog_MP_seed3_job32717625_9
+peptides_func,Peptides-func,SiGMA,SiGMA,True,True,AP,4,0.70891,0.70891,paper_T6_peptides_func_Homog_MP,n5ngw5j2,paper_T6_peptides_func_Homog_MP_seed4_job32717625_10
+peptides_func,Peptides-func,MP_only,MP-only,False,True,AP,0,0.70032,0.70032,paper_T5_peptides_func_MP_only,aher2dd5,paper_T5_peptides_func_MP_only_seed0_job32232124_16
+peptides_func,Peptides-func,MP_only,MP-only,False,True,AP,1,0.69212,0.69212,paper_T5_peptides_func_MP_only,14rua66v,paper_T5_peptides_func_MP_only_seed1_job32232124_17
+peptides_func,Peptides-func,MP_only,MP-only,False,True,AP,2,0.69579,0.69579,paper_T5_peptides_func_MP_only,kdnmfazv,paper_T5_peptides_func_MP_only_seed2_job32232124_18
+peptides_func,Peptides-func,MP_only,MP-only,False,True,AP,3,0.69347,0.69347,paper_T5_peptides_func_MP_only,t6lwmwq0,paper_T5_peptides_func_MP_only_seed3_job32232124_19
+peptides_func,Peptides-func,MP_only,MP-only,False,True,AP,4,0.70104,0.70104,paper_T5_peptides_func_MP_only,sz9k91gz,paper_T5_peptides_func_MP_only_seed4_job32232124_20
+peptides_func,Peptides-func,Attn_only,Attention-only,False,True,AP,0,0.70633,0.70633,paper_T5_peptides_func_Attn_only,5zdeztyp,paper_T5_peptides_func_Attn_only_seed0_job32232124_11
+peptides_func,Peptides-func,Attn_only,Attention-only,False,True,AP,1,0.68282,0.68282,paper_T5_peptides_func_Attn_only,ahq24r6v,paper_T5_peptides_func_Attn_only_seed1_job32232124_12
+peptides_func,Peptides-func,Attn_only,Attention-only,False,True,AP,2,0.7052,0.7052,paper_T5_peptides_func_Attn_only,poymipso,paper_T5_peptides_func_Attn_only_seed2_job32232124_13
+peptides_func,Peptides-func,Attn_only,Attention-only,False,True,AP,3,0.71393,0.71393,paper_T5_peptides_func_Attn_only,w4d1vx0h,paper_T5_peptides_func_Attn_only_seed3_job32232124_14
+peptides_func,Peptides-func,Attn_only,Attention-only,False,True,AP,4,0.69074,0.69074,paper_T5_peptides_func_Attn_only,mruf0qp4,paper_T5_peptides_func_Attn_only_seed4_job32232124_15
+peptides_func,Peptides-func,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,AP,0,0.71446,0.71446,paper_T5_peptides_func_SiGMA_attn_gate,qyl6018y,paper_T5_peptides_func_SiGMA_attn_gate_seed0_job35354579_1
+peptides_func,Peptides-func,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,AP,1,0.6953,0.6953,paper_T5_peptides_func_SiGMA_attn_gate,dsi38m8q,paper_T5_peptides_func_SiGMA_attn_gate_seed1_job35354579_2
+peptides_func,Peptides-func,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,AP,2,0.70647,0.70647,paper_T5_peptides_func_SiGMA_attn_gate,b7yan22m,paper_T5_peptides_func_SiGMA_attn_gate_seed2_job35354579_3
+peptides_func,Peptides-func,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,AP,3,0.69109,0.69109,paper_T5_peptides_func_SiGMA_attn_gate,f3cckyxo,paper_T5_peptides_func_SiGMA_attn_gate_seed3_job35354579_4
+peptides_func,Peptides-func,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,AP,4,0.70504,0.70504,paper_T5_peptides_func_SiGMA_attn_gate,1ziemtf4,paper_T5_peptides_func_SiGMA_attn_gate_seed4_job35354579_5
+peptides_func,Peptides-func,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,AP,0,0.68851,0.68851,paper_T5_peptides_func_SiGMA_ungated_attn,oj2mvrxs,paper_T5_peptides_func_SiGMA_ungated_attn_seed0_job36605829_1
+peptides_func,Peptides-func,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,AP,1,0.68944,0.68944,paper_T5_peptides_func_SiGMA_ungated_attn,5tn0wtxv,paper_T5_peptides_func_SiGMA_ungated_attn_seed1_job36605829_2
+peptides_func,Peptides-func,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,AP,2,0.68696,0.68696,paper_T5_peptides_func_SiGMA_ungated_attn,7kso3bn5,paper_T5_peptides_func_SiGMA_ungated_attn_seed2_job36605829_3
+peptides_func,Peptides-func,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,AP,3,0.68072,0.68072,paper_T5_peptides_func_SiGMA_ungated_attn,ftyqkuuq,paper_T5_peptides_func_SiGMA_ungated_attn_seed3_job36605829_4
+peptides_func,Peptides-func,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,AP,4,0.70352,0.70352,paper_T5_peptides_func_SiGMA_ungated_attn,cajg24wv,paper_T5_peptides_func_SiGMA_ungated_attn_seed4_job36605829_5
+peptides_func,Peptides-func,SiGMA_ungated,"SiGMA, ungated",False,True,AP,0,0.69335,0.69335,paper_T5_peptides_func_SiGMA_ungated,hil8dko6,paper_T5_peptides_func_SiGMA_ungated_seed0_job32232124_6
+peptides_func,Peptides-func,SiGMA_ungated,"SiGMA, ungated",False,True,AP,1,0.68141,0.68141,paper_T5_peptides_func_SiGMA_ungated,spvg6xel,paper_T5_peptides_func_SiGMA_ungated_seed1_job32232124_7
+peptides_func,Peptides-func,SiGMA_ungated,"SiGMA, ungated",False,True,AP,2,0.6891,0.6891,paper_T5_peptides_func_SiGMA_ungated,u9lhvk2u,paper_T5_peptides_func_SiGMA_ungated_seed2_job32232124_8
+peptides_func,Peptides-func,SiGMA_ungated,"SiGMA, ungated",False,True,AP,3,0.67632,0.67632,paper_T5_peptides_func_SiGMA_ungated,0nhmq5ot,paper_T5_peptides_func_SiGMA_ungated_seed3_job32232124_9
+peptides_func,Peptides-func,SiGMA_ungated,"SiGMA, ungated",False,True,AP,4,0.69203,0.69203,paper_T5_peptides_func_SiGMA_ungated,jdcqh4x8,paper_T5_peptides_func_SiGMA_ungated_seed4_job32232124_10
+peptides_struct,Peptides-struct,SiGMA,SiGMA,True,False,MAE,0,0.24275,0.24275,paper_bestmodel_v2_peptides_struct_g3bsaq32_b7m0_ep250,joskj6gk,peptides_struct_hybrid_g3bsaq32_b7m0_seed0_ep250_job28593691_1
+peptides_struct,Peptides-struct,SiGMA,SiGMA,True,False,MAE,1,0.24456,0.24456,paper_bestmodel_v2_peptides_struct_g3bsaq32_b7m0_ep250,9vpas7oc,peptides_struct_hybrid_g3bsaq32_b7m0_seed1_ep250_job28593691_2
+peptides_struct,Peptides-struct,SiGMA,SiGMA,True,False,MAE,2,0.24498,0.24498,paper_bestmodel_v2_peptides_struct_g3bsaq32_b7m0_ep250,uh3uel3v,peptides_struct_hybrid_g3bsaq32_b7m0_seed2_ep250_job28593691_3
+peptides_struct,Peptides-struct,SiGMA,SiGMA,True,False,MAE,3,0.2444,0.2444,paper_bestmodel_v2_peptides_struct_g3bsaq32_b7m0_ep250,78a665x8,peptides_struct_hybrid_g3bsaq32_b7m0_seed3_ep250_job28593691_4
+peptides_struct,Peptides-struct,SiGMA,SiGMA,True,False,MAE,4,0.24542,0.24542,paper_bestmodel_v2_peptides_struct_g3bsaq32_b7m0_ep250,zdss5uhy,peptides_struct_hybrid_g3bsaq32_b7m0_seed4_ep250_job28593691_5
+peptides_struct,Peptides-struct,MP_only,MP-only,False,False,MAE,0,0.2475,0.2475,paper_T5_peptides_struct_MP_only,7lkytgcj,paper_T5_peptides_struct_MP_only_seed0_job32232124_36
+peptides_struct,Peptides-struct,MP_only,MP-only,False,False,MAE,1,0.24671,0.24671,paper_T5_peptides_struct_MP_only,yvr0p7wa,paper_T5_peptides_struct_MP_only_seed1_job32232124_37
+peptides_struct,Peptides-struct,MP_only,MP-only,False,False,MAE,2,0.24636,0.24636,paper_T5_peptides_struct_MP_only,6vaatow3,paper_T5_peptides_struct_MP_only_seed2_job32232124_38
+peptides_struct,Peptides-struct,MP_only,MP-only,False,False,MAE,3,0.24927,0.24927,paper_T5_peptides_struct_MP_only,wnzsm8rr,paper_T5_peptides_struct_MP_only_seed3_job32232124_39
+peptides_struct,Peptides-struct,MP_only,MP-only,False,False,MAE,4,0.24808,0.24808,paper_T5_peptides_struct_MP_only,1j5pld34,paper_T5_peptides_struct_MP_only_seed4_job32232124_40
+peptides_struct,Peptides-struct,Attn_only,Attention-only,False,False,MAE,0,0.27847,0.27847,paper_T5_peptides_struct_Attn_only,qeyqumso,paper_T5_peptides_struct_Attn_only_seed0_job32232124_31
+peptides_struct,Peptides-struct,Attn_only,Attention-only,False,False,MAE,1,0.25627,0.25627,paper_T5_peptides_struct_Attn_only,dw27g9sw,paper_T5_peptides_struct_Attn_only_seed1_job32232124_32
+peptides_struct,Peptides-struct,Attn_only,Attention-only,False,False,MAE,2,0.2622,0.2622,paper_T5_peptides_struct_Attn_only,e9xnruv3,paper_T5_peptides_struct_Attn_only_seed2_job32232124_33
+peptides_struct,Peptides-struct,Attn_only,Attention-only,False,False,MAE,3,0.26713,0.26713,paper_T5_peptides_struct_Attn_only,43pmbscx,paper_T5_peptides_struct_Attn_only_seed3_job32232124_34
+peptides_struct,Peptides-struct,Attn_only,Attention-only,False,False,MAE,4,0.27253,0.27253,paper_T5_peptides_struct_Attn_only,sw8wwcbx,paper_T5_peptides_struct_Attn_only_seed4_job32232124_35
+peptides_struct,Peptides-struct,SiGMA_attn_gate,"SiGMA, ung. MP",False,False,MAE,0,0.25138,0.25138,paper_T5_peptides_struct_SiGMA_attn_gate,ptoj5592,paper_T5_peptides_struct_SiGMA_attn_gate_seed0_job35354579_6
+peptides_struct,Peptides-struct,SiGMA_attn_gate,"SiGMA, ung. MP",False,False,MAE,1,0.24801,0.24801,paper_T5_peptides_struct_SiGMA_attn_gate,h92hupzz,paper_T5_peptides_struct_SiGMA_attn_gate_seed1_job35354579_7
+peptides_struct,Peptides-struct,SiGMA_attn_gate,"SiGMA, ung. MP",False,False,MAE,2,0.2491,0.2491,paper_T5_peptides_struct_SiGMA_attn_gate,ibht8hpv,paper_T5_peptides_struct_SiGMA_attn_gate_seed2_job35354579_8
+peptides_struct,Peptides-struct,SiGMA_attn_gate,"SiGMA, ung. MP",False,False,MAE,3,0.24545,0.24545,paper_T5_peptides_struct_SiGMA_attn_gate,cyey0kup,paper_T5_peptides_struct_SiGMA_attn_gate_seed3_job35354579_9
+peptides_struct,Peptides-struct,SiGMA_attn_gate,"SiGMA, ung. MP",False,False,MAE,4,0.24833,0.24833,paper_T5_peptides_struct_SiGMA_attn_gate,u4g3b3g5,paper_T5_peptides_struct_SiGMA_attn_gate_seed4_job35354579_10
+peptides_struct,Peptides-struct,SiGMA_ungated_attn,"SiGMA, ung. att.",False,False,MAE,0,0.2429,0.2429,paper_T5_peptides_struct_SiGMA_ungated_attn,sdn67gn5,paper_T5_peptides_struct_SiGMA_ungated_attn_seed0_job36605829_6
+peptides_struct,Peptides-struct,SiGMA_ungated_attn,"SiGMA, ung. att.",False,False,MAE,1,0.24275,0.24275,paper_T5_peptides_struct_SiGMA_ungated_attn,fxieuuvb,paper_T5_peptides_struct_SiGMA_ungated_attn_seed1_job36605829_7
+peptides_struct,Peptides-struct,SiGMA_ungated_attn,"SiGMA, ung. att.",False,False,MAE,2,0.24357,0.24357,paper_T5_peptides_struct_SiGMA_ungated_attn,rypopsiu,paper_T5_peptides_struct_SiGMA_ungated_attn_seed2_job36605829_8
+peptides_struct,Peptides-struct,SiGMA_ungated_attn,"SiGMA, ung. att.",False,False,MAE,3,0.24744,0.24744,paper_T5_peptides_struct_SiGMA_ungated_attn,p9y21268,paper_T5_peptides_struct_SiGMA_ungated_attn_seed3_job36605829_9
+peptides_struct,Peptides-struct,SiGMA_ungated_attn,"SiGMA, ung. att.",False,False,MAE,4,0.24247,0.24247,paper_T5_peptides_struct_SiGMA_ungated_attn,nfqq111h,paper_T5_peptides_struct_SiGMA_ungated_attn_seed4_job36605829_10
+peptides_struct,Peptides-struct,SiGMA_ungated,"SiGMA, ungated",False,False,MAE,0,0.25702,0.25702,paper_T5_peptides_struct_SiGMA_ungated,34wmc8bb,paper_T5_peptides_struct_SiGMA_ungated_seed0_job32232124_26
+peptides_struct,Peptides-struct,SiGMA_ungated,"SiGMA, ungated",False,False,MAE,1,0.24741,0.24741,paper_T5_peptides_struct_SiGMA_ungated,pfwl6be9,paper_T5_peptides_struct_SiGMA_ungated_seed1_job32232124_27
+peptides_struct,Peptides-struct,SiGMA_ungated,"SiGMA, ungated",False,False,MAE,2,0.24753,0.24753,paper_T5_peptides_struct_SiGMA_ungated,oxol1qix,paper_T5_peptides_struct_SiGMA_ungated_seed2_job32232124_28
+peptides_struct,Peptides-struct,SiGMA_ungated,"SiGMA, ungated",False,False,MAE,3,0.24458,0.24458,paper_T5_peptides_struct_SiGMA_ungated,snc7hqr4,paper_T5_peptides_struct_SiGMA_ungated_seed3_job32232124_29
+peptides_struct,Peptides-struct,SiGMA_ungated,"SiGMA, ungated",False,False,MAE,4,0.24244,0.24244,paper_T5_peptides_struct_SiGMA_ungated,gno276w2,paper_T5_peptides_struct_SiGMA_ungated_seed4_job32232124_30
+voc,PascalVOC-SP,SiGMA,SiGMA,True,True,F1,0,0.46424,0.46424,paper_bestmodel_v1_voc_j7ukyzdm,zhfigzdi,voc_hybrid_j7ukyzdm_a2g2_seed0_job25322496_1
+voc,PascalVOC-SP,SiGMA,SiGMA,True,True,F1,1,0.46442,0.46442,paper_bestmodel_v1_voc_j7ukyzdm,axtosowj,voc_hybrid_j7ukyzdm_a2g2_seed1_job25322496_2
+voc,PascalVOC-SP,SiGMA,SiGMA,True,True,F1,2,0.46725,0.46725,paper_bestmodel_v1_voc_j7ukyzdm,umkqmd0q,voc_hybrid_j7ukyzdm_a2g2_seed2_job25322496_3
+voc,PascalVOC-SP,SiGMA,SiGMA,True,True,F1,3,0.48105,0.48105,paper_bestmodel_v1_voc_j7ukyzdm,vyt7hjj5,voc_hybrid_j7ukyzdm_a2g2_seed3_job25322496_4
+voc,PascalVOC-SP,SiGMA,SiGMA,True,True,F1,4,0.46651,0.46651,paper_bestmodel_v1_voc_j7ukyzdm,sdsawqf0,voc_hybrid_j7ukyzdm_a2g2_seed4_job25322496_5
+voc,PascalVOC-SP,MP_only,MP-only,False,True,F1,0,0.42416,0.42416,paper_T5_voc_MP_only,ava68bbl,paper_T5_voc_MP_only_seed0_job32232124_56
+voc,PascalVOC-SP,MP_only,MP-only,False,True,F1,1,0.4292,0.4292,paper_T5_voc_MP_only,pu1pi91p,paper_T5_voc_MP_only_seed1_job32232124_57
+voc,PascalVOC-SP,MP_only,MP-only,False,True,F1,2,0.40754,0.40754,paper_T5_voc_MP_only,m0w70g4x,paper_T5_voc_MP_only_seed2_job32232124_58
+voc,PascalVOC-SP,MP_only,MP-only,False,True,F1,3,0.4221,0.4221,paper_T5_voc_MP_only,xnyyju8z,paper_T5_voc_MP_only_seed3_job32232124_59
+voc,PascalVOC-SP,MP_only,MP-only,False,True,F1,4,0.42475,0.42475,paper_T5_voc_MP_only,43tszpmc,paper_T5_voc_MP_only_seed4_job32232124_60
+voc,PascalVOC-SP,Attn_only,Attention-only,False,True,F1,0,0.38857,0.38857,paper_T5_voc_Attn_only,zghkxdss,paper_T5_voc_Attn_only_seed0_job32232124_51
+voc,PascalVOC-SP,Attn_only,Attention-only,False,True,F1,1,0.39387,0.39387,paper_T5_voc_Attn_only,iymkckex,paper_T5_voc_Attn_only_seed1_job32232124_52
+voc,PascalVOC-SP,Attn_only,Attention-only,False,True,F1,2,0.39299,0.39299,paper_T5_voc_Attn_only,d3unoelb,paper_T5_voc_Attn_only_seed2_job32232124_53
+voc,PascalVOC-SP,Attn_only,Attention-only,False,True,F1,3,0.38922,0.38922,paper_T5_voc_Attn_only,2ymqidjg,paper_T5_voc_Attn_only_seed3_job32232124_54
+voc,PascalVOC-SP,Attn_only,Attention-only,False,True,F1,4,0.38913,0.38913,paper_T5_voc_Attn_only,r0fvgu5t,paper_T5_voc_Attn_only_seed4_job32232124_55
+voc,PascalVOC-SP,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,F1,0,0.47788,0.47788,paper_T5_voc_SiGMA_attn_gate,83ivoaxa,paper_T5_voc_SiGMA_attn_gate_seed0_job35354579_11
+voc,PascalVOC-SP,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,F1,1,0.46437,0.46437,paper_T5_voc_SiGMA_attn_gate,defa60go,paper_T5_voc_SiGMA_attn_gate_seed1_job35354579_12
+voc,PascalVOC-SP,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,F1,2,0.46437,0.46437,paper_T5_voc_SiGMA_attn_gate,8ixdgq1m,paper_T5_voc_SiGMA_attn_gate_seed2_job35354579_13
+voc,PascalVOC-SP,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,F1,3,0.46775,0.46775,paper_T5_voc_SiGMA_attn_gate,774rkwh2,paper_T5_voc_SiGMA_attn_gate_seed3_job35354579_14
+voc,PascalVOC-SP,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,F1,4,0.46094,0.46094,paper_T5_voc_SiGMA_attn_gate,i27b4n9s,paper_T5_voc_SiGMA_attn_gate_seed4_job35354579_15
+voc,PascalVOC-SP,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,F1,0,0.45742,0.45742,paper_T5_voc_SiGMA_ungated_attn,1jvvujjy,paper_T5_voc_SiGMA_ungated_attn_seed0_job36605829_11
+voc,PascalVOC-SP,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,F1,1,0.46681,0.46681,paper_T5_voc_SiGMA_ungated_attn,egf2fuq4,paper_T5_voc_SiGMA_ungated_attn_seed1_job36605829_12
+voc,PascalVOC-SP,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,F1,2,0.45029,0.45029,paper_T5_voc_SiGMA_ungated_attn,4d2iwc10,paper_T5_voc_SiGMA_ungated_attn_seed2_job36605829_13
+voc,PascalVOC-SP,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,F1,3,0.47238,0.47238,paper_T5_voc_SiGMA_ungated_attn,nzk7uzzz,paper_T5_voc_SiGMA_ungated_attn_seed3_job36605829_14
+voc,PascalVOC-SP,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,F1,4,0.4483,0.4483,paper_T5_voc_SiGMA_ungated_attn,xnuc25p5,paper_T5_voc_SiGMA_ungated_attn_seed4_job36605829_15
+voc,PascalVOC-SP,SiGMA_ungated,"SiGMA, ungated",False,True,F1,0,0.47986,0.47986,paper_T5_voc_SiGMA_ungated,qf1e32ua,paper_T5_voc_SiGMA_ungated_seed0_job32232124_46
+voc,PascalVOC-SP,SiGMA_ungated,"SiGMA, ungated",False,True,F1,1,0.45601,0.45601,paper_T5_voc_SiGMA_ungated,alwifq53,paper_T5_voc_SiGMA_ungated_seed1_job32232124_47
+voc,PascalVOC-SP,SiGMA_ungated,"SiGMA, ungated",False,True,F1,2,0.47614,0.47614,paper_T5_voc_SiGMA_ungated,pkntir4l,paper_T5_voc_SiGMA_ungated_seed2_job32232124_48
+voc,PascalVOC-SP,SiGMA_ungated,"SiGMA, ungated",False,True,F1,3,0.46931,0.46931,paper_T5_voc_SiGMA_ungated,n3u0k1x8,paper_T5_voc_SiGMA_ungated_seed3_job32232124_49
+voc,PascalVOC-SP,SiGMA_ungated,"SiGMA, ungated",False,True,F1,4,0.46394,0.46394,paper_T5_voc_SiGMA_ungated,ga0u29n1,paper_T5_voc_SiGMA_ungated_seed4_job32232124_50
+mnist,MNIST,SiGMA,SiGMA,True,True,accuracy_pct,0,0.9859,98.59,paper_bestmodel_v1_mnist_lcvbyyss,uh7nxm4e,mnist_hybrid_lcvbyyss_a2g2_seed0_job25313521_1
+mnist,MNIST,SiGMA,SiGMA,True,True,accuracy_pct,1,0.9877,98.77,paper_bestmodel_v1_mnist_lcvbyyss,jorlmk2q,mnist_hybrid_lcvbyyss_a2g2_seed1_job25313521_2
+mnist,MNIST,SiGMA,SiGMA,True,True,accuracy_pct,2,0.9865,98.65,paper_bestmodel_v1_mnist_lcvbyyss,86jxiuvz,mnist_hybrid_lcvbyyss_a2g2_seed2_job25313521_3
+mnist,MNIST,SiGMA,SiGMA,True,True,accuracy_pct,3,0.9848,98.48,paper_bestmodel_v1_mnist_lcvbyyss,loebushu,mnist_hybrid_lcvbyyss_a2g2_seed3_job25313521_4
+mnist,MNIST,SiGMA,SiGMA,True,True,accuracy_pct,4,0.9865,98.65,paper_bestmodel_v1_mnist_lcvbyyss,z7y9ucx2,mnist_hybrid_lcvbyyss_a2g2_seed4_job25313521_5
+mnist,MNIST,MP_only,MP-only,False,True,accuracy_pct,0,0.9854,98.54,paper_T5_mnist_MP_only,9o203nua,paper_T5_mnist_MP_only_seed0_job35720034_21
+mnist,MNIST,MP_only,MP-only,False,True,accuracy_pct,1,0.9862,98.61999999999999,paper_T5_mnist_MP_only,6yqz9vgp,paper_T5_mnist_MP_only_seed1_job35720034_22
+mnist,MNIST,MP_only,MP-only,False,True,accuracy_pct,2,0.9867,98.67,paper_T5_mnist_MP_only,1idr17dr,paper_T5_mnist_MP_only_seed2_job35720034_23
+mnist,MNIST,MP_only,MP-only,False,True,accuracy_pct,3,0.9857,98.57000000000001,paper_T5_mnist_MP_only,6qcu5p3p,paper_T5_mnist_MP_only_seed3_job35720034_24
+mnist,MNIST,MP_only,MP-only,False,True,accuracy_pct,4,0.986,98.6,paper_T5_mnist_MP_only,sv9dbu45,paper_T5_mnist_MP_only_seed4_job35720034_25
+mnist,MNIST,Attn_only,Attention-only,False,True,accuracy_pct,0,0.9776,97.76,paper_T5_mnist_Attn_only,cs81upao,paper_T5_mnist_Attn_only_seed0_job35720034_16
+mnist,MNIST,Attn_only,Attention-only,False,True,accuracy_pct,1,0.976,97.6,paper_T5_mnist_Attn_only,0b8w6oge,paper_T5_mnist_Attn_only_seed1_job35720034_17
+mnist,MNIST,Attn_only,Attention-only,False,True,accuracy_pct,2,0.979,97.89999999999999,paper_T5_mnist_Attn_only,fylco8dl,paper_T5_mnist_Attn_only_seed2_job35720034_18
+mnist,MNIST,Attn_only,Attention-only,False,True,accuracy_pct,3,0.9758,97.58,paper_T5_mnist_Attn_only,qplj0srj,paper_T5_mnist_Attn_only_seed3_job35720034_19
+mnist,MNIST,Attn_only,Attention-only,False,True,accuracy_pct,4,0.9741,97.41,paper_T5_mnist_Attn_only,fk83hy7i,paper_T5_mnist_Attn_only_seed4_job35720034_20
+mnist,MNIST,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,0,0.9873,98.72999999999999,paper_T5_mnist_SiGMA_attn_gate,2oup1qr1,paper_T5_mnist_SiGMA_attn_gate_seed0_job35720034_11
+mnist,MNIST,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,1,0.9861,98.61,paper_T5_mnist_SiGMA_attn_gate,cmk88mpr,paper_T5_mnist_SiGMA_attn_gate_seed1_job35720034_12
+mnist,MNIST,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,2,0.9866,98.66,paper_T5_mnist_SiGMA_attn_gate,zy930ubn,paper_T5_mnist_SiGMA_attn_gate_seed2_job36000721_13
+mnist,MNIST,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,3,0.9877,98.77,paper_T5_mnist_SiGMA_attn_gate,lhhdemm1,paper_T5_mnist_SiGMA_attn_gate_seed3_job36000721_14
+mnist,MNIST,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,4,0.9875,98.75,paper_T5_mnist_SiGMA_attn_gate,5c9pai8o,paper_T5_mnist_SiGMA_attn_gate_seed4_job35720034_15
+mnist,MNIST,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,accuracy_pct,0,0.9856,98.56,paper_T5_mnist_SiGMA_ungated_attn,y6agqbhx,paper_T5_mnist_SiGMA_ungated_attn_seed0_job36605829_21
+mnist,MNIST,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,accuracy_pct,1,0.9852,98.52,paper_T5_mnist_SiGMA_ungated_attn,ug6x1ks3,paper_T5_mnist_SiGMA_ungated_attn_seed1_job36605829_22
+mnist,MNIST,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,accuracy_pct,2,0.987,98.7,paper_T5_mnist_SiGMA_ungated_attn,hy2bjuu2,paper_T5_mnist_SiGMA_ungated_attn_seed2_job36605829_23
+mnist,MNIST,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,accuracy_pct,3,0.9851,98.50999999999999,paper_T5_mnist_SiGMA_ungated_attn,1snywsb5,paper_T5_mnist_SiGMA_ungated_attn_seed3_job36605829_24
+mnist,MNIST,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,accuracy_pct,4,0.9859,98.59,paper_T5_mnist_SiGMA_ungated_attn,fz2llu8f,paper_T5_mnist_SiGMA_ungated_attn_seed4_job36605829_25
+mnist,MNIST,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,0,0.9857,98.57000000000001,paper_T5_mnist_SiGMA_ungated,2ajpqljr,paper_T5_mnist_SiGMA_ungated_seed0_job35720034_6
+mnist,MNIST,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,1,0.9866,98.66,paper_T5_mnist_SiGMA_ungated,o3nsq91s,paper_T5_mnist_SiGMA_ungated_seed1_job35720034_7
+mnist,MNIST,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,2,0.9868,98.68,paper_T5_mnist_SiGMA_ungated,cmne8mm0,paper_T5_mnist_SiGMA_ungated_seed2_job35720034_8
+mnist,MNIST,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,3,0.9853,98.53,paper_T5_mnist_SiGMA_ungated,sm7g1ngt,paper_T5_mnist_SiGMA_ungated_seed3_job35720034_9
+mnist,MNIST,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,4,0.9864,98.64,paper_T5_mnist_SiGMA_ungated,fn02ruo9,paper_T5_mnist_SiGMA_ungated_seed4_job35773781_10
+cifar10,CIFAR10,SiGMA,SiGMA,True,True,accuracy_pct,0,0.7945,79.45,paper_bestmodel_v1_cifar10_ulij45a2,skdtqk7t,cifar10_hybrid_ulij45a2_a8g4_seed0_job25310487_1
+cifar10,CIFAR10,SiGMA,SiGMA,True,True,accuracy_pct,1,0.7978,79.78,paper_bestmodel_v1_cifar10_ulij45a2,3tx560wq,cifar10_hybrid_ulij45a2_a8g4_seed1_job25310487_2
+cifar10,CIFAR10,SiGMA,SiGMA,True,True,accuracy_pct,2,0.7962,79.62,paper_bestmodel_v1_cifar10_ulij45a2,hep56q27,cifar10_hybrid_ulij45a2_a8g4_seed2_job25310487_3
+cifar10,CIFAR10,SiGMA,SiGMA,True,True,accuracy_pct,3,0.7933,79.33,paper_bestmodel_v1_cifar10_ulij45a2,7wm0gq2c,cifar10_hybrid_ulij45a2_a8g4_seed3_job25310487_4
+cifar10,CIFAR10,SiGMA,SiGMA,True,True,accuracy_pct,4,0.7946,79.46,paper_bestmodel_v1_cifar10_ulij45a2,61g0yg8m,cifar10_hybrid_ulij45a2_a8g4_seed4_job25310487_5
+cifar10,CIFAR10,MP_only,MP-only,False,True,accuracy_pct,0,0.7551,75.51,paper_T5_cifar10_MP_only,ox741d2i,paper_T5_cifar10_MP_only_seed0_job36912369_1_gapfill
+cifar10,CIFAR10,MP_only,MP-only,False,True,accuracy_pct,1,0.7547,75.47,paper_T5_cifar10_MP_only,kp72jdvf,paper_T5_cifar10_MP_only_seed1_job36912369_2_gapfill
+cifar10,CIFAR10,MP_only,MP-only,False,True,accuracy_pct,2,0.7564,75.64,paper_T5_cifar10_MP_only,6ogmrzb0,paper_T5_cifar10_MP_only_seed2_job36912369_3_gapfill
+cifar10,CIFAR10,MP_only,MP-only,False,True,accuracy_pct,3,0.7544,75.44,paper_T5_cifar10_MP_only,wqpfwv1e,paper_T5_cifar10_MP_only_seed3_job36912369_4_gapfill
+cifar10,CIFAR10,MP_only,MP-only,False,True,accuracy_pct,4,0.7633,76.33,paper_T5_cifar10_MP_only,iu9x5z9a,paper_T5_cifar10_MP_only_seed4_job36912369_5_gapfill
+cifar10,CIFAR10,Attn_only,Attention-only,False,True,accuracy_pct,0,0.5955,59.550000000000004,paper_T5_cifar10_Attn_only,vb1y7vdj,paper_T5_cifar10_Attn_only_seed0_job35720034_41
+cifar10,CIFAR10,Attn_only,Attention-only,False,True,accuracy_pct,1,0.6076,60.760000000000005,paper_T5_cifar10_Attn_only,nc57cgot,paper_T5_cifar10_Attn_only_seed1_job35720034_42
+cifar10,CIFAR10,Attn_only,Attention-only,False,True,accuracy_pct,2,0.6202,62.019999999999996,paper_T5_cifar10_Attn_only,581apgkl,paper_T5_cifar10_Attn_only_seed2_job35720034_43
+cifar10,CIFAR10,Attn_only,Attention-only,False,True,accuracy_pct,3,0.6155,61.550000000000004,paper_T5_cifar10_Attn_only,g81wcowv,paper_T5_cifar10_Attn_only_seed3_job35720034_44
+cifar10,CIFAR10,Attn_only,Attention-only,False,True,accuracy_pct,4,0.6155,61.550000000000004,paper_T5_cifar10_Attn_only,2v5s19vm,paper_T5_cifar10_Attn_only_seed4_job35720034_45
+cifar10,CIFAR10,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,0,0.797,79.7,paper_T5_cifar10_SiGMA_attn_gate,f8cb6ayp,paper_T5_cifar10_SiGMA_attn_gate_seed0_job35720034_36
+cifar10,CIFAR10,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,1,0.8002,80.02,paper_T5_cifar10_SiGMA_attn_gate,849ao8un,paper_T5_cifar10_SiGMA_attn_gate_seed1_job35720034_37
+cifar10,CIFAR10,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,2,0.7913,79.13,paper_T5_cifar10_SiGMA_attn_gate,2lc9a4s3,paper_T5_cifar10_SiGMA_attn_gate_seed2_job35720034_38
+cifar10,CIFAR10,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,3,0.7931,79.31,paper_T5_cifar10_SiGMA_attn_gate,ozol9yji,paper_T5_cifar10_SiGMA_attn_gate_seed3_job35720034_39
+cifar10,CIFAR10,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,4,0.7944,79.44,paper_T5_cifar10_SiGMA_attn_gate,clzp0erw,paper_T5_cifar10_SiGMA_attn_gate_seed4_job35720034_40
+cifar10,CIFAR10,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,accuracy_pct,0,0.7969,79.69000000000001,paper_T5_cifar10_SiGMA_ungated_attn,6z32lydj,paper_T5_cifar10_SiGMA_ungated_attn_seed0_job36605829_26
+cifar10,CIFAR10,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,accuracy_pct,1,0.7923,79.23,paper_T5_cifar10_SiGMA_ungated_attn,fxc1uyku,paper_T5_cifar10_SiGMA_ungated_attn_seed1_job36605829_27
+cifar10,CIFAR10,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,accuracy_pct,2,0.798,79.80000000000001,paper_T5_cifar10_SiGMA_ungated_attn,90s6romu,paper_T5_cifar10_SiGMA_ungated_attn_seed2_job36605829_28
+cifar10,CIFAR10,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,accuracy_pct,3,0.799,79.9,paper_T5_cifar10_SiGMA_ungated_attn,hop2iind,paper_T5_cifar10_SiGMA_ungated_attn_seed3_job36605829_29
+cifar10,CIFAR10,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,accuracy_pct,4,0.8015,80.15,paper_T5_cifar10_SiGMA_ungated_attn,xqjh7at1,paper_T5_cifar10_SiGMA_ungated_attn_seed4_job36605829_30
+cifar10,CIFAR10,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,0,0.7984,79.84,paper_T5_cifar10_SiGMA_ungated,681w5f5y,paper_T5_cifar10_SiGMA_ungated_seed0_job35720034_31
+cifar10,CIFAR10,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,1,0.8053,80.53,paper_T5_cifar10_SiGMA_ungated,h3mc4uer,paper_T5_cifar10_SiGMA_ungated_seed1_job35720034_32
+cifar10,CIFAR10,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,2,0.8031,80.31,paper_T5_cifar10_SiGMA_ungated,fkbv8fe0,paper_T5_cifar10_SiGMA_ungated_seed2_job35720034_33
+cifar10,CIFAR10,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,3,0.799,79.9,paper_T5_cifar10_SiGMA_ungated,zwf8wtxa,paper_T5_cifar10_SiGMA_ungated_seed3_job35720034_34
+cifar10,CIFAR10,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,4,0.8011,80.11,paper_T5_cifar10_SiGMA_ungated,1mae111v,paper_T5_cifar10_SiGMA_ungated_seed4_job35720034_35
+pattern,PATTERN,SiGMA,SiGMA,True,True,accuracy_pct,5,0.87185,87.185,paper_sigma_grit_attn_pattern_vn4,w8u40h6j,sigma_grit_attn_pattern_vn4_seed5_job34096507_11
+pattern,PATTERN,SiGMA,SiGMA,True,True,accuracy_pct,6,0.87315,87.315,paper_sigma_grit_attn_pattern_vn4,u56vrk0i,sigma_grit_attn_pattern_vn4_seed6_job34096507_12
+pattern,PATTERN,SiGMA,SiGMA,True,True,accuracy_pct,7,0.87658,87.658,paper_sigma_grit_attn_pattern_vn4,8s7ia7ya,sigma_grit_attn_pattern_vn4_seed7_job34096507_13
+pattern,PATTERN,SiGMA,SiGMA,True,True,accuracy_pct,8,0.87531,87.531,paper_sigma_grit_attn_pattern_vn4,cjjfcpsc,sigma_grit_attn_pattern_vn4_seed8_job34096507_14
+pattern,PATTERN,SiGMA,SiGMA,True,True,accuracy_pct,9,0.87285,87.285,paper_sigma_grit_attn_pattern_vn4,ouyfav9q,sigma_grit_attn_pattern_vn4_seed9_job34096507_15
+pattern,PATTERN,MP_only,MP-only,False,True,accuracy_pct,5,0.87174,87.17399999999999,paper_T5_pattern_gritvn4_MP_only,3bnk7l5l,paper_T5_pattern_gritvn4_MP_only_seed5_job36912370_21
+pattern,PATTERN,MP_only,MP-only,False,True,accuracy_pct,6,0.87108,87.10799999999999,paper_T5_pattern_gritvn4_MP_only,8ei1hygb,paper_T5_pattern_gritvn4_MP_only_seed6_job36912370_22
+pattern,PATTERN,MP_only,MP-only,False,True,accuracy_pct,7,0.87182,87.182,paper_T5_pattern_gritvn4_MP_only,kyy7qu2j,paper_T5_pattern_gritvn4_MP_only_seed7_job36912370_23
+pattern,PATTERN,MP_only,MP-only,False,True,accuracy_pct,8,0.87168,87.168,paper_T5_pattern_gritvn4_MP_only,cygznafk,paper_T5_pattern_gritvn4_MP_only_seed8_job36912370_24
+pattern,PATTERN,MP_only,MP-only,False,True,accuracy_pct,9,0.87052,87.05199999999999,paper_T5_pattern_gritvn4_MP_only,1jqf0afg,paper_T5_pattern_gritvn4_MP_only_seed9_job36912370_25
+pattern,PATTERN,Attn_only,Attention-only,False,True,accuracy_pct,5,0.87416,87.41600000000001,paper_T5_pattern_gritvn4_Attn_only,jww8std1,paper_T5_pattern_gritvn4_Attn_only_seed5_job36912370_16
+pattern,PATTERN,Attn_only,Attention-only,False,True,accuracy_pct,6,0.87115,87.115,paper_T5_pattern_gritvn4_Attn_only,cbug93gw,paper_T5_pattern_gritvn4_Attn_only_seed6_job36912370_17
+pattern,PATTERN,Attn_only,Attention-only,False,True,accuracy_pct,7,0.87271,87.271,paper_T5_pattern_gritvn4_Attn_only,vgxjtlbf,paper_T5_pattern_gritvn4_Attn_only_seed7_job36912370_18
+pattern,PATTERN,Attn_only,Attention-only,False,True,accuracy_pct,8,0.87508,87.508,paper_T5_pattern_gritvn4_Attn_only,ps529k95,paper_T5_pattern_gritvn4_Attn_only_seed8_job36912370_19
+pattern,PATTERN,Attn_only,Attention-only,False,True,accuracy_pct,9,0.87156,87.156,paper_T5_pattern_gritvn4_Attn_only,r9dnig99,paper_T5_pattern_gritvn4_Attn_only_seed9_job36912370_20
+pattern,PATTERN,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,5,0.87385,87.385,paper_T5_pattern_gritvn4_SiGMA_attn_gate,rhh1kv1k,paper_T5_pattern_gritvn4_SiGMA_attn_gate_seed5_job36912370_6
+pattern,PATTERN,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,6,0.87292,87.292,paper_T5_pattern_gritvn4_SiGMA_attn_gate,u7h237oe,paper_T5_pattern_gritvn4_SiGMA_attn_gate_seed6_job36912370_7
+pattern,PATTERN,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,7,0.87546,87.546,paper_T5_pattern_gritvn4_SiGMA_attn_gate,8q0ybojv,paper_T5_pattern_gritvn4_SiGMA_attn_gate_seed7_job36912370_8
+pattern,PATTERN,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,8,0.87566,87.566,paper_T5_pattern_gritvn4_SiGMA_attn_gate,x5ysheot,paper_T5_pattern_gritvn4_SiGMA_attn_gate_seed8_job36912370_9
+pattern,PATTERN,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,9,0.8723,87.22999999999999,paper_T5_pattern_gritvn4_SiGMA_attn_gate,1hn8k9v9,paper_T5_pattern_gritvn4_SiGMA_attn_gate_seed9_job36912370_10
+pattern,PATTERN,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,accuracy_pct,5,0.8758,87.58,paper_T5_pattern_gritvn4_SiGMA_ungated_attn,fmavzy6n,paper_T5_pattern_gritvn4_SiGMA_ungated_attn_seed5_job36912370_11
+pattern,PATTERN,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,accuracy_pct,6,0.8729,87.29,paper_T5_pattern_gritvn4_SiGMA_ungated_attn,2nd95dbr,paper_T5_pattern_gritvn4_SiGMA_ungated_attn_seed6_job36912370_12
+pattern,PATTERN,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,accuracy_pct,7,0.87155,87.155,paper_T5_pattern_gritvn4_SiGMA_ungated_attn,t3wpp9l1,paper_T5_pattern_gritvn4_SiGMA_ungated_attn_seed7_job36912370_13
+pattern,PATTERN,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,accuracy_pct,8,0.87513,87.51299999999999,paper_T5_pattern_gritvn4_SiGMA_ungated_attn,2j7g0cr9,paper_T5_pattern_gritvn4_SiGMA_ungated_attn_seed8_job36912370_14
+pattern,PATTERN,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,accuracy_pct,9,0.87112,87.112,paper_T5_pattern_gritvn4_SiGMA_ungated_attn,290imxfc,paper_T5_pattern_gritvn4_SiGMA_ungated_attn_seed9_job36912370_15
+pattern,PATTERN,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,5,0.87403,87.40299999999999,paper_T5_pattern_gritvn4_SiGMA_ungated,qq09dgqb,paper_T5_pattern_gritvn4_SiGMA_ungated_seed5_job36912370_1
+pattern,PATTERN,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,6,0.87623,87.62299999999999,paper_T5_pattern_gritvn4_SiGMA_ungated,nlztk2t4,paper_T5_pattern_gritvn4_SiGMA_ungated_seed6_job36912370_2
+pattern,PATTERN,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,7,0.87284,87.28399999999999,paper_T5_pattern_gritvn4_SiGMA_ungated,0190h5s2,paper_T5_pattern_gritvn4_SiGMA_ungated_seed7_job36912370_3
+pattern,PATTERN,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,8,0.87366,87.366,paper_T5_pattern_gritvn4_SiGMA_ungated,0skkdr74,paper_T5_pattern_gritvn4_SiGMA_ungated_seed8_job36912370_4
+pattern,PATTERN,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,9,0.87428,87.428,paper_T5_pattern_gritvn4_SiGMA_ungated,178vvpdd,paper_T5_pattern_gritvn4_SiGMA_ungated_seed9_job36912370_5
+cluster,CLUSTER,SiGMA,SiGMA,True,True,accuracy_pct,0,0.78973,78.973,paper_bestmodel_v1_cluster_ht9bntg2,qdkezojh,cluster_hybrid_ht9bntg2_a1g1_seed0_job25389326_1
+cluster,CLUSTER,SiGMA,SiGMA,True,True,accuracy_pct,1,0.78843,78.84299999999999,paper_bestmodel_v1_cluster_ht9bntg2,8bx9c5m2,cluster_hybrid_ht9bntg2_a1g1_seed1_job25389326_2
+cluster,CLUSTER,SiGMA,SiGMA,True,True,accuracy_pct,2,0.79092,79.092,paper_bestmodel_v1_cluster_ht9bntg2,f6k8rjip,cluster_hybrid_ht9bntg2_a1g1_seed2_job25389326_3
+cluster,CLUSTER,SiGMA,SiGMA,True,True,accuracy_pct,3,0.79031,79.03099999999999,paper_bestmodel_v1_cluster_ht9bntg2,vkno6rq8,cluster_hybrid_ht9bntg2_a1g1_seed3_job25389326_4
+cluster,CLUSTER,SiGMA,SiGMA,True,True,accuracy_pct,4,0.78843,78.84299999999999,paper_bestmodel_v1_cluster_ht9bntg2,6ipfj6sf,cluster_hybrid_ht9bntg2_a1g1_seed4_job25389326_5
+cluster,CLUSTER,MP_only,MP-only,False,True,accuracy_pct,0,0.78869,78.869,paper_T5_cluster_MP_only,os7w4lea,paper_T5_cluster_MP_only_seed0_job36912373_21
+cluster,CLUSTER,MP_only,MP-only,False,True,accuracy_pct,1,0.79267,79.267,paper_T5_cluster_MP_only,2kyolakt,paper_T5_cluster_MP_only_seed1_job36912373_22
+cluster,CLUSTER,MP_only,MP-only,False,True,accuracy_pct,2,0.79187,79.187,paper_T5_cluster_MP_only,d71j36ww,paper_T5_cluster_MP_only_seed2_job36912373_23
+cluster,CLUSTER,MP_only,MP-only,False,True,accuracy_pct,3,0.79121,79.121,paper_T5_cluster_MP_only,gbiolnk6,paper_T5_cluster_MP_only_seed3_job36912373_24
+cluster,CLUSTER,MP_only,MP-only,False,True,accuracy_pct,4,0.78993,78.993,paper_T5_cluster_MP_only,jfnj8msx,paper_T5_cluster_MP_only_seed4_job36912373_25
+cluster,CLUSTER,Attn_only,Attention-only,False,True,accuracy_pct,0,0.31486,31.485999999999997,paper_T5_cluster_Attn_only,91vsbpqh,paper_T5_cluster_Attn_only_seed0_job36912373_16
+cluster,CLUSTER,Attn_only,Attention-only,False,True,accuracy_pct,1,0.31546,31.546000000000003,paper_T5_cluster_Attn_only,3qb3ifjc,paper_T5_cluster_Attn_only_seed1_job36912373_17
+cluster,CLUSTER,Attn_only,Attention-only,False,True,accuracy_pct,2,0.31537,31.537,paper_T5_cluster_Attn_only,2lw1oybn,paper_T5_cluster_Attn_only_seed2_job36912373_18
+cluster,CLUSTER,Attn_only,Attention-only,False,True,accuracy_pct,3,0.31567,31.567,paper_T5_cluster_Attn_only,nj9v1wa5,paper_T5_cluster_Attn_only_seed3_job36912373_19
+cluster,CLUSTER,Attn_only,Attention-only,False,True,accuracy_pct,4,0.31626,31.625999999999998,paper_T5_cluster_Attn_only,jg25y5zn,paper_T5_cluster_Attn_only_seed4_job36912373_20
+cluster,CLUSTER,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,0,0.79122,79.122,paper_T5_cluster_SiGMA_attn_gate,uxnfcthw,paper_T5_cluster_SiGMA_attn_gate_seed0_job36912373_6
+cluster,CLUSTER,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,1,0.78842,78.842,paper_T5_cluster_SiGMA_attn_gate,d1imixhg,paper_T5_cluster_SiGMA_attn_gate_seed1_job36912373_7
+cluster,CLUSTER,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,2,0.78739,78.739,paper_T5_cluster_SiGMA_attn_gate,ximcx1ff,paper_T5_cluster_SiGMA_attn_gate_seed2_job36912373_8
+cluster,CLUSTER,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,3,0.79114,79.11399999999999,paper_T5_cluster_SiGMA_attn_gate,24yshcey,paper_T5_cluster_SiGMA_attn_gate_seed3_job36912373_9
+cluster,CLUSTER,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,4,0.78818,78.818,paper_T5_cluster_SiGMA_attn_gate,lb148qsx,paper_T5_cluster_SiGMA_attn_gate_seed4_job36912373_10
+cluster,CLUSTER,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,0,0.78896,78.896,paper_T5_cluster_SiGMA_ungated,ih9mj2lg,paper_T5_cluster_SiGMA_ungated_seed0_job36912373_1
+cluster,CLUSTER,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,1,0.79026,79.026,paper_T5_cluster_SiGMA_ungated,yypjk58f,paper_T5_cluster_SiGMA_ungated_seed1_job36912373_2
+cluster,CLUSTER,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,2,0.79221,79.221,paper_T5_cluster_SiGMA_ungated,llk4gpdt,paper_T5_cluster_SiGMA_ungated_seed2_job36912373_3
+cluster,CLUSTER,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,3,0.79101,79.101,paper_T5_cluster_SiGMA_ungated,3afk3j5g,paper_T5_cluster_SiGMA_ungated_seed3_job36912373_4
+cluster,CLUSTER,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,4,0.79071,79.071,paper_T5_cluster_SiGMA_ungated,sbnyrh2t,paper_T5_cluster_SiGMA_ungated_seed4_job36912373_5

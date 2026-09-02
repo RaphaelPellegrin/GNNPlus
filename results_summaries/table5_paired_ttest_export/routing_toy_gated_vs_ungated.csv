@@ -1,0 +1,11 @@
+track,model,model_label,lr_tag,seed,acc_all,acc_all_pct,acc_tau0,acc_tau0_pct,acc_tau1,acc_tau1_pct,run_dir
+toy,a0g2_gated,SiGMA (gated),lr001,0,0.997,99.7,0.9939148073022313,99.39148073022312,1.0,100.0,/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results/gcn_gin_routing/toy/a0g2_gated_lr001_seed0
+toy,a0g2_gated,SiGMA (gated),lr001,2,0.996,99.6,0.9918864097363083,99.18864097363083,1.0,100.0,/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results/gcn_gin_routing/toy/a0g2_gated_lr001_seed2
+toy,a0g2_gated,SiGMA (gated),lr001,3,0.9965,99.65,0.9929006085192698,99.29006085192698,1.0,100.0,/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results/gcn_gin_routing/toy/a0g2_gated_lr001_seed3
+toy,a0g2_gated,SiGMA (gated),lr001,4,0.996,99.6,0.9918864097363083,99.18864097363083,1.0,100.0,/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results/gcn_gin_routing/toy/a0g2_gated_lr001_seed4
+toy,a0g2_gated,SiGMA (gated),lr001,5,0.9965,99.65,0.9929006085192698,99.29006085192698,1.0,100.0,/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results/gcn_gin_routing/toy/a0g2_gated_lr001_seed5
+toy,a0g2_ungated,SiGMA (ungated),lr001,0,0.886,88.6,0.7728194726166329,77.28194726166329,0.9960552268244576,99.60552268244575,/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results/gcn_gin_routing/toy/a0g2_ungated_lr001_seed0
+toy,a0g2_ungated,SiGMA (ungated),lr001,1,0.886,88.6,0.8012170385395537,80.12170385395537,0.9684418145956607,96.84418145956607,/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results/gcn_gin_routing/toy/a0g2_ungated_lr001_seed1
+toy,a0g2_ungated,SiGMA (ungated),lr001,2,0.886,88.6,0.768762677484787,76.8762677484787,1.0,100.0,/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results/gcn_gin_routing/toy/a0g2_ungated_lr001_seed2
+toy,a0g2_ungated,SiGMA (ungated),lr001,3,0.886,88.6,0.7758620689655172,77.58620689655173,0.9930966469428008,99.30966469428007,/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results/gcn_gin_routing/toy/a0g2_ungated_lr001_seed3
+toy,a0g2_ungated,SiGMA (ungated),lr001,4,0.886,88.6,0.8174442190669371,81.7444219066937,0.9526627218934911,95.26627218934911,/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results/gcn_gin_routing/toy/a0g2_ungated_lr001_seed4

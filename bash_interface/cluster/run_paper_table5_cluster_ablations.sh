@@ -39,7 +39,9 @@ num_seeds="${PAPER_T5_CLUSTER_NUM_SEEDS:-5}"
 seed_offset="${PAPER_T5_CLUSTER_SEED_OFFSET:-0}"
 include_sigma="${PAPER_T5_CLUSTER_INCLUDE_SIGMA:-0}"
 
-if [ "${include_sigma}" = "1" ]; then
+if [ -n "${PAPER_T5_CLUSTER_VARIANT_INDICES:-}" ]; then
+    IFS=',' read -r -a variant_list <<< "${PAPER_T5_CLUSTER_VARIANT_INDICES}"
+elif [ "${include_sigma}" = "1" ]; then
     variant_list=(0 1 2 3 4 5)
 else
     variant_list=(1 2 3 4 5)

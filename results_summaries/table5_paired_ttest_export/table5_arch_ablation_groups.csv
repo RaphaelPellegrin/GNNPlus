@@ -1,0 +1,42 @@
+dataset_key,dataset_label,model_key,model_label,is_sigma_baseline,higher_better,display_unit,display_scale,wandb_group,wandb_metric
+peptides_func,Peptides-func,SiGMA,SiGMA,True,True,AP,1.0,paper_T6_peptides_func_Homog_MP,best_test_perf
+peptides_func,Peptides-func,MP_only,MP-only,False,True,AP,1.0,paper_T5_peptides_func_MP_only,best_test_perf
+peptides_func,Peptides-func,Attn_only,Attention-only,False,True,AP,1.0,paper_T5_peptides_func_Attn_only,best_test_perf
+peptides_func,Peptides-func,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,AP,1.0,paper_T5_peptides_func_SiGMA_attn_gate,best_test_perf
+peptides_func,Peptides-func,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,AP,1.0,paper_T5_peptides_func_SiGMA_ungated_attn,best_test_perf
+peptides_func,Peptides-func,SiGMA_ungated,"SiGMA, ungated",False,True,AP,1.0,paper_T5_peptides_func_SiGMA_ungated,best_test_perf
+peptides_struct,Peptides-struct,SiGMA,SiGMA,True,False,MAE,1.0,paper_bestmodel_v2_peptides_struct_g3bsaq32_b7m0_ep250,best_test_perf
+peptides_struct,Peptides-struct,MP_only,MP-only,False,False,MAE,1.0,paper_T5_peptides_struct_MP_only,best_test_perf
+peptides_struct,Peptides-struct,Attn_only,Attention-only,False,False,MAE,1.0,paper_T5_peptides_struct_Attn_only,best_test_perf
+peptides_struct,Peptides-struct,SiGMA_attn_gate,"SiGMA, ung. MP",False,False,MAE,1.0,paper_T5_peptides_struct_SiGMA_attn_gate,best_test_perf
+peptides_struct,Peptides-struct,SiGMA_ungated_attn,"SiGMA, ung. att.",False,False,MAE,1.0,paper_T5_peptides_struct_SiGMA_ungated_attn,best_test_perf
+peptides_struct,Peptides-struct,SiGMA_ungated,"SiGMA, ungated",False,False,MAE,1.0,paper_T5_peptides_struct_SiGMA_ungated,best_test_perf
+voc,PascalVOC-SP,SiGMA,SiGMA,True,True,F1,1.0,paper_bestmodel_v1_voc_j7ukyzdm,best_test_perf
+voc,PascalVOC-SP,MP_only,MP-only,False,True,F1,1.0,paper_T5_voc_MP_only,best_test_perf
+voc,PascalVOC-SP,Attn_only,Attention-only,False,True,F1,1.0,paper_T5_voc_Attn_only,best_test_perf
+voc,PascalVOC-SP,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,F1,1.0,paper_T5_voc_SiGMA_attn_gate,best_test_perf
+voc,PascalVOC-SP,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,F1,1.0,paper_T5_voc_SiGMA_ungated_attn,best_test_perf
+voc,PascalVOC-SP,SiGMA_ungated,"SiGMA, ungated",False,True,F1,1.0,paper_T5_voc_SiGMA_ungated,best_test_perf
+mnist,MNIST,SiGMA,SiGMA,True,True,accuracy_pct,100.0,paper_bestmodel_v1_mnist_lcvbyyss,best_test_perf
+mnist,MNIST,MP_only,MP-only,False,True,accuracy_pct,100.0,paper_T5_mnist_MP_only,best_test_perf
+mnist,MNIST,Attn_only,Attention-only,False,True,accuracy_pct,100.0,paper_T5_mnist_Attn_only,best_test_perf
+mnist,MNIST,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,100.0,paper_T5_mnist_SiGMA_attn_gate,best_test_perf
+mnist,MNIST,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,accuracy_pct,100.0,paper_T5_mnist_SiGMA_ungated_attn,best_test_perf
+mnist,MNIST,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,100.0,paper_T5_mnist_SiGMA_ungated,best_test_perf
+cifar10,CIFAR10,SiGMA,SiGMA,True,True,accuracy_pct,100.0,paper_bestmodel_v1_cifar10_ulij45a2,best_test_perf
+cifar10,CIFAR10,MP_only,MP-only,False,True,accuracy_pct,100.0,paper_T5_cifar10_MP_only,best_test_perf
+cifar10,CIFAR10,Attn_only,Attention-only,False,True,accuracy_pct,100.0,paper_T5_cifar10_Attn_only,best_test_perf
+cifar10,CIFAR10,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,100.0,paper_T5_cifar10_SiGMA_attn_gate,best_test_perf
+cifar10,CIFAR10,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,accuracy_pct,100.0,paper_T5_cifar10_SiGMA_ungated_attn,best_test_perf
+cifar10,CIFAR10,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,100.0,paper_T5_cifar10_SiGMA_ungated,best_test_perf
+pattern,PATTERN,SiGMA,SiGMA,True,True,accuracy_pct,100.0,paper_sigma_grit_attn_pattern_vn4,best_test_perf
+pattern,PATTERN,MP_only,MP-only,False,True,accuracy_pct,100.0,paper_T5_pattern_gritvn4_MP_only,best_test_perf
+pattern,PATTERN,Attn_only,Attention-only,False,True,accuracy_pct,100.0,paper_T5_pattern_gritvn4_Attn_only,best_test_perf
+pattern,PATTERN,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,100.0,paper_T5_pattern_gritvn4_SiGMA_attn_gate,best_test_perf
+pattern,PATTERN,SiGMA_ungated_attn,"SiGMA, ung. att.",False,True,accuracy_pct,100.0,paper_T5_pattern_gritvn4_SiGMA_ungated_attn,best_test_perf
+pattern,PATTERN,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,100.0,paper_T5_pattern_gritvn4_SiGMA_ungated,best_test_perf
+cluster,CLUSTER,SiGMA,SiGMA,True,True,accuracy_pct,100.0,paper_bestmodel_v1_cluster_ht9bntg2,best_test_perf
+cluster,CLUSTER,MP_only,MP-only,False,True,accuracy_pct,100.0,paper_T5_cluster_MP_only,best_test_perf
+cluster,CLUSTER,Attn_only,Attention-only,False,True,accuracy_pct,100.0,paper_T5_cluster_Attn_only,best_test_perf
+cluster,CLUSTER,SiGMA_attn_gate,"SiGMA, ung. MP",False,True,accuracy_pct,100.0,paper_T5_cluster_SiGMA_attn_gate,best_test_perf
+cluster,CLUSTER,SiGMA_ungated,"SiGMA, ungated",False,True,accuracy_pct,100.0,paper_T5_cluster_SiGMA_ungated,best_test_perf
