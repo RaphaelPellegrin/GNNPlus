@@ -118,15 +118,11 @@ case "${campaign}" in
         model_key="sigma_hetero"
         model_tag="SiGMA_hetero"
         seed=$((seed_offset))
-        mapfile -t sigma_task < <(python3 -c "
+        read -r ds_tag fold_idx grid_rel hp_id < <(python3 -c "
 import json
 t=json.load(open('configs/tu_errica/sigma_grids/manifest.json'))['tasks'][${idx}]
 print(t['ds_tag'], t['fold'], t['grid_file'], t['hp_id'])
 ")
-        ds_tag="${sigma_task[0]}"
-        fold_idx="${sigma_task[1]}"
-        grid_rel="${sigma_task[2]}"
-        hp_id="${sigma_task[3]}"
         sigma_grid_file="configs/tu_errica/sigma_grids/grids/${grid_rel}"
         for i in "${!datasets[@]}"; do
             if [ "${datasets[$i]}" = "${ds_tag}" ]; then
