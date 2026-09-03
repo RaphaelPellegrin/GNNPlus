@@ -16,14 +16,14 @@ Fair comparison under [Errica et al. ICLR 2020](https://arxiv.org/pdf/1912.09893
 > and matches or exceeds the best classical GNN on **X/7** datasets
 > (and Errica's reported GIN on **Y/7**).
 
-## Errica GIN reference (Table 3/4, degree social)
+## Errica GIN reference (Table 3 chemical / Table 4 social+degree)
 
 | Dataset | Errica GIN |
 |---------|------------|
-| ENZYMES | 29.5 ± 8.2 |
+| ENZYMES | 59.6 ± 4.5 |
 | PROTEINS | 73.3 ± 4.0 |
 | NCI1 | 80.0 ± 1.4 |
-| DD | 76.6 ± 4.3 |
+| DD | 75.3 ± 2.9 |
 | IMDB-BINARY | 71.2 ± 3.9 |
 | REDDIT-BINARY | 89.9 ± 1.9 |
 | COLLAB | 75.6 ± 2.3 |
@@ -37,6 +37,7 @@ Fair comparison under [Errica et al. ICLR 2020](https://arxiv.org/pdf/1912.09893
 | GCN | GIN-isomorphic† | 32 | 7 × 32 × 10 = **2,240** |
 | GAT | GIN-isomorphic† | 32 | 7 × 32 × 10 = **2,240** |
 | SiGMA hetero | fixed8 `SIGMA_GRID` | 8 | 7 × 8 × 10 = **560** |
+| SiGMA hetero (alt) | GIN-isomorphic `full64` | 64 | 7 × 64 × 10 = **4,480** |
 
 †Errica's [gnn-comparison](https://github.com/diningphil/gnn-comparison) repo has no `config_GCN.yml` /
 `config_GAT.yml`. GCN/GAT use the same **protocol** (splits, early stop, Adam+StepLR) with a
@@ -57,7 +58,8 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 | **2b** | `generate_sigma` **fixed8** | — | ✅ local | manifest · **560** tasks (replaces 400 budget_bio) |
 | **3a†** | `sigma_grid_select` budget_bio | **43741550** | ✅ done | **obsolete** for final SiGMA column |
 | **3a‡** | `sigma_grid_select` (failed) | **43451648** | ❌ failed | bash `mapfile` bug · fixed in `5e1688c` |
-| **3a** | `sigma_grid_select` **fixed8** | — | **todo** | **560** tasks · relaunch |
+| **3a** | `sigma_grid_select` **fixed8** | **44217420** | 🔄 **submitted** | **560** tasks · W&B `…_sigma_grid_select_fixed8_…` |
+| **3a§** | `sigma_grid_select` **full64** | — | **ready to submit** | GIN-matched **4,480** · `sigma_grids_full64/` · use `gpu_h200` + 72h |
 | **3b** | `aggregate_sigma` | — | **todo** | after fixed8 select |
 | **4a–d** | `grid_eval` GIN/SAGE/GCN/GAT | 44100531 / 66 / 96 / **44165919** | ✅ **done** | classical column frozen |
 | **4e†** | `sigma_grid_eval` budget_bio | **44165958** | ignore / cancel | HPs from obsolete select |
@@ -71,7 +73,7 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 | GraphSAGE | 43116245 | 5,040 | ✅ 5040 COMPLETED |
 | GCN | 43434937 | 2,240 | ✅ 2240 COMPLETED |
 | GAT | 43434950 + **44099901** | 2,240 | 14 W&B-timeout reruns |
-| **SiGMA fixed8** | *(relaunch)* | **560** | **todo** (old **43741550**=400 budget_bio, obsolete) |
+| **SiGMA fixed8** | **44217420** | **560** | 🔄 submitted |
 
 **Total grid_select jobs (all four):** 14,000
 
@@ -84,7 +86,7 @@ cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 squeue -u $USER | grep tu_errica
 
 # Per-job completion (replace nothing — use real IDs)
-for j in 44099901 44100531 44100566 44100596 43741550; do
+for j in 44217420; do
   echo "=== $j ==="
   sacct -j $j -X --format=State,ExitCode -n | awk '{print $1}' | sort | uniq -c
 done
@@ -108,7 +110,7 @@ source ~/.gnnplus_env
 export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 
 # Active arrays
-for j in 44099901 44100531 44100566 44100596 43741550; do
+for j in 44217420; do
   echo "=== $j ==="
   sacct -j $j -X --format=State -n | awk '{print $1}' | sort | uniq -c
 done
@@ -129,10 +131,10 @@ LaTeX: [`results/tu_errica/analysis/tab_tu_errica_grid_eval.tex`](results/tu_err
 
 | Dataset | GCN | GIN | GraphSAGE | GAT | Errica GIN [1] |
 |---------|-----|-----|-----------|-----|----------------|
-| ENZYMES | 50.4±5.2 | 45.4±5.2 | **51.0±4.7** | 42.1±7.0 | 29.5±8.2 |
+| ENZYMES | 50.4±5.2 | 45.4±5.2 | **51.0±4.7** | 42.1±7.0 | 59.6±4.5 |
 | PROTEINS | **73.9±4.0** | 73.4±4.4 | 73.0±3.2 | 72.7±3.1 | 73.3±4.0 |
 | NCI1 | 80.7±1.5 | 80.4±1.5 | **81.6±2.3** | 75.4±2.4 | 80.0±1.4 |
-| DD | 71.9±4.2 | **73.7±5.2** | 72.8±3.0 | 72.9±9.2 | 76.6±4.3 |
+| DD | 71.9±4.2 | **73.7±5.2** | 72.8±3.0 | 72.9±9.2 | 75.3±2.9 |
 | IMDB-BINARY | 65.7±3.5 | **71.1±4.5** | 50.5±1.1 | 50.4±2.0 | 71.2±3.9 |
 | REDDIT-BINARY | **92.6±1.0** | 92.5±1.1 | 73.4±4.0 | 74.7±2.3 | 89.9±1.9 |
 | COLLAB | **77.0±2.1** | 76.5±2.5 | 52.5±3.2 | 47.6±7.9 | 75.6±2.3 |
@@ -146,10 +148,10 @@ Fixed `GIN_CANONICAL` — useful signal only:
 
 | Dataset | GIN | GraphSAGE | SiGMA | Errica GIN |
 |---------|-----|-----------|-------|------------|
-| ENZYMES | 45.0 | 51.3 | 54.1 | 29.5 |
+| ENZYMES | 45.0 | 51.3 | 54.1 | 59.6 |
 | PROTEINS | 74.1 | 72.3 | 71.8 | 73.3 |
 | NCI1 | 77.8 | 79.1 | **80.3** | 80.0 |
-| DD | 72.4 | 70.7 | pending | 76.6 |
+| DD | 72.4 | 70.7 | pending | 75.3 |
 | IMDB-B | 71.0 | ~50† | 71.1 | 71.2 |
 | REDDIT-B | 89.3 | ~50† | pending | 89.9 |
 | COLLAB | 74.9 | 51.8 | **78.2** | 75.6 |
@@ -183,6 +185,25 @@ TU_ERRICA_CAMPAIGN=sigma_grid_eval_fixed8 TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:
 ```
 
 Legacy budgeted bio grids: `--mode budget_bio` (requires `gin_per_fold.json`).
+
+## Alternative: GIN-matched 64-config SiGMA (`full64`)
+
+Protocol-matched search: **same 64 configs as GIN**, with `d_h ∈ {8,16}` standing in
+for GIN's `train_eps`. Axes: `batch∈{32,128}`, `lr=0.01`, `layers=4`, `dim∈{32,64}`,
+`pool∈{add,mean}`, `dropout∈{0,0.5}`, `early_stop∈{acc,loss}`.
+
+Task count: **7 × 10 × 64 = 4,480** (same as GIN `grid_select`).
+Writes `configs/tu_errica/sigma_grids_full64/` — **does not overwrite** the running
+fixed8 job **44217420**.
+
+Wall-clock at `%12` and ~0.9 h/task: \(\approx 4480 \times 0.9 / 12 \approx\) **14 days**.
+Raise `TU_ERRICA_PARALLEL` if launching.
+
+```bash
+python scripts/tu_errica/generate_sigma_errica_grids.py --mode full64
+# → 4480 tasks under configs/tu_errica/sigma_grids_full64/
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_select_full64
+```
 
 Scripts:
 - `scripts/tu_errica/param_budget.py` — param counting (+ legacy bio budget helpers)
@@ -232,7 +253,7 @@ Monitor:
 
 ```bash
 # All four grid_select jobs
-for j in 44099901 44100531 44100566 44100596 43741550; do
+for j in 44217420; do
   echo "=== $j ==="
   sacct -j $j -X --format=State,ExitCode -n | awk '{print $1}' | sort | uniq -c
 done

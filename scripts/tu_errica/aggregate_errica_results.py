@@ -12,12 +12,14 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any, Sequence
 
-# Errica Table 3/4 GIN reference (10-fold, degree social) — accuracy in %.
+# Errica et al. ICLR 2020 Tables 3/4 — published GIN mean±std (accuracy %).
+# Chemical: Table 3 GIN row. Social: Table 4 "With Degree" GIN row.
+# (Previously ENZYMES/DD were mis-copied from ECC/DGCNN.)
 ERRICA_GIN_REFERENCE: dict[str, tuple[float, float]] = {
-    "ENZYMES": (29.5, 8.2),
+    "ENZYMES": (59.6, 4.5),
     "PROTEINS": (73.3, 4.0),
     "NCI1": (80.0, 1.4),
-    "DD": (76.6, 4.3),
+    "DD": (75.3, 2.9),
     "IMDB-BINARY": (71.2, 3.9),
     "REDDIT-BINARY": (89.9, 1.9),
     "COLLAB": (75.6, 2.3),
@@ -298,11 +300,7 @@ def format_latex_table(
             if row is None:
                 cells.append("--")
                 continue
-            cell = (
-                f"{row['test_acc_mean']:.2f}"
-                r"{\pm}"
-                f"{row['test_acc_std']:.2f}"
-            )
+            cell = f"{row['test_acc_mean']:.2f}" r"{\pm}" f"{row['test_acc_std']:.2f}"
             if model in best_models:
                 cell = r"$\mathbf{" + cell + "}$"
             else:
@@ -321,7 +319,9 @@ def format_latex_table(
     return "\n".join(lines)
 
 
-def print_summary(summary: list[dict[str, Any]], *, n_rows: int, n_with_acc: int) -> None:
+def print_summary(
+    summary: list[dict[str, Any]], *, n_rows: int, n_with_acc: int
+) -> None:
     """Print summary table or diagnostics when empty."""
     if not summary:
         print(
@@ -336,7 +336,9 @@ def print_summary(summary: list[dict[str, Any]], *, n_rows: int, n_with_acc: int
         )
         return
 
-    print(f"{'dataset':<16} {'model':<14} {'n':>4}  {'mean±std':>12}  {'vs Errica GIN':>14}")
+    print(
+        f"{'dataset':<16} {'model':<14} {'n':>4}  {'mean±std':>12}  {'vs Errica GIN':>14}"
+    )
     print("-" * 70)
     for row in summary:
         vs = ""
@@ -371,8 +373,7 @@ def main() -> None:
     parser.add_argument(
         "--models",
         default="",
-        help="Comma-separated model tags (default: all). "
-        "Example: GIN,GraphSAGE,GCN",
+        help="Comma-separated model tags (default: all). " "Example: GIN,GraphSAGE,GCN",
     )
     parser.add_argument(
         "--state",
@@ -409,7 +410,9 @@ def main() -> None:
     rows: list[dict[str, Any]] = []
     if args.source in ("local", "auto"):
         rows = collect_local_runs(args.root)
-    if args.source == "wandb" or (args.source == "auto" and not any(r.get("test_acc") for r in rows)):
+    if args.source == "wandb" or (
+        args.source == "auto" and not any(r.get("test_acc") for r in rows)
+    ):
         states = [s.strip() for s in args.state.split(",") if s.strip()]
         rows = collect_wandb_runs(
             entity=args.entity,

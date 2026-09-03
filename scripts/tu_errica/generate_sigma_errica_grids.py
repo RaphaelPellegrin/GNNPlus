@@ -2,7 +2,11 @@
 """Build per-fold SiGMA grids for Errica hybrid search.
 
 Default (``--mode fixed8``): every dataset/fold uses the fixed 8-config
-``SIGMA_GRID`` (no GIN/GCN parameter ceiling).
+``SIGMA_GRID`` (no GIN/GCN parameter ceiling). Writes
+``configs/tu_errica/sigma_grids/``.
+
+``--mode full64``: GIN-isomorphic 64-config grid (same search budget as GIN).
+Writes ``configs/tu_errica/sigma_grids_full64/`` so it does not clobber fixed8.
 
 Legacy (``--mode budget_bio``): bio folds lock depth/width to the GIN winner
 and keep SiGMA params ≤ that GIN budget; social folds use ``SIGMA_GRID``.
@@ -18,7 +22,7 @@ from typing import Any, Literal
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
-SigmaGridMode = Literal["fixed8", "budget_bio"]
+SigmaGridMode = Literal["fixed8", "budget_bio", "full64"]
 
 
 def _load_module(name: str, rel_path: str) -> Any:
@@ -40,9 +44,14 @@ DS_TAG_TO_NAME = _hp.DS_TAG_TO_NAME
 SOCIAL_DS_TAGS = _hp.SOCIAL_DS_TAGS
 build_bio_sigma_micro_grid = _hp.build_bio_sigma_micro_grid
 social_sigma_grid_entries = _hp.social_sigma_grid_entries
+full64_sigma_grid_entries = _hp.full64_sigma_grid_entries
 
-GRIDS_DIR = _REPO_ROOT / "configs/tu_errica/sigma_grids"
-MANIFEST_PATH = GRIDS_DIR / "manifest.json"
+
+def grids_dir_for_mode(mode: SigmaGridMode) -> Path:
+    """Return the on-disk grid directory for ``mode`` (full64 is separate)."""
+    if mode == "full64":
+        return _REPO_ROOT / "configs/tu_errica/sigma_grids_full64"
+    return _REPO_ROOT / "configs/tu_errica/sigma_grids"
 
 
 def _budget_module() -> Any:
@@ -94,6 +103,13 @@ def _grid_for_fold(
     if mode == "fixed8":
         return _annotate_grid(
             social_sigma_grid_entries(),
+            dataset_name=ds_name,
+            gin_params=None,
+            with_params=False,
+        )
+    if mode == "full64":
+        return _annotate_grid(
+            full64_sigma_grid_entries(),
             dataset_name=ds_name,
             gin_params=None,
             with_params=False,
@@ -207,8 +223,9 @@ def write_grids(
         assert gin_selection_path is not None
         gin_sel = _load_gin_selection(gin_selection_path)
 
-    GRIDS_DIR.mkdir(parents=True, exist_ok=True)
-    grids_sub = GRIDS_DIR / "grids"
+    grids_dir = grids_dir_for_mode(mode)
+    grids_dir.mkdir(parents=True, exist_ok=True)
+    grids_sub = grids_dir / "grids"
     grids_sub.mkdir(parents=True, exist_ok=True)
 
     written: set[str] = set()
@@ -230,7 +247,8 @@ def write_grids(
         out_path.write_text(json.dumps({"grid": grid}, indent=2), encoding="utf-8")
         written.add(rel_name)
 
-    MANIFEST_PATH.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    manifest_path = grids_dir / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
 
 def main() -> None:
@@ -238,16 +256,17 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--mode",
-        choices=("fixed8", "budget_bio"),
+        choices=("fixed8", "budget_bio", "full64"),
         default="fixed8",
-        help="fixed8: SIGMA_GRID on all folds (default). "
+        help="fixed8: 8-config SIGMA_GRID (default). "
+        "full64: GIN-isomorphic 64-config grid. "
         "budget_bio: legacy GIN-budgeted bio micro-grid.",
     )
     parser.add_argument(
         "--gin-selection",
         type=Path,
         default=_REPO_ROOT / "configs/tu_errica/selections/gin_per_fold.json",
-        help="Required for --mode budget_bio; ignored for fixed8.",
+        help="Required for --mode budget_bio; ignored otherwise.",
     )
     parser.add_argument("--num-folds", type=int, default=10)
     args = parser.parse_args()
@@ -261,11 +280,12 @@ def main() -> None:
         num_folds=args.num_folds,
         mode=mode,
     )
+    grids_dir = grids_dir_for_mode(mode)
     print(
-        f"Wrote {MANIFEST_PATH} with {manifest['num_tasks']} "
+        f"Wrote {grids_dir / 'manifest.json'} with {manifest['num_tasks']} "
         f"sigma_grid_select tasks (mode={mode})"
     )
-    print(f"Grid files: {GRIDS_DIR / 'grids'}")
+    print(f"Grid files: {grids_dir / 'grids'}")
 
 
 if __name__ == "__main__":

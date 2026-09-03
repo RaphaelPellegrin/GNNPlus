@@ -1,0 +1,644 @@
+{
+  "grid": [
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 8,
+      "graph_pooling": "add",
+      "dropout": 0.5,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 8,
+      "graph_pooling": "add",
+      "dropout": 0.5,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 8,
+      "graph_pooling": "add",
+      "dropout": 0.0,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 8,
+      "graph_pooling": "add",
+      "dropout": 0.0,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 8,
+      "graph_pooling": "mean",
+      "dropout": 0.5,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 8,
+      "graph_pooling": "mean",
+      "dropout": 0.5,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 8,
+      "graph_pooling": "mean",
+      "dropout": 0.0,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 8,
+      "graph_pooling": "mean",
+      "dropout": 0.0,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 16,
+      "graph_pooling": "add",
+      "dropout": 0.5,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 16,
+      "graph_pooling": "add",
+      "dropout": 0.5,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 16,
+      "graph_pooling": "add",
+      "dropout": 0.0,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 16,
+      "graph_pooling": "add",
+      "dropout": 0.0,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 16,
+      "graph_pooling": "mean",
+      "dropout": 0.5,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 16,
+      "graph_pooling": "mean",
+      "dropout": 0.5,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 16,
+      "graph_pooling": "mean",
+      "dropout": 0.0,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 16,
+      "graph_pooling": "mean",
+      "dropout": 0.0,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 8,
+      "graph_pooling": "add",
+      "dropout": 0.5,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 8,
+      "graph_pooling": "add",
+      "dropout": 0.5,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 8,
+      "graph_pooling": "add",
+      "dropout": 0.0,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 8,
+      "graph_pooling": "add",
+      "dropout": 0.0,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 8,
+      "graph_pooling": "mean",
+      "dropout": 0.5,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 8,
+      "graph_pooling": "mean",
+      "dropout": 0.5,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 8,
+      "graph_pooling": "mean",
+      "dropout": 0.0,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 8,
+      "graph_pooling": "mean",
+      "dropout": 0.0,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 16,
+      "graph_pooling": "add",
+      "dropout": 0.5,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 16,
+      "graph_pooling": "add",
+      "dropout": 0.5,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 16,
+      "graph_pooling": "add",
+      "dropout": 0.0,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 16,
+      "graph_pooling": "add",
+      "dropout": 0.0,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 16,
+      "graph_pooling": "mean",
+      "dropout": 0.5,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 16,
+      "graph_pooling": "mean",
+      "dropout": 0.5,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 16,
+      "graph_pooling": "mean",
+      "dropout": 0.0,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 16,
+      "graph_pooling": "mean",
+      "dropout": 0.0,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 8,
+      "graph_pooling": "add",
+      "dropout": 0.5,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 8,
+      "graph_pooling": "add",
+      "dropout": 0.5,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 8,
+      "graph_pooling": "add",
+      "dropout": 0.0,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 8,
+      "graph_pooling": "add",
+      "dropout": 0.0,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 8,
+      "graph_pooling": "mean",
+      "dropout": 0.5,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 8,
+      "graph_pooling": "mean",
+      "dropout": 0.5,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 8,
+      "graph_pooling": "mean",
+      "dropout": 0.0,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 8,
+      "graph_pooling": "mean",
+      "dropout": 0.0,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 16,
+      "graph_pooling": "add",
+      "dropout": 0.5,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 16,
+      "graph_pooling": "add",
+      "dropout": 0.5,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 16,
+      "graph_pooling": "add",
+      "dropout": 0.0,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 16,
+      "graph_pooling": "add",
+      "dropout": 0.0,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 16,
+      "graph_pooling": "mean",
+      "dropout": 0.5,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 16,
+      "graph_pooling": "mean",
+      "dropout": 0.5,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 16,
+      "graph_pooling": "mean",
+      "dropout": 0.0,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 64,
+      "d_h": 16,
+      "graph_pooling": "mean",
+      "dropout": 0.0,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 8,
+      "graph_pooling": "add",
+      "dropout": 0.5,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 8,
+      "graph_pooling": "add",
+      "dropout": 0.5,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 8,
+      "graph_pooling": "add",
+      "dropout": 0.0,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 8,
+      "graph_pooling": "add",
+      "dropout": 0.0,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 8,
+      "graph_pooling": "mean",
+      "dropout": 0.5,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 8,
+      "graph_pooling": "mean",
+      "dropout": 0.5,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 8,
+      "graph_pooling": "mean",
+      "dropout": 0.0,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 8,
+      "graph_pooling": "mean",
+      "dropout": 0.0,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 16,
+      "graph_pooling": "add",
+      "dropout": 0.5,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 16,
+      "graph_pooling": "add",
+      "dropout": 0.5,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 16,
+      "graph_pooling": "add",
+      "dropout": 0.0,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 16,
+      "graph_pooling": "add",
+      "dropout": 0.0,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 16,
+      "graph_pooling": "mean",
+      "dropout": 0.5,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 16,
+      "graph_pooling": "mean",
+      "dropout": 0.5,
+      "early_stop_use_loss": true
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 16,
+      "graph_pooling": "mean",
+      "dropout": 0.0,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 4,
+      "dim_inner": 32,
+      "d_h": 16,
+      "graph_pooling": "mean",
+      "dropout": 0.0,
+      "early_stop_use_loss": true
+    }
+  ]
+}

@@ -57,11 +57,14 @@ case "${campaign}" in
         num_hp=$(python3 -c "import json; from pathlib import Path; p=Path('configs/tu_errica/${hp_model}_hp_grid.json'); print(len(json.load(p.open())['grid']))")
         num_tasks=$((num_datasets * num_hp * num_folds))
         ;;
-    grid_eval|sigma_grid_eval|sigma_grid_eval_fixed8)
+    grid_eval|sigma_grid_eval|sigma_grid_eval_fixed8|sigma_grid_eval_full64)
         num_tasks=$((num_datasets * num_folds * num_seeds))
         ;;
     sigma_grid_select|sigma_grid_select_fixed8)
         num_tasks=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids/manifest.json'))['num_tasks'])")
+        ;;
+    sigma_grid_select_full64)
+        num_tasks=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids_full64/manifest.json'))['num_tasks'])")
         ;;
     *)
         log_message "Unknown TU_ERRICA_CAMPAIGN=${campaign}"
@@ -134,11 +137,32 @@ print(t['ds_tag'], t['fold'], t['grid_file'], t['hp_id'])
         done
         emit_extra=(--sigma-grid-file "${sigma_grid_file}" --hp-id="${hp_id}")
         ;;
-    sigma_grid_eval|sigma_grid_eval_fixed8)
+    sigma_grid_select_full64)
         cfg="configs/tu_errica/sigma-hetero-errica-base.yaml"
         model_key="sigma_hetero"
         model_tag="SiGMA_hetero"
-        if [ "${campaign}" = "sigma_grid_eval_fixed8" ]; then
+        seed=$((seed_offset))
+        read -r ds_tag fold_idx grid_rel hp_id < <(python3 -c "
+import json
+t=json.load(open('configs/tu_errica/sigma_grids_full64/manifest.json'))['tasks'][${idx}]
+print(t['ds_tag'], t['fold'], t['grid_file'], t['hp_id'])
+")
+        sigma_grid_file="configs/tu_errica/sigma_grids_full64/grids/${grid_rel}"
+        for i in "${!datasets[@]}"; do
+            if [ "${datasets[$i]}" = "${ds_tag}" ]; then
+                dataset_idx=$i
+                break
+            fi
+        done
+        emit_extra=(--sigma-grid-file "${sigma_grid_file}" --hp-id="${hp_id}")
+        ;;
+    sigma_grid_eval|sigma_grid_eval_fixed8|sigma_grid_eval_full64)
+        cfg="configs/tu_errica/sigma-hetero-errica-base.yaml"
+        model_key="sigma_hetero"
+        model_tag="SiGMA_hetero"
+        if [ "${campaign}" = "sigma_grid_eval_full64" ]; then
+            selection_file="${TU_ERRICA_SELECTION_FILE:-configs/tu_errica/selections/sigma_full64_per_fold.json}"
+        elif [ "${campaign}" = "sigma_grid_eval_fixed8" ]; then
             selection_file="${TU_ERRICA_SELECTION_FILE:-configs/tu_errica/selections/sigma_fixed8_per_fold.json}"
         else
             selection_file="${TU_ERRICA_SELECTION_FILE:-configs/tu_errica/selections/sigma_per_fold.json}"
@@ -164,7 +188,7 @@ print(t['ds_tag'], t['fold'], t['grid_file'], t['hp_id'])
         ;;
 esac
 
-if [[ "${campaign}" != sigma_grid_select && "${campaign}" != sigma_grid_select_fixed8 ]]; then
+if [[ "${campaign}" != sigma_grid_select && "${campaign}" != sigma_grid_select_fixed8 && "${campaign}" != sigma_grid_select_full64 ]]; then
     ds_tag="${datasets[$dataset_idx]}"
 fi
 ds_name="${dataset_names[$dataset_idx]}"
@@ -192,7 +216,7 @@ hp_args=(${hp_line})
 job_tag="${SLURM_ARRAY_JOB_ID:-${SLURM_JOB_ID:-local}}"
 hp_tag="canonical"
 if [ "${hp_id}" -ge 0 ]; then
-    if [[ "${campaign}" == sigma_grid_select || "${campaign}" == sigma_grid_select_fixed8 ]]; then
+    if [[ "${campaign}" == sigma_grid_select || "${campaign}" == sigma_grid_select_fixed8 || "${campaign}" == sigma_grid_select_full64 ]]; then
         hp_tag="f${fold_idx}_hp${hp_id}"
     else
         hp_tag="hp${hp_id}"

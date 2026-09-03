@@ -107,6 +107,20 @@ SIGMA_GRID: dict[str, list[Any]] = {
     "early_stop_use_loss": [False],
 }
 
+# GIN-isomorphic 64-config SiGMA grid for a protocol-matched search.
+# Same axes as GIN except ``gin_train_eps`` → ``d_h ∈ {8, 16}``.
+# Count: 2×1×1×2×2×2×2×2 = 64 (same as GIN; GCN/GAT are 32 without eps).
+SIGMA_FULL64_GRID: dict[str, list[Any]] = {
+    "batch_size": [32, 128],
+    "base_lr": [0.01],
+    "layers_mp": [4],
+    "dim_inner": [64, 32],
+    "d_h": [8, 16],
+    "graph_pooling": ["add", "mean"],
+    "dropout": [0.5, 0.0],
+    "early_stop_use_loss": [False, True],
+}
+
 SIGMA_CANONICAL: dict[str, Any] = {
     "batch_size": 128,
     "base_lr": 0.001,
@@ -168,6 +182,11 @@ def social_sigma_grid_entries() -> list[dict[str, Any]]:
     return expand_grid(SIGMA_GRID)
 
 
+def full64_sigma_grid_entries() -> list[dict[str, Any]]:
+    """GIN-isomorphic 64-config SiGMA grid (``full64`` mode)."""
+    return expand_grid(SIGMA_FULL64_GRID)
+
+
 def expand_grid(grid: dict[str, list[Any]]) -> list[dict[str, Any]]:
     """Cartesian product of a hyperparameter grid."""
     keys = list(grid.keys())
@@ -190,6 +209,8 @@ def write_grid_json(model: str, out_dir: Path) -> Path:
         canonical, grid = GAT_CANONICAL, expand_grid(GAT_GRID)
     elif model == "sigma_hetero":
         canonical, grid = SIGMA_CANONICAL, expand_grid(SIGMA_GRID)
+    elif model == "sigma_hetero_full64":
+        canonical, grid = SIGMA_CANONICAL, expand_grid(SIGMA_FULL64_GRID)
     else:
         raise ValueError(f"Unknown model: {model}")
 
@@ -219,5 +240,5 @@ def load_hp_config(model: str, hp_id: int, *, canonical_only: bool = False) -> d
 
 if __name__ == "__main__":
     root = Path(__file__).resolve().parents[2] / "configs" / "tu_errica"
-    for family in ("gin", "graphsage", "gcn", "gat", "sigma_hetero"):
+    for family in ("gin", "graphsage", "gcn", "gat", "sigma_hetero", "sigma_hetero_full64"):
         write_grid_json(family, root)

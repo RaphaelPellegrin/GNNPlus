@@ -85,7 +85,9 @@ def collect_sigma_runs(
     return rows
 
 
-def select_best_sigma(rows: list[dict[str, Any]]) -> dict[str, dict[str, dict[str, Any]]]:
+def select_best_sigma(
+    rows: list[dict[str, Any]],
+) -> dict[str, dict[str, dict[str, Any]]]:
     """Nested ds_tag → fold → best sigma grid entry."""
     best: dict[tuple[str, int], dict[str, Any]] = {}
     for row in rows:
