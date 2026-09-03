@@ -42,6 +42,8 @@ num_models=${#models[@]}
 num_datasets=${#datasets[@]}
 num_tasks=$((num_datasets * num_models))
 
+log_message "HETERO_DATASETS='${HETERO_DATASETS:-}' HETERO_MODELS='${HETERO_MODELS:-}' → ${num_datasets}×${num_models}=${num_tasks} tasks"
+
 if [ "$task_id" -lt 1 ] || [ "$task_id" -gt "$num_tasks" ]; then
     log_message "task_id=${task_id} out of range (1..${num_tasks})"
     exit 1

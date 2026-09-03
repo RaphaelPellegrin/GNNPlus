@@ -280,3 +280,13 @@ Disable W&B: `HETERO_WANDB=0 bash …/submit_heterogeneity_tu.sh`
 | 7 | proteins | GCN |
 | 8 | proteins | GIN |
 | 9 | proteins | SiGMA |
+
+---
+
+## TU gate–operator bridge (2026-09)
+
+Per-graph **GCN / GIN / SAGE / GatedGCN** profiles on MUTAG + ENZYMES (Xu HPs),
+to pair with SiGMA hetero gate dumps (Appendix F) for Tables 1–2.
+
+→ **[`Paper_tu_gate_hetero_bridge.md`](Paper_tu_gate_hetero_bridge.md)**  
+`mutag_gcn` ✅ **`43789365_1`** · retries ❌ (`--export` comma bug) · fix submit then resubmit 2–8.

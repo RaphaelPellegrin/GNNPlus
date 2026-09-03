@@ -51,10 +51,27 @@ MAX_TRIALS="${HETERO_MAX_TRIALS:-2000}"
 SEED0="${HETERO_SEED0:-0}"
 WANDB_USE="${HETERO_WANDB:-1}"
 
+# Comma-separated lists MUST NOT appear inside ``--export=A=x,B=y`` — SLURM
+# splits on commas, so ``HETERO_DATASETS=mutag,enzymes`` becomes only ``mutag``
+# (and ``HETERO_MODELS=gcn``). That made array tasks 2–8 die with
+# ``task_id out of range (1..1)``. Export them via the shell + ``--export=ALL``.
+export ENV_NAME=gnnplus
+export HETERO_REQUIRED_TEST_APPEARANCES="${REQUIRED}"
+export HETERO_MAX_TRIALS="${MAX_TRIALS}"
+export HETERO_SEED0="${SEED0}"
+export HETERO_WANDB="${WANDB_USE}"
+export HETERO_DATASETS="${HETERO_DATASETS:-mutag,enzymes}"
+export HETERO_MODELS="${HETERO_MODELS:-gcn,gin,sage,gatedgcn}"
+export HETERO_OUT_SUBDIR="${HETERO_OUT_SUBDIR:-heterogeneity/powerful_gnns/tu_gate_bridge}"
+if [ -n "${GNNPLUS_DATASET_DIR:-}" ]; then
+    export GNNPLUS_DATASET_DIR
+fi
+
 if [ -z "${GNNPLUS_OUT_DIR:-}" ]; then
     export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
     echo "[submit_gate_bridge] GNNPLUS_OUT_DIR unset → ${GNNPLUS_OUT_DIR}"
 fi
+export GNNPLUS_OUT_DIR
 
 sbatch_args=(
     --parsable
@@ -65,7 +82,7 @@ sbatch_args=(
     --time="${TIME}"
     --gpus=1
     --output="logs_gnnplus/hetero_gate_bridge_%A_%a.log"
-    --export=ALL,ENV_NAME=gnnplus,HETERO_REQUIRED_TEST_APPEARANCES="${REQUIRED}",HETERO_MAX_TRIALS="${MAX_TRIALS}",HETERO_SEED0="${SEED0}",HETERO_WANDB="${WANDB_USE}",GNNPLUS_DATASET_DIR="${GNNPLUS_DATASET_DIR:-}",GNNPLUS_OUT_DIR="${GNNPLUS_OUT_DIR:-}",HETERO_DATASETS="${HETERO_DATASETS:-mutag,enzymes}",HETERO_MODELS="${HETERO_MODELS:-gcn,gin,sage,gatedgcn}",HETERO_OUT_SUBDIR="${HETERO_OUT_SUBDIR:-heterogeneity/powerful_gnns/tu_gate_bridge}"
+    --export=ALL
 )
 
 if [ "${NICE}" != "0" ]; then
@@ -82,7 +99,9 @@ cat <<EOF
 === TU gate–operator bridge heterogeneity submitted ===
   ARRAY JOBID:   ${job_id}
   Partition:     ${PARTITION}
-  Tasks:         ${ARRAY_SPEC}  (mutag/enzymes × gcn/gin/sage/gatedgcn = 8)
+  Tasks:         ${ARRAY_SPEC}  (datasets×models → see lists below)
+  Datasets:      ${HETERO_DATASETS}
+  Models:        ${HETERO_MODELS}
   Parallel:      ${PARALLEL} GPUs max
   Appearances:   ≥${REQUIRED} per graph
   Max trials:    ${MAX_TRIALS}

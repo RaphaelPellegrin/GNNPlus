@@ -1,4 +1,4 @@
-d# 🚦 Cluster launches tracker (SiGMA paper week)
+# 🚦 Cluster launches tracker (SiGMA paper week)
 
 > **Status legend**  
 > ✅ **SUBMITTED / RUNNING** — job already on FASRC  
@@ -10,6 +10,24 @@ Entity/project: [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/webe
 ---
 
 ## ✅ SUBMITTED (do not re-submit)
+
+### 🧪 Table 5 — PATTERN + CLUSTER seed-20 fill (165 jobs)
+
+| | |
+|--|--|
+| **Status** | 🔄 **IN PROGRESS** (2026-09-03 ~08:50) — CLUSTER ✅ **60/60** · PATTERN **20/90** |
+| **SLURM** | CLUSTER **`43796006`** (SiGMA 1–15 ✅) + **`43916889`** (ablations 16–75 ✅) · PATTERN **`43796007`** 🔄 20/90 |
+| **When** | 2026-09-01 original · 2026-09-02 CLUSTER ablation resubmit |
+| **Tasks** | CLUSTER `1-75%5` · PATTERN `1-90%5` |
+| **Docs** | [`Paper_table5_seed20_fill.md`](Paper_table5_seed20_fill.md) |
+| **W&B** | `paper_T5_cluster_*` (seeds 5–19) · `paper_T5_pattern_gritvn4_*` (seeds 10–24) |
+| **Logs** | `sigma_T5_cl_s20_43796006_<TASK>.log` · `sigma_T5_cl_s20_43916889_<TASK>.log` · `sigma_T5_pat_s20_43796007_<TASK>.log` |
+| **Note** | 43796006 tasks 16–75 failed (`sbatch --export` comma split); resubmitted as 43916889 ✅ |
+
+```bash
+# 📊 re-export paired t-test CSVs when done
+python scripts/api_wanndb_query/export_table5_paired_ttest_data.py
+```
 
 ### 🧪 Table 5 — LRGB ablations (80 jobs)
 
@@ -443,6 +461,30 @@ GCN_GIN_FORWARD_OUT_DIR=$PWD/results/gcn_gin_routing/analysis/forward_traces/nox
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
+║  ❌  FAILED  ·  TU gate–operator bridge · fix submit --export commas    ║
+║  📄  Paper_tu_gate_hetero_bridge.md                                      ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+| Field | Value |
+|-------|-------|
+| **mutag_gcn** | ✅ **`43789365_1`** (≥100 apps, COMPLETED) |
+| **Retries** | ❌ `43789365_2..8` · ❌ **`44100206`** (same `1..1`) |
+| **Root cause** | SLURM `--export=HETERO_DATASETS=mutag,enzymes,...` splits on commas |
+| **Fix** | `submit_heterogeneity_tu_gate_bridge.sh` → shell export + `--export=ALL` |
+| **Next** | sync fix → `HETERO_ARRAY=2-8` resubmit |
+| **Out** | `$GNNPLUS_OUT_DIR/heterogeneity/powerful_gnns/tu_gate_bridge/` |
+
+```bash
+# after git pull / copying fixed submit script:
+HETERO_ARRAY=2-8 bash bash_interface/cluster/submit_heterogeneity_tu_gate_bridge.sh
+# first log line must include: 2×4=8 tasks   and   task 2/8: ds=mutag model=gin
+```
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
 ║  🛑  TO RUN  ·  Hetero MUTAG/ENZYMES · Xu et al. ICLR 2019 HPs (6 jobs) ║
 ║  🧪  GCN / GIN / SiGMA · arXiv:1810.00826 / weihua916/powerful-gnns      ║
 ║  📄  Paper_heterogeneity.md                                              ║
@@ -797,43 +839,49 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🔄  RUNNING  ·  TU Errica hybrid (Option 3 — per-fold HP select)        ║
-║  🎯  Phase 1: GIN ✅ · SAGE ~95% · GCN+GAT running · then SiGMA → eval   ║
+║  🔄  RUNNING  ·  TU Errica hybrid (Option 3)                             ║
+║  🎯  grid_eval GIN/SAGE/GCN · GAT fill-in · SiGMA ~378/400               ║
 ║  📄  Paper_tu_errica_fair_comparison.md                                  ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
-| Model | JOBID | Tasks | Status (2026-08-31) |
+| Phase | JOBID | Tasks | Status (2026-09-02) |
 |-------|-------|-------|------------------------|
-| **GIN** | **42750648** | 4,480 | ✅ **4480/4480 COMPLETED** (6 log errors) |
-| **GraphSAGE** | **43116245** | 5,040 | 🔄 **4768 done** · 12 RUNNING · 1 PENDING |
-| **GCN** | **43434937** | 2,240 | 🔄 submitted after `7046d65` |
-| **GAT** | **43434950** | 2,240 | 🔄 submitted after `7046d65` |
+| `grid_select` GIN | **42750648** | 4,480 | ✅ done |
+| `grid_select` SAGE | **43116245** | 5,040 | ✅ done |
+| `grid_select` GCN | **43434937** | 2,240 | ✅ done · `gcn_per_fold.json` |
+| `grid_select` GAT | **43434950** | 2,240 | ⚠️ 14 COLLAB W&B timeouts |
+| GAT fill-in | **44099901** | 14 | 🔄 rerun |
+| `sigma_grid_select` | **43741550** | 400 | 🔄 ~378 COMPLETED |
+| `grid_eval` GIN | **44100531** | 210 | 🔄 submitted |
+| `grid_eval` SAGE | **44100566** | 210 | 🔄 submitted |
+| `grid_eval` GCN | **44100596** | 210 | 🔄 submitted |
+| `grid_eval` GAT / `sigma_grid_eval` | — | 210 | ⏳ after GAT fill-in / SiGMA |
 
 ```bash
-# Submit examples (already launched for Phase 1):
-# TU_ERRICA_CAMPAIGN=grid_select TU_ERRICA_GRID_MODEL=gin \
-#   bash bash_interface/cluster/submit_tu_errica_fair.sh   # → 42750648
-# TU_ERRICA_CAMPAIGN=grid_select TU_ERRICA_GRID_MODEL=graphsage \
-#   bash bash_interface/cluster/submit_tu_errica_fair.sh   # → 43116245
-# bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_select_gcn  # → 43434937
-# bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_select_gat  # → 43434950
+# Already launched — do not duplicate grid_eval_gin/sage/gcn
+# After 44099901:
+#   python scripts/tu_errica/aggregate_hp_selection.py --model gat
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_eval_gat
+# After 43741550 (400/400):
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval
 ```
 
 | Field | Value |
 |-------|-------|
-| **Parallel** | 12 default · 48h · 32GB · `mweber_gpu` |
+| **Parallel** | 12 default · 48h · 32GB · `mweber_gpu` (SiGMA 128GB / 96h) |
 | **Submit** | `bash_interface/cluster/submit_tu_errica_fair.sh` |
 | **Orchestrator** | `bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh` |
 | **Worker** | `bash_interface/cluster/run_tu_errica_fair.sh` |
-| **Logs** | `logs_gnnplus/tu_errica_grid_select_<model>_<JOBID>_<TASK>.log` |
-| **W&B groups** | `tu_errica_<ds>_<Model>_grid_select_hp<id>` |
-| **Next** | `aggregate_gin` (now) → `aggregate_sage/gcn/gat` → `generate_sigma_grids` |
+| **Logs** | `logs_gnnplus/tu_errica_<campaign>_<JOBID>_<TASK>.log` |
+| **W&B groups** | `tu_errica_<ds>_<Model>_grid_select_hp<id>` · eval `…_grid_eval_selected` |
+| **Next** | GAT aggregate → `grid_eval_gat`; SiGMA aggregate → `sigma_grid_eval` |
 
 Monitor:
 
 ```bash
-for j in 42750648 43116245 43434937 43434950; do
+for j in 44099901 44100531 44100566 44100596 43741550; do
   echo "=== $j ==="
   sacct -j $j -X --format=State,ExitCode -n | awk '{print $1}' | sort | uniq -c
 done
@@ -918,5 +966,6 @@ bash bash_interface/sweeps/create_sweep.sh \
 | TU GCN vs SiGMA homo vs hetero | ✅ | `37434534` |
 | SiGMA d_h-matched Tab. 3/4 (3 tiers, 2 LRs) | 🔄 fast **96/100** · slow **5/40** · coco 2 run | `41709078` / `42412053` / `41709082` / `41709085` |
 | TU Errica-fair canonical (630, exploratory) | ✅ 570/630 · 60 OOM | `42673425` · SiGMA rerun `42746310` |
-| TU Errica hybrid grid_select GIN (4480) | 🔄 **873/4480** · 0 err | `42750648` (smoke `42750459` ✅) |
+| TU Errica hybrid | 🔄 eval GIN `44100531` · SAGE `44100566` · GCN `44100596` · GAT fill-in `44099901` · SiGMA `43741550` | see `Paper_tu_errica_fair_comparison.md` |
+| TU gate–operator bridge (MUTAG+ENZYMES hetero) | ❌ `44100206` · `mutag_gcn` ✅ · fix `--export` then resubmit 2–8 | — |
 | GCN/GIN routing synthetic (toy + sigma) | 🛑 TO RUN | — |
