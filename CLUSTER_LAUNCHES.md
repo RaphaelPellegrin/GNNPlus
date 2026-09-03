@@ -11,6 +11,38 @@ Entity/project: [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/webe
 
 ## ✅ SUBMITTED (do not re-submit)
 
+### 🧪 GAT specialist hetero profiles (MUTAG / ENZYMES, ≥100 apps)
+
+| | |
+|--|--|
+| **Status** | 🛑 **TO SUBMIT** after `git push` (configs + submit comment) |
+| **Submit** | `HETERO_DATASETS=mutag,enzymes HETERO_MODELS=gat HETERO_NUM_TASKS=2 HETERO_ARRAY=1-2 HETERO_PARTITION=gpu_h200 HETERO_PARALLEL=2 bash bash_interface/cluster/submit_heterogeneity_tu_gate_bridge.sh` |
+| **When** | 2026-09-03 |
+| **Tasks** | 1 mutag_gat · 2 enzymes_gat |
+| **Docs** | [`Paper_tu_gate_hetero_bridge.md`](Paper_tu_gate_hetero_bridge.md) |
+| **Outs** | `$GNNPLUS_OUT_DIR/heterogeneity/powerful_gnns/tu_gate_bridge/{mutag,enzymes}_gat/` |
+| **Configs** | `configs/heterogeneity/powerful_gnns/{mutag,enzymes}-gat.yaml` |
+
+Paste JOBID here after submit. Then re-join with `--operators GCN,GIN,SAGE,GAT`.
+
+### 🧪 Xu SiGMA a2g4 ckpt + gates (MUTAG / ENZYMES × 5 seeds)
+
+| | |
+|--|--|
+| **Status** | ✅ **SUBMITTED** on `gpu_h200` (2026-09-03 ~18:54 ET) |
+| **SLURM** | **`44258255`** `1-10%10` · cancelled prior `44229226` (`mweber_gpu` PD) |
+| **When** | 2026-09-03 |
+| **Tasks** | 1–5 mutag seeds 0–4 · 6–10 enzymes seeds 0–4 |
+| **Docs** | [`Paper_tu_gate_hetero_bridge.md`](Paper_tu_gate_hetero_bridge.md) |
+| **W&B** | `xu_sigma_a2g4_{mutag,enzymes}` |
+| **Logs** | `logs_gnnplus/xu_sigma_a2g4_44258255_<TASK>.log` |
+| **Outs** | `$GNNPLUS_OUT_DIR/heterogeneity/powerful_gnns/tu_xu_sigma_a2g4/<ds>_SiGMA_hetero_xu_seed<s>/` |
+
+```bash
+squeue -u $USER -j 44258255
+head -40 logs_gnnplus/xu_sigma_a2g4_44258255_1.log
+```
+
 ### 🧪 Table 5 — PATTERN + CLUSTER seed-20 fill (165 jobs)
 
 | | |
@@ -461,25 +493,23 @@ GCN_GIN_FORWARD_OUT_DIR=$PWD/results/gcn_gin_routing/analysis/forward_traces/nox
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🔄  SUBMITTED  ·  TU gate–operator bridge · fixed --export=ALL         ║
+║  🔄  GatedGCN retry  ·  TU gate–operator bridge · 44218244 (4,8)        ║
 ║  📄  Paper_tu_gate_hetero_bridge.md                                      ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
 | Field | Value |
 |-------|-------|
-| **mutag_gcn** | ✅ **`43789365_1`** (≥100 apps, COMPLETED) |
-| **Retry 2–8** | **`44164801`**: GCN/GIN/SAGE ✅ · gatedgcn ❌ tasks 4+8 |
-| **GatedGCN fix** | yaml `times_func` + ones-edge in `master_loader` → resubmit `HETERO_ARRAY=4,8` |
-| **Failed export** | `43789365_2..8` · `44100206` (fixed earlier) |
-| **When** | 2026-09-03 |
+| **GCN/GIN/SAGE** | ✅ mutag + enzymes (`43789365_1` · `44164801`) |
+| **GatedGCN retry** | 🔄 **`44218244`** · `4,8%4` · ≥100 appearances |
+| **When** | 2026-09-03 · holylogin08 |
 | **Out** | `$GNNPLUS_OUT_DIR/heterogeneity/powerful_gnns/tu_gate_bridge/` |
-| **Logs** | `logs_gnnplus/hetero_gate_bridge_44164801_<TASK>.log` |
+| **Logs** | `logs_gnnplus/hetero_gate_bridge_44218244_{4,8}.log` |
 
 ```bash
-squeue -u $USER -j 44164801 -o "%.18i %.30j %.2t %.10M %R"
-head -50 logs_gnnplus/hetero_gate_bridge_44164801_2.log
-# expect: 2×4=8 tasks  and  task 2/8: ds=mutag model=gin
+squeue -u $USER -j 44218244
+head -60 logs_gnnplus/hetero_gate_bridge_44218244_4.log   # mutag_gatedgcn
+head -60 logs_gnnplus/hetero_gate_bridge_44218244_8.log   # enzymes_gatedgcn
 ```
 
 ---
@@ -840,43 +870,37 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🔄  RUNNING  ·  TU Errica hybrid (Option 3)                             ║
-║  🎯  grid_eval GIN/SAGE/GCN · GAT fill-in · SiGMA ~378/400               ║
+║  🔄  RUNNING  ·  TU Errica SiGMA select (fixed8 + full64)                ║
+║  🎯  fixed8 44217420 (560, mweber) · full64 44258217 (4480, H200)        ║
 ║  📄  Paper_tu_errica_fair_comparison.md                                  ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
-| Phase | JOBID | Tasks | Status (2026-09-02) |
+| Phase | JOBID | Tasks | Status (2026-09-03) |
 |-------|-------|-------|------------------------|
-| `grid_select` GIN | **42750648** | 4,480 | ✅ done |
-| `grid_select` SAGE | **43116245** | 5,040 | ✅ done |
-| `grid_select` GCN | **43434937** | 2,240 | ✅ done · `gcn_per_fold.json` |
-| `grid_select` GAT | **43434950** | 2,240 | ⚠️ 14 COLLAB W&B timeouts |
-| GAT fill-in | **44099901** | 14 | 🔄 rerun |
-| `sigma_grid_select` | **43741550** | 400 | 🔄 ~378 COMPLETED |
-| `grid_eval` GIN | **44100531** | 210 | 🔄 submitted |
-| `grid_eval` SAGE | **44100566** | 210 | 🔄 submitted |
-| `grid_eval` GCN | **44100596** | 210 | 🔄 submitted |
-| `grid_eval` GAT / `sigma_grid_eval` | — | 210 | ⏳ after GAT fill-in / SiGMA |
+| `grid_select` GIN/SAGE/GCN/GAT | 42750648 / 43116245 / 43434937 / 43434950+44099901 | — | ✅ done |
+| `grid_eval` GIN/SAGE/GCN/GAT | 44100531 / 66 / 96 / **44165919** | 210×4 | ✅ done |
+| `sigma_grid_select` budget_bio | **43741550** | 400 | obsolete |
+| `sigma_grid_eval` budget_bio | **44165958** | 210 | ignore / cancel |
+| **`sigma_grid_select_fixed8`** | **44217420** | **560** | 🔄 **submitted** |
+| **`sigma_grid_select_full64`** | **44258217** | **4,480** | 🔄 **submitted** · `gpu_h200` · `%20` · 72h |
+| `aggregate_sigma` → `sigma_grid_eval_fixed8` | — | 210 | ⏳ after 44217420 |
 
 ```bash
-# Already launched — do not duplicate grid_eval_gin/sage/gcn
-# After 44099901:
-#   python scripts/tu_errica/aggregate_hp_selection.py --model gat
-#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_eval_gat
-# After 43741550 (400/400):
+# After 44217420 (560/560):
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma
+#   # commit+push sigma_fixed8_per_fold.json, then:
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval
 ```
 
 | Field | Value |
 |-------|-------|
-| **Parallel** | 12 default · 48h · 32GB · `mweber_gpu` (SiGMA 128GB / 96h) |
+| **Parallel** | 12 default · SiGMA select 128GB / 96h · `mweber_gpu` |
 | **Submit** | `bash_interface/cluster/submit_tu_errica_fair.sh` |
 | **Orchestrator** | `bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh` |
 | **Worker** | `bash_interface/cluster/run_tu_errica_fair.sh` |
-| **Logs** | `logs_gnnplus/tu_errica_<campaign>_<JOBID>_<TASK>.log` |
-| **W&B groups** | `tu_errica_<ds>_<Model>_grid_select_hp<id>` · eval `…_grid_eval_selected` |
+| **Logs** | `logs_gnnplus/tu_errica_sigma_grid_select_fixed8_<JOBID>_<TASK>.log` |
+| **W&B groups** | `tu_errica_<ds>_SiGMA_hetero_sigma_grid_select_fixed8_f<fold>_hp<id>` |
 | **Next** | GAT aggregate → `grid_eval_gat`; SiGMA aggregate → `sigma_grid_eval` |
 
 Monitor:
@@ -967,6 +991,6 @@ bash bash_interface/sweeps/create_sweep.sh \
 | TU GCN vs SiGMA homo vs hetero | ✅ | `37434534` |
 | SiGMA d_h-matched Tab. 3/4 (3 tiers, 2 LRs) | 🔄 fast **96/100** · slow **5/40** · coco 2 run | `41709078` / `42412053` / `41709082` / `41709085` |
 | TU Errica-fair canonical (630, exploratory) | ✅ 570/630 · 60 OOM | `42673425` · SiGMA rerun `42746310` |
-| TU Errica hybrid | 🔄 eval GIN `44100531` · SAGE `44100566` · GCN `44100596` · GAT fill-in `44099901` · SiGMA `43741550` | see `Paper_tu_errica_fair_comparison.md` |
-| TU gate–operator bridge (MUTAG+ENZYMES hetero) | 🟢 6/8 ✅ · gatedgcn ❌ fix+resubmit 4,8 | `44164801` |
+| TU Errica hybrid | 🔄 fixed8 **44217420** (560) · full64 **44258217** (4480, H200) · classical eval ✅ | see `Paper_tu_errica_fair_comparison.md` |
+| TU gate–operator bridge (MUTAG+ENZYMES hetero) | 🟢 6/8 ✅ · GatedGCN retry **`44218244`** | `44218244` |
 | GCN/GIN routing synthetic (toy + sigma) | 🛑 TO RUN | — |

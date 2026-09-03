@@ -2,7 +2,8 @@
 # =============================================================================
 # Heterogeneity profiles for TU gate–operator bridge (Tables 1–2 prep).
 #
-# MUTAG / ENZYMES × {GCN, GIN, SAGE, GatedGCN} = 8 tasks.
+# MUTAG / ENZYMES × {GCN, GIN, SAGE, GatedGCN} = 8 tasks (default).
+# Override with HETERO_MODELS=gat for Xu-recipe GAT specialists (2 tasks).
 # Protocol: random 50/25/25, ≥N test appearances per graph (default 100).
 #
 # Pairs with SiGMA hetero gate dumps under tu_sigma_homo_hetero/ and plots in

@@ -48,6 +48,7 @@ OPERATOR_CFG_SUFFIX: Mapping[str, str] = {
     "GCN": "gcn",
     "GIN": "gin",
     "SAGE": "sage",
+    "GAT": "gat",
     "GATEDGCN": "gatedgcn",
 }
 SIGMA_MP_HEADS: Tuple[str, ...] = ("GCN", "GIN", "SAGE", "GAT")
@@ -191,6 +192,18 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         type=float,
         default=0.0,
         help="Drop graphs whose specialist accuracy margin is below this.",
+    )
+    parser.add_argument(
+        "--scan-layers",
+        action="store_true",
+        default=True,
+        help="Also compute Δγ at every MP layer (default: on).",
+    )
+    parser.add_argument(
+        "--no-scan-layers",
+        action="store_false",
+        dest="scan_layers",
+        help="Skip the all-layer Δγ sweep.",
     )
     parser.add_argument(
         "--dpi",
@@ -487,6 +500,7 @@ def _load_sigma_gates(
                     split_name,
                     int(y_dump[row].item()),
                     _gate_vector(gnn, int(row), layer, head_names),
+                    int(row),
                 )
             continue
 
@@ -524,9 +538,38 @@ def _load_sigma_gates(
                 "train",
                 int(y_dump[row].item()),
                 _gate_vector(gnn, int(row), layer, head_names),
+                int(row),
             )
 
     return mapped, head_names, (n_unique_train, n_ambiguous_train)
+
+
+def _gates_from_gnn_rows(
+    row_map: Mapping[int, Tuple[str, int, int]],
+    gnn: torch.Tensor,
+    layer: int,
+    head_names: Sequence[str],
+) -> Dict[int, Tuple[str, int, Dict[str, float]]]:
+    """Slice one MP layer out of an already-aligned dump."""
+    out: Dict[int, Tuple[str, int, Dict[str, float]]] = {}
+    for gidx, (split_name, y, row) in row_map.items():
+        out[int(gidx)] = (
+            split_name,
+            int(y),
+            _gate_vector(gnn, int(row), layer, head_names),
+        )
+    return out
+
+
+def _row_map_from_layer_payload(
+    mapped: Mapping[int, Tuple[str, int, Dict[str, float], int]],
+) -> Dict[int, Tuple[str, int, int]]:
+    """Drop the layer-specific gate vector, keep dump-row alignment."""
+    out: Dict[int, Tuple[str, int, int]] = {}
+    for gidx, payload in mapped.items():
+        split_name, y, _vec, row = payload
+        out[int(gidx)] = (split_name, int(y), int(row))
+    return out
 
 
 def _build_records(
@@ -545,7 +588,7 @@ def _build_records(
         pref, margin = _preferred_operator(acc)
         if pref != "TIE" and margin < min_margin:
             continue
-        split_name, y, gate_vec = gates[gidx]
+        split_name, y, gate_vec = gates[gidx][:3]
         records.append(
             GraphOperatorRecord(
                 graph_idx=gidx,
@@ -678,6 +721,42 @@ def _delta_gamma_over_seeds(join: DatasetJoin, operator: str) -> List[float]:
     other = _series_over_seeds_other(join, preferred=operator, head=operator)
     n = min(len(pref), len(other))
     return [pref[i] - other[i] for i in range(n)]
+
+
+def _delta_from_records(records: Sequence[GraphOperatorRecord], operator: str) -> float:
+    """Δγ_H on one seed: mean γ_H | pref H minus mean γ_H | pref ≠ H (untied)."""
+    recs = _untied(records)
+    pref_vals = [
+        rec.sigma_gates[operator]
+        for rec in recs
+        if rec.preferred == operator and operator in rec.sigma_gates
+    ]
+    other_vals = [
+        rec.sigma_gates[operator]
+        for rec in recs
+        if rec.preferred != operator and operator in rec.sigma_gates
+    ]
+    if not pref_vals or not other_vals:
+        return float("nan")
+    return float(np.mean(pref_vals) - np.mean(other_vals))
+
+
+def _pearson_from_records(
+    records: Sequence[GraphOperatorRecord],
+    op_a: str,
+    op_b: str,
+) -> float:
+    """Pearson r between Δacc and Δγ for one operator pair."""
+    xs: List[float] = []
+    ys: List[float] = []
+    for rec in records:
+        if op_a not in rec.accuracies or op_b not in rec.accuracies:
+            continue
+        if op_a not in rec.sigma_gates or op_b not in rec.sigma_gates:
+            continue
+        xs.append(rec.accuracies[op_a] - rec.accuracies[op_b])
+        ys.append(rec.sigma_gates[op_a] - rec.sigma_gates[op_b])
+    return _pearson(xs, ys)
 
 
 def plot_preference_fractions(
@@ -1101,6 +1180,160 @@ def plot_summary_table(
     plt.close(fig)
 
 
+def plot_delta_gamma_by_layer(
+    layer_table: Sequence[Mapping[str, object]],
+    out_path: Path,
+    dpi: int,
+) -> None:
+    """Line plot of Δγ vs MP layer (one panel per dataset)."""
+    datasets = sorted({str(row["dataset"]) for row in layer_table})
+    operators = ("GIN", "GCN", "SAGE")
+    fig, axes = plt.subplots(
+        1,
+        len(datasets),
+        figsize=(5.4 * max(len(datasets), 1), 4.6),
+        squeeze=False,
+    )
+    for ax, ds in zip(axes[0], datasets):
+        layers = sorted(
+            {int(row["layer"]) for row in layer_table if str(row["dataset"]) == ds}
+        )
+        for op in operators:
+            means: List[float] = []
+            stds: List[float] = []
+            for layer in layers:
+                match = [
+                    row
+                    for row in layer_table
+                    if str(row["dataset"]) == ds
+                    and int(row["layer"]) == layer
+                    and str(row["operator"]) == op
+                    and str(row["delta_mean"]) != ""
+                ]
+                if not match:
+                    means.append(0.0)
+                    stds.append(0.0)
+                    continue
+                means.append(float(match[0]["delta_mean"]))
+                stds.append(float(match[0]["delta_std"] or 0.0))
+            ax.errorbar(
+                layers,
+                means,
+                yerr=stds,
+                marker="o",
+                markersize=4,
+                capsize=2,
+                color=PALETTE[op],
+                label=rf"$\Delta\gamma_{{\mathrm{{{op}}}}}$",
+            )
+        ax.axhline(0.0, color="gray", linestyle="--", linewidth=0.8)
+        ax.set_xlabel("MP layer")
+        ax.set_ylabel(r"$\Delta\gamma$ (pref H − other)")
+        ax.set_title(ds.upper())
+        ax.grid(alpha=0.22)
+        ax.legend(fontsize=8)
+    fig.suptitle(
+        r"Gate–preference contrast vs depth (5-seed mean $\pm$ std, val+test)",
+        y=1.02,
+        fontsize=12,
+    )
+    fig.tight_layout()
+    _save_fig(fig, out_path, dpi)
+
+
+def _write_layer_scan_csv(rows: Sequence[Mapping[str, object]], out_path: Path) -> None:
+    """Write per-dataset per-layer Δγ table."""
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = [
+        "dataset",
+        "layer",
+        "operator",
+        "delta_mean",
+        "delta_std",
+        "n_seeds",
+        "pearson_vs_gin",
+    ]
+    with out_path.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.DictWriter(fh, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({k: row.get(k, "") for k in fieldnames})
+
+
+def _scan_layers_for_dataset(
+    dataset: str,
+    *,
+    profiles: Dict[int, Dict[str, float]],
+    gate_pts: Sequence[Tuple[int, Path]],
+    tu_root: Path,
+    operators: Tuple[str, ...],
+    splits: Tuple[str, ...],
+    min_margin: float,
+) -> List[Dict[str, object]]:
+    """Compute per-layer Δγ over seeds for one dataset."""
+    per_layer_seed: Dict[Tuple[int, str], List[float]] = defaultdict(list)
+    per_layer_r: Dict[Tuple[int, str], List[float]] = defaultdict(list)
+    n_layers = 0
+    for seed, gate_pt in gate_pts:
+        mapped, head_names, _counts = _load_sigma_gates(
+            gate_pt,
+            -1,
+            dataset=dataset,
+            tu_root=tu_root,
+            splits=splits,
+        )
+        row_map = _row_map_from_layer_payload(mapped)  # type: ignore[arg-type]
+        payload = torch.load(gate_pt, map_location="cpu", weights_only=False)
+        gnn = payload["gnn"]
+        n_layers = int(gnn.shape[1])
+        for layer in range(n_layers):
+            gates = _gates_from_gnn_rows(row_map, gnn, layer, head_names)
+            records = _build_records(profiles, gates, operators, min_margin)
+            for op in ("GCN", "GIN", "SAGE"):
+                if op not in operators:
+                    continue
+                per_layer_seed[(layer, op)].append(_delta_from_records(records, op))
+            if "GIN" in operators:
+                for op in ("GCN", "SAGE"):
+                    if op in operators:
+                        per_layer_r[(layer, op)].append(
+                            _pearson_from_records(records, op, "GIN")
+                        )
+        logging.info("%s seed %d: scanned %d MP layers", dataset, seed, n_layers)
+    rows: List[Dict[str, object]] = []
+    for layer in range(n_layers):
+        for op in ("GIN", "GCN", "SAGE"):
+            if op not in operators:
+                continue
+            vals = [v for v in per_layer_seed[(layer, op)] if not np.isnan(v)]
+            mean, std = _mean_std(vals)
+            r_vals = [v for v in per_layer_r[(layer, op)] if not np.isnan(v)]
+            r_mean, _rstd = (
+                _mean_std(r_vals) if r_vals else (float("nan"), float("nan"))
+            )
+            rows.append(
+                {
+                    "dataset": dataset,
+                    "layer": layer,
+                    "operator": op,
+                    "delta_mean": f"{mean:.6f}" if not np.isnan(mean) else "",
+                    "delta_std": f"{std:.6f}" if not np.isnan(std) else "",
+                    "n_seeds": len(vals),
+                    "pearson_vs_gin": f"{r_mean:.4f}" if not np.isnan(r_mean) else "",
+                }
+            )
+            logging.info(
+                "%s L%02d %s Δγ=%.3f±%.3f  r_vs_GIN=%.2f",
+                dataset,
+                layer,
+                op,
+                mean if not np.isnan(mean) else float("nan"),
+                std if not np.isnan(std) else float("nan"),
+                r_mean if not np.isnan(r_mean) else float("nan"),
+            )
+    return rows
+
+
 def _write_paper_figures(
     joins: Sequence[DatasetJoin],
     fig_dir: Path,
@@ -1129,7 +1362,7 @@ def _average_gate_maps(
     by_graph: Dict[int, List[Tuple[str, int, Dict[str, float]]]] = defaultdict(list)
     for seed_map in seed_maps:
         for gidx, payload in seed_map.items():
-            by_graph[int(gidx)].append(payload)
+            by_graph[int(gidx)].append(payload[:3])
     out: Dict[int, Tuple[str, int, Dict[str, float], int]] = {}
     for gidx, items in by_graph.items():
         heads = sorted({h for _s, _y, vec in items for h in vec})
@@ -1319,6 +1552,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     tu_root = Path(args.tu_root) if args.tu_root else Path.home() / ".cache" / "pyg_tu_gate_join"
 
     joins: List[DatasetJoin] = []
+    layer_rows: List[Dict[str, object]] = []
     seeds = tuple(int(s) for s in _parse_csv_list(args.seeds))
     for dataset in datasets:
         gate_pts = _discover_gate_pts(
@@ -1347,9 +1581,36 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         logging.info("Wrote %s (%d graphs)", csv_path, len(join.records))
         joins.append(join)
 
+        if bool(args.scan_layers):
+            layer_rows.extend(
+                _scan_layers_for_dataset(
+                    dataset,
+                    profiles=_load_operator_profiles(
+                        hetero_root,
+                        dataset,
+                        int(args.min_appearances),
+                        operators,
+                    ),
+                    gate_pts=gate_pts,
+                    tu_root=tu_root,
+                    operators=operators,
+                    splits=splits,
+                    min_margin=float(args.min_margin),
+                )
+            )
+
     fig_dir = out_dir / "paper_figures"
     _write_paper_figures(joins, fig_dir, int(args.dpi))
     logging.info("Wrote paper figures under %s", fig_dir)
+    if bool(args.scan_layers) and layer_rows:
+        csv_layers = out_dir / "layer_delta_gamma.csv"
+        _write_layer_scan_csv(layer_rows, csv_layers)
+        plot_delta_gamma_by_layer(
+            layer_rows,
+            fig_dir / "fig_delta_gamma_by_layer.png",
+            int(args.dpi),
+        )
+        logging.info("Wrote layer sweep %s", csv_layers)
 
 
 if __name__ == "__main__":

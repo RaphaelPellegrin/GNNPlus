@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Launch MUTAG/ENZYMES heterogeneity profiles for gate–operator bridge.
 #
-# Goal: per-graph operator preference (GCN / GIN / SAGE / GatedGCN) to pair with
-# SiGMA hetero gate dumps (Appendix F, results/gate_viz/tu_hh_hetero).
+# Goal: per-graph operator preference (GCN / GIN / SAGE / GatedGCN / GAT) to
+# pair with SiGMA hetero gate dumps (Appendix F, results/gate_viz/tu_hh_hetero).
 #
 # Prerequisites:
 #   source ~/.gnnplus_env
@@ -13,6 +13,12 @@
 #
 # Full launch (8 jobs, ≥100 appearances — slow):
 #   bash bash_interface/cluster/submit_heterogeneity_tu_gate_bridge.sh
+#
+# GAT specialists only (MUTAG + ENZYMES, 2 jobs) on H200:
+#   HETERO_DATASETS=mutag,enzymes HETERO_MODELS=gat \
+#     HETERO_NUM_TASKS=2 HETERO_ARRAY=1-2 \
+#     HETERO_PARTITION=gpu_h200 HETERO_PARALLEL=2 \
+#     bash bash_interface/cluster/submit_heterogeneity_tu_gate_bridge.sh
 #
 # Smoke (2 appearances, cap trials):
 #   HETERO_REQUIRED_TEST_APPEARANCES=2 HETERO_MAX_TRIALS=20 \
