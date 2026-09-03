@@ -2,27 +2,51 @@
 
 ```text
 ╔══════════════════════════════════════════════════════════════════╗
-║  🟢  6/8 DONE  ·  GCN/GIN/SAGE ✅  ·  GatedGCN ❌ (config fix)  ║
-║  Done: mutag×{gcn,gin,sage} · enzymes×{gcn,gin,sage}            ║
-║  Fail: tasks 4+8 gatedgcn — LinearEdge / missing ENZYMES edges  ║
-║  Next: sync gatedgcn yaml + master_loader → HETERO_ARRAY=4,8    ║
+║  Pref–gate join: SAGE Δγ added (L=12 a2g4, 5 seeds)             ║
+║  NEXT: Xu L=4 SiGMA a2g4 × 5 seeds + ckpt + gate dump (10 jobs) ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-### Live status (2026-09-03 ~13:51 ET)
+## Xu-protocol SiGMA a2g4 (5 seeds, checkpoint + gates)
+
+Match **Xu HPs** (L=4, lr=0.01, 350 ep, sum pool) with the **a2g4 mix**
+(GCN,GIN,SAGE,GAT) so last-layer γ can be joined to the existing specialist
+pickles. Not the old `mutag-sigma.yaml` `GIN,GIN` a2g2.
+
+| Field | Value |
+|-------|-------|
+| **Jobs** | 10 (mutag seeds 0–4, enzymes seeds 0–4) |
+| **Submit** | `bash bash_interface/cluster/submit_heterogeneity_xu_sigma_a2g4_ckpt.sh` |
+| **Outs** | `$GNNPLUS_OUT_DIR/heterogeneity/powerful_gnns/tu_xu_sigma_a2g4/<ds>_SiGMA_hetero_xu_seed<s>/` |
+| **SLURM** | _paste JOBID after submit_ |
+
+```bash
+# local git first, then on cluster: git pull && bash bash_interface/cluster/submit_heterogeneity_xu_sigma_a2g4_ckpt.sh
+```
+
+---
+
+### Live status (2026-09-03 ~14:26 ET)
 
 | Array | Task | State | Notes |
 |-------|------|-------|-------|
 | **43789365** | 1 mutag_gcn | ✅ | ≥100 apps |
 | **44164801** | 2 mutag_gin | ✅ | ≥100 apps |
 | **44164801** | 3 mutag_sage | ✅ | ≥100 apps |
-| **44164801** | 4 mutag_gatedgcn | ❌ | `LinearEdgeEncoder` needs `times_func` |
+| **44164801** | 4 mutag_gatedgcn | ❌ then 🔄 **`44218244`** | LinearEdge `times_func` + 4-D edges |
 | **44164801** | 5 enzymes_gcn | ✅ | ≥100 apps |
 | **44164801** | 6 enzymes_gin | ✅ | ≥100 apps |
 | **44164801** | 7 enzymes_sage | ✅ | ≥100 apps |
-| **44164801** | 8 enzymes_gatedgcn | ❌ | same + ENZYMES has **no** `edge_attr` |
+| **44164801** | 8 enzymes_gatedgcn | ❌ then 🔄 **`44218244`** | ones-edge + `times_func` |
 
-**GatedGCN fix (local):** `posenc_RWSE.kernel.times_func` in yaml (MUTAG `range(1,5)`, ENZYMES `range(1,2)`) + `master_loader` adds constant ones edges when `edge_encoder=True` and `num_edge_features==0`.
+**GatedGCN fix (synced):** yaml `posenc_RWSE.kernel.times_func` (MUTAG `range(1,5)`, ENZYMES `range(1,2)`) + `master_loader` ones `edge_attr` when `num_edge_features==0`.
+
+```bash
+squeue -u $USER -j 44218244
+# first lines must NOT be LinearEdgeEncoder ValueError
+head -60 logs_gnnplus/hetero_gate_bridge_44218244_4.log
+head -60 logs_gnnplus/hetero_gate_bridge_44218244_8.log
+```
 
 ### Task progress
 
@@ -31,11 +55,11 @@
 | 1 | mutag | gcn | ✅ |
 | 2 | mutag | gin | ✅ |
 | 3 | mutag | sage | ✅ |
-| 4 | mutag | gatedgcn | ❌ → resubmit after fix |
+| 4 | mutag | gatedgcn | 🔄 `44218244` |
 | 5 | enzymes | gcn | ✅ |
 | 6 | enzymes | gin | ✅ |
 | 7 | enzymes | sage | ✅ |
-| 8 | enzymes | gatedgcn | ❌ → resubmit after fix |
+| 8 | enzymes | gatedgcn | 🔄 `44218244` |
 
 **Done when** each out dir contains `*_graph_dict.pickle` + `test_appearances.csv`:
 `$GNNPLUS_OUT_DIR/heterogeneity/powerful_gnns/tu_gate_bridge/<ds>_<model>/`
@@ -105,7 +129,8 @@ bash bash_interface/cluster/submit_heterogeneity_tu_gate_bridge.sh
 | **Pilot** | ✅ **`43789364`** | ≥10 | 200 | `1-8%4` | `logs_gnnplus/hetero_gate_bridge_43789364_<TASK>.log` |
 | **Full (paper)** | ⚠️ **`43789365`** | ≥100 | 2000 | `1-8%4` | task 1 ✅; **2–8 failed** (`num_tasks=1` env bug) |
 | **Full retry 2–8** | ❌ **`44100206`** | ≥100 | 2000 | `2-8%4` | same `--export` comma bug |
-| **Full retry 2–8 (fixed)** | 🔄 **`44164801`** | ≥100 | 2000 | `2-8%4` | `--export=ALL`; banner lists OK |
+| **Full retry 2–8 (fixed)** | ✅ **`44164801`** | ≥100 | 2000 | `2-8%4` | GCN/GIN/SAGE ✅; gatedgcn ❌ |
+| **GatedGCN retry 4,8** | 🔄 **`44218244`** | ≥100 | 2000 | `4,8%4` | `times_func` + ones-edge |
 
 | Field | Value |
 |-------|-------|
@@ -204,6 +229,7 @@ vs not (printed by join script; extend for paper LaTeX).
 
 | Date | Event |
 |------|-------|
+| 2026-09-03 | Submitted GatedGCN retry **`44218244`** tasks 4,8 (holylogin08) |
 | 2026-09-03 | **44164801**: 6/8 ✅ (GCN/GIN/SAGE); gatedgcn ❌ (`LinearEdge` / ENZYMES no edges) |
 | 2026-09-03 | Fix gatedgcn yaml `times_func` + master_loader ones-edge for empty edge_attr |
 | 2026-09-03 | **44164801** running: tasks 2/3/5/6 R; verified `2×4=8` + mutag_gin Trial 1 |
