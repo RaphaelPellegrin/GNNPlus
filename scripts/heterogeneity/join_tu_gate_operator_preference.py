@@ -104,6 +104,12 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         help="MP layer index for gate readout (-1 = last).",
     )
     parser.add_argument(
+        "--operators",
+        type=str,
+        default="GCN,GIN,SAGE,GATEDGCN",
+        help="Comma-separated operators to join (default: all four).",
+    )
+    parser.add_argument(
         "--min-appearances",
         type=int,
         default=1,
@@ -146,10 +152,11 @@ def _load_operator_profiles(
     hetero_root: Path,
     dataset: str,
     min_appearances: int,
+    operators: Sequence[str],
 ) -> Dict[int, Dict[str, float]]:
     """Map graph_idx → {operator: avg_accuracy}."""
     merged: Dict[int, Dict[str, float]] = {}
-    for op in OPERATORS:
+    for op in operators:
         suffix = OPERATOR_CFG_SUFFIX[op]
         model_dir = hetero_root / f"{dataset}_{suffix}"
         if not model_dir.is_dir():
@@ -157,6 +164,9 @@ def _load_operator_profiles(
         pickle_path = _find_pickle(model_dir, op)
         acc = _load_avg_accuracy(pickle_path)
         appearances_csv = model_dir / "test_appearances.csv"
+        if not appearances_csv.is_file():
+            matches = sorted(model_dir.glob("*_test_appearances.csv"))
+            appearances_csv = matches[0] if matches else appearances_csv
         if appearances_csv.is_file() and min_appearances > 1:
             allowed: set[int] = set()
             with appearances_csv.open(encoding="utf-8", newline="") as fh:
@@ -270,13 +280,15 @@ def _load_sigma_gates(
 def _build_records(
     profiles: Dict[int, Dict[str, float]],
     gates: Dict[int, Dict[str, float]],
+    operators: Sequence[str],
 ) -> List[GraphOperatorRecord]:
     """Align graphs present in both hetero profiles and gate dumps."""
     records: List[GraphOperatorRecord] = []
+    n_ops = len(operators)
     common = sorted(set(profiles.keys()) & set(gates.keys()))
     for gidx in common:
         acc = profiles[gidx]
-        if len(acc) < len(OPERATORS):
+        if len(acc) < n_ops:
             continue
         pref, margin = _preferred_operator(acc)
         records.append(
@@ -291,12 +303,16 @@ def _build_records(
     return records
 
 
-def _write_csv(records: Sequence[GraphOperatorRecord], out_path: Path) -> None:
+def _write_csv(
+    records: Sequence[GraphOperatorRecord],
+    out_path: Path,
+    operators: Sequence[str],
+) -> None:
     """Write per-graph join table."""
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = (
         ["graph_idx", "preferred", "margin"]
-        + [f"acc_{op.lower()}" for op in OPERATORS]
+        + [f"acc_{op.lower()}" for op in operators]
         + [f"gate_{h.lower()}" for h in SIGMA_MP_HEADS]
     )
     with out_path.open("w", newline="", encoding="utf-8") as fh:
@@ -308,7 +324,7 @@ def _write_csv(records: Sequence[GraphOperatorRecord], out_path: Path) -> None:
                 "preferred": rec.preferred,
                 "margin": f"{rec.margin:.4f}",
             }
-            for op in OPERATORS:
+            for op in operators:
                 row[f"acc_{op.lower()}"] = f"{rec.accuracies[op]:.4f}"
             for head in SIGMA_MP_HEADS:
                 row[f"gate_{head.lower()}"] = (
@@ -397,20 +413,39 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    profiles = _load_operator_profiles(hetero_root, ds, args.min_appearances)
+    operators = tuple(
+        op.strip().upper() for op in str(args.operators).split(",") if op.strip()
+    )
+    for op in operators:
+        if op not in OPERATOR_CFG_SUFFIX:
+            raise ValueError(f"Unknown operator {op!r}; choose from {list(OPERATOR_CFG_SUFFIX)}")
+
+    profiles = _load_operator_profiles(hetero_root, ds, args.min_appearances, operators)
     gates, head_names = _load_sigma_gates(
         gate_pt,
         args.gate_layer,
         run_dir=gate_run_dir,
         dataset_dir=dataset_dir,
     )
-    records = _build_records(profiles, gates)
+    records = _build_records(profiles, gates, operators)
     if not records:
         raise RuntimeError("No overlapping graphs between hetero profiles and gate dump.")
 
     csv_path = out_dir / f"{ds}_operator_gate_join.csv"
-    _write_csv(records, csv_path)
+    _write_csv(records, csv_path, operators)
     logging.info("Wrote %s (%d graphs)", csv_path, len(records))
+
+    # Preference fractions (paper Table 1 precursor).
+    prefs = [rec.preferred for rec in records]
+    for op in operators:
+        n = sum(1 for p in prefs if p == op)
+        logging.info(
+            "preferred %s: %d / %d (%.1f%%)",
+            op,
+            n,
+            len(prefs),
+            100.0 * n / max(len(prefs), 1),
+        )
 
     pref_plot = out_dir / f"{ds}_preferred_operator_gate_boxplot.png"
     _plot_preferred_vs_gate(records, head_names, pref_plot, ds, args.dpi)

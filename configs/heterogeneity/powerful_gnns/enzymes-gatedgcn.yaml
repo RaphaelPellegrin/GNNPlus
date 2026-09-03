@@ -26,6 +26,12 @@ dataset:
   edge_encoder: True
   edge_encoder_name: LinearEdge
   edge_encoder_bn: False
+# ENZYMES has no native edge_attr; master_loader adds constant ones (dim=1)
+# when edge_encoder=True. LinearEdgeEncoder in_dim = last times_func value.
+posenc_RWSE:
+  enable: False
+  kernel:
+    times_func: range(1,2)
 train:
   mode: custom
   batch_size: 128

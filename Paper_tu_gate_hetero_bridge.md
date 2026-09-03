@@ -2,40 +2,40 @@
 
 ```text
 ╔══════════════════════════════════════════════════════════════════╗
-║  ❌  44100206 FAILED again · same 1..1 bug · root cause found   ║
-║  Cause: SLURM --export=… splits on commas → only mutag + gcn    ║
-║  Fix: submit script now uses --export=ALL (shell env)           ║
-║  Keep: 43789365_1 mutag_gcn ✅ · resubmit 2–8 after git sync    ║
+║  🟢  6/8 DONE  ·  GCN/GIN/SAGE ✅  ·  GatedGCN ❌ (config fix)  ║
+║  Done: mutag×{gcn,gin,sage} · enzymes×{gcn,gin,sage}            ║
+║  Fail: tasks 4+8 gatedgcn — LinearEdge / missing ENZYMES edges  ║
+║  Next: sync gatedgcn yaml + master_loader → HETERO_ARRAY=4,8    ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 
-### Live status (2026-09-03)
+### Live status (2026-09-03 ~13:51 ET)
 
 | Array | Task | State | Notes |
 |-------|------|-------|-------|
-| **43789365** | 1 | ✅ COMPLETED | `mutag_gcn` ≥100 apps on disk |
-| **43789365** | 2–8 | ❌ FAILED | `out of range (1..1)` |
-| **44100206** | 2–8 | ❌ FAILED | same bug — `--export` ate commas |
-| **next** | 2–8 | 🛑 TO SUBMIT | after syncing fixed `submit_heterogeneity_tu_gate_bridge.sh` |
+| **43789365** | 1 mutag_gcn | ✅ | ≥100 apps |
+| **44164801** | 2 mutag_gin | ✅ | ≥100 apps |
+| **44164801** | 3 mutag_sage | ✅ | ≥100 apps |
+| **44164801** | 4 mutag_gatedgcn | ❌ | `LinearEdgeEncoder` needs `times_func` |
+| **44164801** | 5 enzymes_gcn | ✅ | ≥100 apps |
+| **44164801** | 6 enzymes_gin | ✅ | ≥100 apps |
+| **44164801** | 7 enzymes_sage | ✅ | ≥100 apps |
+| **44164801** | 8 enzymes_gatedgcn | ❌ | same + ENZYMES has **no** `edge_attr` |
 
-**Root cause:** `--export=ALL,...,HETERO_DATASETS=mutag,enzymes,HETERO_MODELS=gcn,gin,...`
-is comma-split by SLURM → job only sees `HETERO_DATASETS=mutag` and
-`HETERO_MODELS=gcn` → `num_tasks=1`.
-
-**Fix (local):** submit script exports lists via shell + `--export=ALL` only.
+**GatedGCN fix (local):** `posenc_RWSE.kernel.times_func` in yaml (MUTAG `range(1,5)`, ENZYMES `range(1,2)`) + `master_loader` adds constant ones edges when `edge_encoder=True` and `num_edge_features==0`.
 
 ### Task progress
 
-| Task | Dataset | Operator | Status | Log | W&B name |
-|------|---------|----------|--------|-----|----------|
-| 1 | mutag | gcn | ✅ done (`43789365`) | `…_43789365_1.log` | `mutag_gcn_tu_gate_bridge` |
-| 2 | mutag | gin | ❌ then 🛑 resubmit | — | `mutag_gin_tu_gate_bridge` |
-| 3 | mutag | sage | ❌ then 🛑 resubmit | — | `mutag_sage_tu_gate_bridge` |
-| 4 | mutag | gatedgcn | ❌ then 🛑 resubmit | — | `mutag_gatedgcn_tu_gate_bridge` |
-| 5 | enzymes | gcn | ❌ then 🛑 resubmit | — | `enzymes_gcn_tu_gate_bridge` |
-| 6 | enzymes | gin | ❌ then 🛑 resubmit | — | `enzymes_gin_tu_gate_bridge` |
-| 7 | enzymes | sage | ❌ then 🛑 resubmit | — | `enzymes_sage_tu_gate_bridge` |
-| 8 | enzymes | gatedgcn | ❌ then 🛑 resubmit | — | `enzymes_gatedgcn_tu_gate_bridge` |
+| Task | Dataset | Operator | Status |
+|------|---------|----------|--------|
+| 1 | mutag | gcn | ✅ |
+| 2 | mutag | gin | ✅ |
+| 3 | mutag | sage | ✅ |
+| 4 | mutag | gatedgcn | ❌ → resubmit after fix |
+| 5 | enzymes | gcn | ✅ |
+| 6 | enzymes | gin | ✅ |
+| 7 | enzymes | sage | ✅ |
+| 8 | enzymes | gatedgcn | ❌ → resubmit after fix |
 
 **Done when** each out dir contains `*_graph_dict.pickle` + `test_appearances.csv`:
 `$GNNPLUS_OUT_DIR/heterogeneity/powerful_gnns/tu_gate_bridge/<ds>_<model>/`
@@ -105,7 +105,7 @@ bash bash_interface/cluster/submit_heterogeneity_tu_gate_bridge.sh
 | **Pilot** | ✅ **`43789364`** | ≥10 | 200 | `1-8%4` | `logs_gnnplus/hetero_gate_bridge_43789364_<TASK>.log` |
 | **Full (paper)** | ⚠️ **`43789365`** | ≥100 | 2000 | `1-8%4` | task 1 ✅; **2–8 failed** (`num_tasks=1` env bug) |
 | **Full retry 2–8** | ❌ **`44100206`** | ≥100 | 2000 | `2-8%4` | same `--export` comma bug |
-| **Full retry 2–8 (fixed)** | 🛑 after syncing submit fix | ≥100 | 2000 | `2-8%4` | use `--export=ALL` only |
+| **Full retry 2–8 (fixed)** | 🔄 **`44164801`** | ≥100 | 2000 | `2-8%4` | `--export=ALL`; banner lists OK |
 
 | Field | Value |
 |-------|-------|
@@ -204,6 +204,10 @@ vs not (printed by join script; extend for paper LaTeX).
 
 | Date | Event |
 |------|-------|
+| 2026-09-03 | **44164801**: 6/8 ✅ (GCN/GIN/SAGE); gatedgcn ❌ (`LinearEdge` / ENZYMES no edges) |
+| 2026-09-03 | Fix gatedgcn yaml `times_func` + master_loader ones-edge for empty edge_attr |
+| 2026-09-03 | **44164801** running: tasks 2/3/5/6 R; verified `2×4=8` + mutag_gin Trial 1 |
+| 2026-09-03 | Submitted fixed retry **44164801** tasks 2–8 (boslogin08); banner lists OK |
 | 2026-09-03 | Root cause: SLURM `--export` comma-split; fixed submit → `--export=ALL` |
 | 2026-09-03 | **44100206** all FAILED again (`out of range 1..1`) |
 | 2026-09-02 | **44100206** confirmed PD (Priority); shell `HETERO_*` unset ✅ |

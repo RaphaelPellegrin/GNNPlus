@@ -461,7 +461,7 @@ GCN_GIN_FORWARD_OUT_DIR=$PWD/results/gcn_gin_routing/analysis/forward_traces/nox
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  ❌  FAILED  ·  TU gate–operator bridge · fix submit --export commas    ║
+║  🔄  SUBMITTED  ·  TU gate–operator bridge · fixed --export=ALL         ║
 ║  📄  Paper_tu_gate_hetero_bridge.md                                      ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
@@ -469,16 +469,17 @@ GCN_GIN_FORWARD_OUT_DIR=$PWD/results/gcn_gin_routing/analysis/forward_traces/nox
 | Field | Value |
 |-------|-------|
 | **mutag_gcn** | ✅ **`43789365_1`** (≥100 apps, COMPLETED) |
-| **Retries** | ❌ `43789365_2..8` · ❌ **`44100206`** (same `1..1`) |
-| **Root cause** | SLURM `--export=HETERO_DATASETS=mutag,enzymes,...` splits on commas |
-| **Fix** | `submit_heterogeneity_tu_gate_bridge.sh` → shell export + `--export=ALL` |
-| **Next** | sync fix → `HETERO_ARRAY=2-8` resubmit |
+| **Retry 2–8** | **`44164801`**: GCN/GIN/SAGE ✅ · gatedgcn ❌ tasks 4+8 |
+| **GatedGCN fix** | yaml `times_func` + ones-edge in `master_loader` → resubmit `HETERO_ARRAY=4,8` |
+| **Failed export** | `43789365_2..8` · `44100206` (fixed earlier) |
+| **When** | 2026-09-03 |
 | **Out** | `$GNNPLUS_OUT_DIR/heterogeneity/powerful_gnns/tu_gate_bridge/` |
+| **Logs** | `logs_gnnplus/hetero_gate_bridge_44164801_<TASK>.log` |
 
 ```bash
-# after git pull / copying fixed submit script:
-HETERO_ARRAY=2-8 bash bash_interface/cluster/submit_heterogeneity_tu_gate_bridge.sh
-# first log line must include: 2×4=8 tasks   and   task 2/8: ds=mutag model=gin
+squeue -u $USER -j 44164801 -o "%.18i %.30j %.2t %.10M %R"
+head -50 logs_gnnplus/hetero_gate_bridge_44164801_2.log
+# expect: 2×4=8 tasks  and  task 2/8: ds=mutag model=gin
 ```
 
 ---
@@ -967,5 +968,5 @@ bash bash_interface/sweeps/create_sweep.sh \
 | SiGMA d_h-matched Tab. 3/4 (3 tiers, 2 LRs) | 🔄 fast **96/100** · slow **5/40** · coco 2 run | `41709078` / `42412053` / `41709082` / `41709085` |
 | TU Errica-fair canonical (630, exploratory) | ✅ 570/630 · 60 OOM | `42673425` · SiGMA rerun `42746310` |
 | TU Errica hybrid | 🔄 eval GIN `44100531` · SAGE `44100566` · GCN `44100596` · GAT fill-in `44099901` · SiGMA `43741550` | see `Paper_tu_errica_fair_comparison.md` |
-| TU gate–operator bridge (MUTAG+ENZYMES hetero) | ❌ `44100206` · `mutag_gcn` ✅ · fix `--export` then resubmit 2–8 | — |
+| TU gate–operator bridge (MUTAG+ENZYMES hetero) | 🟢 6/8 ✅ · gatedgcn ❌ fix+resubmit 4,8 | `44164801` |
 | GCN/GIN routing synthetic (toy + sigma) | 🛑 TO RUN | — |

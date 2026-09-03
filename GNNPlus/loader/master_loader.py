@@ -210,6 +210,25 @@ def load_dataset_master(format, name, dataset_dir):
 
     log_loaded_dataset(dataset, format, name)
 
+    # GatedGCN / LinearEdge need edge_attr. Some TU sets (e.g. ENZYMES) have none.
+    if bool(getattr(cfg.dataset, "edge_encoder", False)) and int(
+        getattr(dataset, "num_edge_features", 0) or 0
+    ) == 0:
+        logging.info(
+            "edge_encoder=True but dataset has 0 edge features — "
+            "adding constant ones edge_attr (dim=1)"
+        )
+
+        def _add_ones_edge_attr(data: object) -> object:
+            edge_index = getattr(data, "edge_index", None)
+            if edge_index is None:
+                return data
+            n_edges = int(edge_index.size(1))
+            data.edge_attr = torch.ones((n_edges, 1), dtype=torch.float)
+            return data
+
+        pre_transform_in_memory(dataset, _add_ones_edge_attr)
+
     # Precompute necessary statistics for positional encodings.
     pe_enabled_list = []
     for key, pecfg in cfg.items():

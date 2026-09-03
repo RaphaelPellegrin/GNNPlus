@@ -289,4 +289,4 @@ Per-graph **GCN / GIN / SAGE / GatedGCN** profiles on MUTAG + ENZYMES (Xu HPs),
 to pair with SiGMA hetero gate dumps (Appendix F) for Tables 1–2.
 
 → **[`Paper_tu_gate_hetero_bridge.md`](Paper_tu_gate_hetero_bridge.md)**  
-`mutag_gcn` ✅ **`43789365_1`** · retries ❌ (`--export` comma bug) · fix submit then resubmit 2–8.
+GCN/GIN/SAGE ✅ (`43789365`/`44164801`) · GatedGCN ❌ (fix `times_func` + ones-edge, resubmit 4+8).

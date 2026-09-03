@@ -26,6 +26,12 @@ dataset:
   edge_encoder: True
   edge_encoder_name: LinearEdge
   edge_encoder_bn: False
+# GraphGym LinearEdgeEncoder hack: last value of times_func == edge feature dim.
+# MUTAG edge_attr is 4-D (bond type one-hot).
+posenc_RWSE:
+  enable: False
+  kernel:
+    times_func: range(1,5)
 train:
   mode: custom
   batch_size: 128
