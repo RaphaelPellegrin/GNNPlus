@@ -39,6 +39,7 @@ def collect_sigma_runs(
     project: str,
     manifest: dict[str, Any],
     states: list[str],
+    campaign: str,
 ) -> list[dict[str, Any]]:
     """Fetch sigma_grid_select runs listed in the manifest."""
     try:
@@ -55,7 +56,7 @@ def collect_sigma_runs(
         fold = int(task["fold"])
         hp_id = int(task["hp_id"])
         hp_tag = f"f{fold}_hp{hp_id}"
-        group = f"tu_errica_{ds_tag}_SiGMA_hetero_sigma_grid_select_{hp_tag}"
+        group = f"tu_errica_{ds_tag}_SiGMA_hetero_{campaign}_{hp_tag}"
         filters: dict[str, Any] = {"group": group, "state": {"$in": states}}
         try:
             runs = list(api.runs(path, filters=filters, per_page=10))
@@ -117,9 +118,15 @@ def main() -> None:
     parser.add_argument("--project", default=DEFAULT_PROJECT)
     parser.add_argument("--manifest", type=Path, default=MANIFEST_PATH)
     parser.add_argument(
+        "--campaign",
+        default="sigma_grid_select_fixed8",
+        help="W&B campaign segment in group names "
+        "(use sigma_grid_select for legacy budget_bio).",
+    )
+    parser.add_argument(
         "--out",
         type=Path,
-        default=_REPO_ROOT / "configs/tu_errica/selections/sigma_per_fold.json",
+        default=_REPO_ROOT / "configs/tu_errica/selections/sigma_fixed8_per_fold.json",
     )
     parser.add_argument("--state", default="finished")
     args = parser.parse_args()
@@ -133,10 +140,15 @@ def main() -> None:
         project=args.project,
         manifest=manifest,
         states=states,
+        campaign=args.campaign,
     )
     selection = select_best_sigma(rows)
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    payload = {"model": "sigma_hetero", "selection": selection}
+    payload = {
+        "model": "sigma_hetero",
+        "campaign": args.campaign,
+        "selection": selection,
+    }
     args.out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     print(f"Wrote {args.out} ({sum(len(v) for v in selection.values())} folds)")
 

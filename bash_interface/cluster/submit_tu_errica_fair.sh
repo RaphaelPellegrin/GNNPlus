@@ -37,13 +37,17 @@ case "${CAMPAIGN}" in
         NUM_TASKS="${TU_ERRICA_NUM_TASKS:-$((NUM_DATASETS * GRID_SIZE * NUM_FOLDS))}"
         JOB_SUFFIX="grid_select_${HP_MODEL}"
         ;;
-    grid_eval|sigma_grid_eval)
+    grid_eval|sigma_grid_eval|sigma_grid_eval_fixed8)
         NUM_TASKS="${TU_ERRICA_NUM_TASKS:-$((NUM_DATASETS * NUM_FOLDS * NUM_SEEDS))}"
-        JOB_SUFFIX="${CAMPAIGN}_$([ "${CAMPAIGN}" = grid_eval ] && echo "${TU_ERRICA_EVAL_MODEL:-gin}" || echo sigma)"
+        if [ "${CAMPAIGN}" = "grid_eval" ]; then
+            JOB_SUFFIX="grid_eval_${TU_ERRICA_EVAL_MODEL:-gin}"
+        else
+            JOB_SUFFIX="${CAMPAIGN}"
+        fi
         ;;
-    sigma_grid_select)
+    sigma_grid_select|sigma_grid_select_fixed8)
         NUM_TASKS=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids/manifest.json'))['num_tasks'])")
-        JOB_SUFFIX="sigma_grid_select"
+        JOB_SUFFIX="${CAMPAIGN}"
         ;;
     *)
         echo "Unknown TU_ERRICA_CAMPAIGN=${CAMPAIGN}"

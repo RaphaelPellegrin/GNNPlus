@@ -120,7 +120,14 @@ def collect_local_runs(root: Path) -> list[dict[str, Any]]:
 
 
 def _wandb_group(ds_tag: str, model: str, campaign: str = "canonical") -> str:
-    return f"tu_errica_{ds_tag}_{model}_{campaign}_canonical"
+    """Build W&B group matching ``run_tu_errica_fair.sh`` naming."""
+    if campaign in ("grid_eval", "sigma_grid_eval", "sigma_grid_eval_fixed8"):
+        hp_tag = "selected"
+    elif campaign == "canonical":
+        hp_tag = "canonical"
+    else:
+        hp_tag = campaign
+    return f"tu_errica_{ds_tag}_{model}_{campaign}_{hp_tag}"
 
 
 def _pick_wandb_metric(summary: dict[str, Any]) -> float | None:
@@ -138,8 +145,9 @@ def collect_wandb_runs(
     campaign: str,
     states: Sequence[str],
     max_runs_per_group: int,
+    models: Sequence[str] | None = None,
 ) -> list[dict[str, Any]]:
-    """Fetch finished Errica canonical runs from W&B."""
+    """Fetch finished Errica runs from W&B for ``campaign``."""
     try:
         import wandb
     except ImportError as exc:  # pragma: no cover
@@ -148,9 +156,10 @@ def collect_wandb_runs(
     api = wandb.Api()
     path = f"{entity}/{project}"
     rows: list[dict[str, Any]] = []
+    model_list = list(models) if models is not None else list(ERRICA_MODELS)
 
     for ds_tag, ds_name in ERRICA_DATASETS:
-        for model in ERRICA_MODELS:
+        for model in model_list:
             group = _wandb_group(ds_tag, model, campaign)
             filters: dict[str, Any] = {
                 "group": group,
@@ -185,7 +194,7 @@ def collect_wandb_runs(
                         "model": model,
                         "fold": fold,
                         "seed": seed,
-                        "hp_id": "canonical",
+                        "hp_id": "selected" if "selected" in group else "canonical",
                         "campaign": campaign,
                         "test_acc": acc,
                         "run_dir": f"wandb:{run.id}",
@@ -195,14 +204,35 @@ def collect_wandb_runs(
     return rows
 
 
-def summarize(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Mean ± std of test accuracy (%) per (dataset, model)."""
-    bucket: dict[tuple[str, str], list[float]] = defaultdict(list)
-    for row in rows:
-        acc = row.get("test_acc")
-        if acc is None:
-            continue
-        bucket[(row["dataset"], row["model"])].append(float(acc))
+def summarize(
+    rows: list[dict[str, Any]],
+    *,
+    fold_then_seed: bool = True,
+) -> list[dict[str, Any]]:
+    """Mean ± std of test accuracy (%) per (dataset, model).
+
+    If ``fold_then_seed`` (Errica-style), average seeds within each fold first,
+    then report mean±std over folds. Otherwise pool all runs.
+    """
+    if fold_then_seed:
+        fold_bucket: dict[tuple[str, str, int], list[float]] = defaultdict(list)
+        for row in rows:
+            acc = row.get("test_acc")
+            if acc is None:
+                continue
+            fold_bucket[(row["dataset"], row["model"], int(row["fold"]))].append(
+                float(acc)
+            )
+        bucket: dict[tuple[str, str], list[float]] = defaultdict(list)
+        for (dataset, model, _fold), values in fold_bucket.items():
+            bucket[(dataset, model)].append(statistics.mean(values))
+    else:
+        bucket = defaultdict(list)
+        for row in rows:
+            acc = row.get("test_acc")
+            if acc is None:
+                continue
+            bucket[(row["dataset"], row["model"])].append(float(acc))
 
     summary: list[dict[str, Any]] = []
     for (dataset, model), values in sorted(bucket.items()):
@@ -212,6 +242,7 @@ def summarize(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         entry: dict[str, Any] = {
             "dataset": dataset,
             "model": model,
+            "n_folds": len(values),
             "n_runs": len(values),
             "test_acc_mean": round(mean, 2),
             "test_acc_std": round(std, 2),
@@ -222,6 +253,72 @@ def summarize(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
             entry["delta_vs_errica"] = round(mean - ref[0], 2)
         summary.append(entry)
     return summary
+
+
+def format_latex_table(
+    summary: list[dict[str, Any]],
+    *,
+    columns: Sequence[str],
+    caption: str,
+    label: str,
+) -> str:
+    """Build a LaTeX table; missing (dataset, model) cells are ``--``."""
+    by_key: dict[tuple[str, str], dict[str, Any]] = {
+        (row["dataset"], row["model"]): row for row in summary
+    }
+    datasets = [name for _, name in ERRICA_DATASETS]
+    col_spec = "l" + "c" * len(columns)
+    header = "Dataset & " + " & ".join(columns) + r" \\"
+    lines = [
+        r"\begin{table}[t]",
+        r"\centering",
+        rf"\caption{{{caption}}}",
+        rf"\label{{{label}}}",
+        r"\resizebox{\textwidth}{!}{%",
+        rf"\begin{{tabular}}{{{col_spec}}}",
+        r"\toprule",
+        header,
+        r"\midrule",
+    ]
+    for dataset in datasets:
+        cells: list[str] = [dataset]
+        best_mean = -1.0
+        best_models: list[str] = []
+        for model in columns:
+            row = by_key.get((dataset, model))
+            if row is None:
+                continue
+            if row["test_acc_mean"] > best_mean + 1e-9:
+                best_mean = float(row["test_acc_mean"])
+                best_models = [model]
+            elif abs(row["test_acc_mean"] - best_mean) <= 1e-9:
+                best_models.append(model)
+        for model in columns:
+            row = by_key.get((dataset, model))
+            if row is None:
+                cells.append("--")
+                continue
+            cell = (
+                f"{row['test_acc_mean']:.2f}"
+                r"{\pm}"
+                f"{row['test_acc_std']:.2f}"
+            )
+            if model in best_models:
+                cell = r"$\mathbf{" + cell + "}$"
+            else:
+                cell = f"${cell}$"
+            cells.append(cell)
+        lines.append(" & ".join(cells) + r" \\")
+    lines.extend(
+        [
+            r"\bottomrule",
+            r"\end{tabular}%",
+            r"}",
+            r"\end{table}",
+            "",
+        ]
+    )
+    return "\n".join(lines)
 
 
 def print_summary(summary: list[dict[str, Any]], *, n_rows: int, n_with_acc: int) -> None:
@@ -246,8 +343,9 @@ def print_summary(summary: list[dict[str, Any]], *, n_rows: int, n_with_acc: int
         if "delta_vs_errica" in row:
             sign = "+" if row["delta_vs_errica"] >= 0 else ""
             vs = f"{sign}{row['delta_vs_errica']:.1f}"
+        n_val = row.get("n_folds", row.get("n_runs", 0))
         print(
-            f"{row['dataset']:<16} {row['model']:<14} {row['n_runs']:>4}  "
+            f"{row['dataset']:<16} {row['model']:<14} {n_val:>4}  "
             f"{row['test_acc_mean']:.1f}±{row['test_acc_std']:.1f}  {vs:>14}"
         )
 
@@ -271,18 +369,42 @@ def main() -> None:
     parser.add_argument("--project", default=DEFAULT_PROJECT)
     parser.add_argument("--campaign", default="canonical")
     parser.add_argument(
+        "--models",
+        default="",
+        help="Comma-separated model tags (default: all). "
+        "Example: GIN,GraphSAGE,GCN",
+    )
+    parser.add_argument(
         "--state",
         default="finished",
         help="Comma-separated W&B run states (wandb/auto)",
     )
     parser.add_argument("--max-runs-per-group", type=int, default=100)
     parser.add_argument(
+        "--pool-runs",
+        action="store_true",
+        help="Pool all seeds/folds instead of Errica fold-then-seed aggregation",
+    )
+    parser.add_argument(
         "--out-csv",
         type=Path,
         default=None,
         help="Optional path for per-run CSV",
     )
+    parser.add_argument(
+        "--out-latex",
+        type=Path,
+        default=None,
+        help="Optional path for LaTeX table",
+    )
+    parser.add_argument(
+        "--latex-columns",
+        default="GCN,GIN,GraphSAGE,GAT,SiGMA_hetero",
+        help="Comma-separated column order for --out-latex",
+    )
     args = parser.parse_args()
+
+    model_filter = [m.strip() for m in args.models.split(",") if m.strip()] or None
 
     rows: list[dict[str, Any]] = []
     if args.source in ("local", "auto"):
@@ -295,10 +417,11 @@ def main() -> None:
             campaign=args.campaign,
             states=states,
             max_runs_per_group=args.max_runs_per_group,
+            models=model_filter,
         )
 
     n_with_acc = sum(1 for r in rows if r.get("test_acc") is not None)
-    summary = summarize(rows)
+    summary = summarize(rows, fold_then_seed=not args.pool_runs)
 
     if args.out_csv and rows:
         args.out_csv.parent.mkdir(parents=True, exist_ok=True)
@@ -309,6 +432,25 @@ def main() -> None:
             writer.writerows(rows)
 
     print_summary(summary, n_rows=len(rows), n_with_acc=n_with_acc)
+
+    if args.out_latex is not None:
+        columns = [c.strip() for c in args.latex_columns.split(",") if c.strip()]
+        caption = (
+            "TU graph classification test accuracy (\\%). "
+            "Errica et al.\\ protocol: 10-fold CV with per-fold HP selection; "
+            "mean$\\pm$std over folds after averaging 3 seeds per fold. "
+            "Missing columns (--) are not yet available for this campaign."
+        )
+        latex = format_latex_table(
+            summary,
+            columns=columns,
+            caption=caption,
+            label="tab:tu_errica_grid_eval",
+        )
+        args.out_latex.parent.mkdir(parents=True, exist_ok=True)
+        args.out_latex.write_text(latex, encoding="utf-8")
+        print(f"Wrote {args.out_latex}", file=sys.stderr)
+        print(latex)
 
 
 if __name__ == "__main__":

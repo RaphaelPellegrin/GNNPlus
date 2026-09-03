@@ -164,7 +164,7 @@ def build_bio_sigma_micro_grid(
 
 
 def social_sigma_grid_entries() -> list[dict[str, Any]]:
-    """Full Errica-style SiGMA grid for social datasets (Option 3)."""
+    """Fixed 8-config SiGMA grid (used for all datasets under ``fixed8`` mode)."""
     return expand_grid(SIGMA_GRID)
 
 

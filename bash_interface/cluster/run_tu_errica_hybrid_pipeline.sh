@@ -74,11 +74,14 @@ case "${phase}" in
         bash bash_interface/cluster/run_generate_sigma_errica_grids.sh
         ;;
     sigma_grid_select)
-        TU_ERRICA_CAMPAIGN=sigma_grid_select TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:00:00 \
+        # Prefer fixed8 campaign name so W&B groups do not collide with budget_bio.
+        TU_ERRICA_CAMPAIGN=sigma_grid_select_fixed8 TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:00:00 \
             bash bash_interface/cluster/submit_tu_errica_fair.sh
         ;;
     aggregate_sigma)
-        _run_python scripts/tu_errica/aggregate_sigma_hp_selection.py
+        _run_python scripts/tu_errica/aggregate_sigma_hp_selection.py \
+            --campaign sigma_grid_select_fixed8 \
+            --out configs/tu_errica/selections/sigma_fixed8_per_fold.json
         ;;
     grid_eval_gin)
         TU_ERRICA_CAMPAIGN=grid_eval TU_ERRICA_EVAL_MODEL=gin \
@@ -97,7 +100,8 @@ case "${phase}" in
             bash bash_interface/cluster/submit_tu_errica_fair.sh
         ;;
     sigma_grid_eval)
-        TU_ERRICA_CAMPAIGN=sigma_grid_eval TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:00:00 \
+        TU_ERRICA_CAMPAIGN=sigma_grid_eval_fixed8 TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:00:00 \
+            TU_ERRICA_SELECTION_FILE=configs/tu_errica/selections/sigma_fixed8_per_fold.json \
             bash bash_interface/cluster/submit_tu_errica_fair.sh
         ;;
     *)
