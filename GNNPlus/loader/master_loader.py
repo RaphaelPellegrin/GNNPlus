@@ -17,6 +17,7 @@ from torch_geometric.graphgym.register import register_loader
 from GNNPlus.loader.dataset.aqsol_molecules import AQSOL
 from GNNPlus.loader.dataset.coco_superpixels import COCOSuperpixels
 from GNNPlus.loader.dataset.gcn_gin_routing import GcnGinRoutingDataset
+from GNNPlus.loader.dataset.gin_depth_routing import GinDepthRoutingDataset
 from GNNPlus.loader.dataset.malnet_tiny import MalNetTiny
 from GNNPlus.loader.dataset.voc_superpixels import VOCSuperpixels
 from GNNPlus.loader.errica_splits import errica_feature_mode
@@ -132,6 +133,9 @@ def load_dataset_master(format, name, dataset_dir):
 
         elif pyg_dataset_id == 'GcnGinRouting':
             dataset = preformat_GcnGinRouting(dataset_dir, name)
+
+        elif pyg_dataset_id == 'GinDepthRouting':
+            dataset = preformat_GinDepthRouting(dataset_dir, name)
 
         elif pyg_dataset_id == 'ZINC':
             dataset = preformat_ZINC(dataset_dir, name)
@@ -658,6 +662,18 @@ def preformat_GcnGinRouting(dataset_dir: str, name: str):
     dataset = join_dataset_splits(
         [
             GcnGinRoutingDataset(dataset_dir, split=split)  # type: ignore[arg-type]
+            for split in ['train', 'val', 'test']
+        ]
+    )
+    return dataset
+
+
+def preformat_GinDepthRouting(dataset_dir: str, name: str):
+    """Load synthetic GIN depth-routing trees (train+val+test joined)."""
+    del name  # reserved for future variants (v1, etc.)
+    dataset = join_dataset_splits(
+        [
+            GinDepthRoutingDataset(dataset_dir, split=split)  # type: ignore[arg-type]
             for split in ['train', 'val', 'test']
         ]
     )

@@ -1,0 +1,64 @@
+out_dir: results
+metric_best: accuracy
+wandb:
+  use: true
+  project: GNNPlus
+  entity: weber-geoml-harvard-university
+  tags:
+  - gnnplus
+  - hybrid_gnn
+  - gin_depth_routing
+  - gin_depth_routing_toy
+  - gin_depth_routing_l2_a0g1_gated
+dataset:
+  format: PyG-GinDepthRouting
+  name: v1
+  task: graph
+  task_type: classification
+  transductive: false
+  split_mode: standard
+  node_encoder: true
+  node_encoder_name: LinearNode
+  node_encoder_bn: false
+  edge_encoder: false
+train:
+  mode: custom
+  batch_size: 128
+  eval_period: 1
+  ckpt_period: 50
+model:
+  type: hybrid_gnn
+  loss_fun: cross_entropy
+  graph_pooling: graph_token
+gnn:
+  head: default
+  ffn: false
+  layers_pre_mp: 0
+  layers_mp: 2
+  layers_post_mp: 1
+  dim_inner: 2
+  act: relu
+  residual: true
+  dropout: 0.0
+  hybrid:
+    num_attn_heads: 0
+    num_gnn_heads: 1
+    d_h: 1
+    attn_mask: full
+    gate: headwise
+    norm: none
+    gnn_types: ROUTING_SUM
+    attn_dropout: 0.0
+    mp_dropout: 0.0
+    block_bn: false
+    log_gate_stats: true
+    residual: true
+    identity_proj: false
+optim:
+  clip_grad_norm: false
+  optimizer: adam
+  weight_decay: 0.0
+  base_lr: 0.001
+  max_epoch: 200
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 5

@@ -25,6 +25,11 @@ from GNNPlus.gcn_gin_routing_gate_tracking import (
     gcn_gin_routing_gate_logging_enabled,
     publish_per_tau_gate_stats_to_wandb,
 )
+from GNNPlus.gin_depth_routing_gate_tracking import (
+    build_per_tau_depth_gate_wandb_log,
+    gin_depth_routing_gate_logging_enabled,
+    publish_per_tau_depth_gate_stats_to_wandb,
+)
 from GNNPlus.attention_sink_tracking import (
     attention_sink_logging_enabled,
     maybe_log_attention_sinks_to_wandb,
@@ -249,6 +254,25 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
                     )
                     publish_per_tau_gate_stats_to_wandb(
                         run, tau_test_log, cur_epoch
+                    )
+            if gin_depth_routing_gate_logging_enabled():
+                if len(loaders) > 1:
+                    depth_val_log = build_per_tau_depth_gate_wandb_log(
+                        model,
+                        loaders[1],
+                        split_name="val",
+                    )
+                    publish_per_tau_depth_gate_stats_to_wandb(
+                        run, depth_val_log, cur_epoch
+                    )
+                if is_eval_epoch(cur_epoch) and len(loaders) > 2:
+                    depth_test_log = build_per_tau_depth_gate_wandb_log(
+                        model,
+                        loaders[2],
+                        split_name="test",
+                    )
+                    publish_per_tau_depth_gate_stats_to_wandb(
+                        run, depth_test_log, cur_epoch
                     )
             maybe_log_attention_sinks_to_wandb(run, model, loaders[0], cur_epoch)
 
