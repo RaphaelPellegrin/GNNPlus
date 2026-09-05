@@ -12,7 +12,8 @@
 #   TU_ERRICA_TIME                default: 72:00:00
 #   TU_ERRICA_NICE                default: 0
 #   TU_ERRICA_EXCLUDE             default: holygpu8a12204
-#   TU_ERRICA_SACCT_START         default: 2026-08-01 (FASRC sacct window)
+#   TU_ERRICA_SACCT_START         optional sacct -S (FASRC max window ~7d;
+#                                 default: omit -S and query by JobID only)
 #   TU_ERRICA_DRY_RUN             if 1, only print array spec (no sbatch)
 
 set -euo pipefail
@@ -29,7 +30,7 @@ TIME="${TU_ERRICA_TIME:-72:00:00}"
 NICE="${TU_ERRICA_NICE:-0}"
 EXCLUDE="${TU_ERRICA_EXCLUDE:-holygpu8a12204}"
 DRY_RUN="${TU_ERRICA_DRY_RUN:-0}"
-SACCT_START="${TU_ERRICA_SACCT_START:-2026-08-01}"
+SACCT_START="${TU_ERRICA_SACCT_START:-}"
 
 if [ -z "${GNNPLUS_OUT_DIR:-}" ]; then
   export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
@@ -50,15 +51,22 @@ IFS=',' read -r -a JOB_ARR <<< "${PARENT_JOBS}"
 for jid in "${JOB_ARR[@]}"; do
   jid="$(echo "${jid}" | tr -d '[:space:]')"
   [ -n "${jid}" ] || continue
-  # -S: FASRC truncates sacct history; -j alone can still miss old array rows.
+  # Prefer -j without -S: FASRC rejects wide -S windows (~7d max) and can
+  # return 0 rows. Optional TU_ERRICA_SACCT_START if you need a narrow window.
   # parsable2 avoids column truncation of compact JobIDs.
-  sacct -j "${jid}" -X -S "${SACCT_START}" \
-    --state=FAILED,TIMEOUT,OUT_OF_MEMORY,NODE_FAIL,CANCELLED \
-    --parsable2 --format=JobID,State,ExitCode -n >> "${TMP_RAW}" || true
+  SACCT_CMD=(sacct -j "${jid}" -X
+    --state=FAILED,TIMEOUT,OUT_OF_MEMORY,NODE_FAIL,CANCELLED
+    --parsable2 --format=JobID,State,ExitCode -n)
+  if [ -n "${SACCT_START}" ]; then
+    SACCT_CMD=(sacct -j "${jid}" -X -S "${SACCT_START}"
+      --state=FAILED,TIMEOUT,OUT_OF_MEMORY,NODE_FAIL,CANCELLED
+      --parsable2 --format=JobID,State,ExitCode -n)
+  fi
+  "${SACCT_CMD[@]}" >> "${TMP_RAW}" || true
 done
 
 N_RAW="$(wc -l < "${TMP_RAW}" | tr -d ' ')"
-echo "[full64_rerun] sacct raw lines=${N_RAW} (start=${SACCT_START})"
+echo "[full64_rerun] sacct raw lines=${N_RAW} (start=${SACCT_START:-none})"
 
 python3 - "${TMP_RAW}" "${TMP_FAILED}" <<'PY'
 """Parse sacct JobIDs (including compact array ranges) into task ID list."""
@@ -105,7 +113,7 @@ if [ "${N_FAILED}" -eq 0 ]; then
   echo "[full64_rerun] No FAILED task IDs found for jobs: ${PARENT_JOBS}"
   echo "[full64_rerun] Debug: head of sacct raw:"
   head -20 "${TMP_RAW}" || true
-  echo "[full64_rerun] Tip: sacct -j 44262912 -X -S ${SACCT_START} --state=FAILED --parsable2 --format=JobID,State,ExitCode | head"
+  echo "[full64_rerun] Tip: sacct -j 44262912 -X --state=FAILED --format=ExitCode -n | wc -l"
   exit 1
 fi
 
