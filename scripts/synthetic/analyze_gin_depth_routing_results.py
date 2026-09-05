@@ -366,6 +366,16 @@ def _write_csv(path: Path, rows: Sequence[dict[str, Any]], fieldnames: Sequence[
         writer.writerows(rows)
 
 
+def _agg_mean_std(vals: Sequence[float]) -> tuple[float, float]:
+    """Mean/population-std over finite values; ``(nan, nan)`` if none."""
+    finite = [v for v in vals if v == v]  # drop NaN (NaN != NaN)
+    if not finite:
+        return float("nan"), float("nan")
+    if len(finite) == 1:
+        return float(finite[0]), 0.0
+    return float(mean(finite)), float(pstdev(finite))
+
+
 def _summarize(rows: Sequence[RunMetrics]) -> list[dict[str, Any]]:
     """Mean/std over seeds by track/model/lr."""
     groups: dict[tuple[str, str, str], list[RunMetrics]] = {}
@@ -373,12 +383,6 @@ def _summarize(rows: Sequence[RunMetrics]) -> list[dict[str, Any]]:
         groups.setdefault((row.track, row.model, row.lr_tag), []).append(row)
     out: list[dict[str, Any]] = []
     for (track, model, lr_tag), items in sorted(groups.items()):
-        def agg(attr: str) -> tuple[float, float]:
-            vals = [float(getattr(it, attr)) for it in items]
-            if len(vals) == 1:
-                return vals[0], 0.0
-            return float(mean(vals)), float(pstdev(vals))
-
         row: dict[str, Any] = {
             "track": track,
             "model": model,
@@ -396,7 +400,7 @@ def _summarize(rows: Sequence[RunMetrics]) -> list[dict[str, Any]]:
             "delta_layer0",
             "delta_layer1",
         ):
-            m, s = agg(key)
+            m, s = _agg_mean_std([float(getattr(it, key)) for it in items])
             row[f"{key}_mean"] = m
             row[f"{key}_std"] = s
         out.append(row)
