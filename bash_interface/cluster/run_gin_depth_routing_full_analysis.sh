@@ -7,6 +7,7 @@
 #   3) layer-mask ablation
 #   4) gate dump
 #   5) ranked gate plots
+#   6) gates by role × layer × τ
 #
 # Submit wrapper:
 #   bash bash_interface/cluster/submit_gin_depth_routing_full_analysis.sh
@@ -38,7 +39,7 @@ lr_tag="${GIN_DEPTH_ANALYZE_LR_TAG:-lr001}"
 
 mkdir -p "${out_dir}" logs_gnnplus
 
-log_message "=== [1/5] per-τ accuracy + gates ==="
+log_message "=== [1/6] per-τ accuracy + gates ==="
 python scripts/synthetic/analyze_gin_depth_routing_results.py \
   --results-root "${results_root}" \
   --dataset-dir "${dataset_dir}" \
@@ -46,7 +47,7 @@ python scripts/synthetic/analyze_gin_depth_routing_results.py \
   --tracks toy \
   --device auto
 
-log_message "=== [2/5] opposite-sign pairs ==="
+log_message "=== [2/6] opposite-sign pairs ==="
 python scripts/synthetic/analyze_gin_depth_opposite_sign_pairs.py \
   --dataset-dir "${dataset_dir}" \
   --results-root "${results_root}" \
@@ -55,7 +56,7 @@ python scripts/synthetic/analyze_gin_depth_opposite_sign_pairs.py \
   --tracks toy \
   --device auto
 
-log_message "=== [3/5] layer-mask ablation ==="
+log_message "=== [3/6] layer-mask ablation ==="
 python scripts/synthetic/eval_gin_depth_routing_layer_masks.py \
   --results-root "${results_root}" \
   --dataset-dir "${dataset_dir}" \
@@ -64,7 +65,7 @@ python scripts/synthetic/eval_gin_depth_routing_layer_masks.py \
   --model l2_a0g1_gated \
   --device auto
 
-log_message "=== [4/5] gate dump ==="
+log_message "=== [4/6] gate dump ==="
 python scripts/synthetic/dump_gin_depth_routing_node_gates.py \
   --results-root "${results_root}" \
   --dataset-dir "${dataset_dir}" \
@@ -72,12 +73,22 @@ python scripts/synthetic/dump_gin_depth_routing_node_gates.py \
   --device auto \
   --skip-existing
 
-log_message "=== [5/5] ranked gate plots ==="
+log_message "=== [5/6] ranked gate plots ==="
 python scripts/synthetic/plot_gin_depth_routing_ranked_gates.py \
   --results-root "${results_root}" \
   --out-dir "${out_dir}/ranked_gates" \
   --lr-tag "${lr_tag}" \
   --split test
+
+log_message "=== [6/6] gates by role × layer × τ ==="
+python scripts/synthetic/analyze_gin_depth_gates_by_role.py \
+  --results-root "${results_root}" \
+  --dataset-dir "${dataset_dir}" \
+  --out-dir "${out_dir}" \
+  --tracks toy \
+  --lr-tag "${lr_tag}" \
+  --model l2_a0g1_gated \
+  --device auto
 
 log_message "Full analysis complete → ${out_dir}"
 ls -lh "${out_dir}"/*.png "${out_dir}"/paper_figures/*.png 2>/dev/null || true

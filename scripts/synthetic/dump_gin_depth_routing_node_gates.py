@@ -210,6 +210,7 @@ def _collect_split_gates(
 
     gnn_n_parts: list[torch.Tensor] = []
     batch_parts: list[torch.Tensor] = []
+    role_parts: list[torch.Tensor] = []
     tau_parts: list[torch.Tensor] = []
     y_parts: list[torch.Tensor] = []
     split_parts: list[torch.Tensor] = []
@@ -222,11 +223,15 @@ def _collect_split_gates(
             batch = batch.to(device)
             if not hasattr(batch, "tau") or batch.tau is None:
                 raise AttributeError("Batch missing graph-level tau.")
+            if not hasattr(batch, "node_role") or batch.node_role is None:
+                raise AttributeError("Batch missing node_role.")
             tau_g = batch.tau.view(-1).long().detach().cpu()
+            role_n = batch.node_role.view(-1).long().detach().cpu()
             gate_out = core.collect_per_graph_gates(batch.clone())
             n_graphs = int(gate_out["num_graphs"])
             split_parts.append(torch.full((n_graphs,), split_id, dtype=torch.long))
             tau_parts.append(tau_g)
+            role_parts.append(role_n)
             if gate_out["y"] is not None:
                 y_parts.append(gate_out["y"].detach().cpu().long().view(-1))
             else:
@@ -247,6 +252,7 @@ def _collect_split_gates(
             "tau": torch.zeros(0, dtype=torch.long),
             "y": torch.zeros(0, dtype=torch.long),
             "split": torch.zeros(0, dtype=torch.long),
+            "node_role": torch.zeros(0, dtype=torch.long),
             "num_graphs": 0,
             "num_nodes": 0,
         }
@@ -261,6 +267,7 @@ def _collect_split_gates(
         "tau": torch.cat(tau_parts, dim=0),
         "y": torch.cat(y_parts, dim=0),
         "split": torch.cat(split_parts, dim=0),
+        "node_role": torch.cat(role_parts, dim=0),
         "num_graphs": num_graphs,
         "num_nodes": int(batch_ids.numel()),
     }
@@ -279,6 +286,7 @@ def _merge_split_payloads(parts: Sequence[dict[str, Any]]) -> dict[str, Any]:
         "tau": [],
         "y": [],
         "split": [],
+        "node_role": [],
     }
     for part in valid:
         merged["gnn_node"].append(part["gnn_node"])
@@ -286,6 +294,7 @@ def _merge_split_payloads(parts: Sequence[dict[str, Any]]) -> dict[str, Any]:
         merged["tau"].append(part["tau"])
         merged["y"].append(part["y"])
         merged["split"].append(part["split"])
+        merged["node_role"].append(part["node_role"])
         graph_offset += int(part["num_graphs"])
 
     batch_ids = torch.cat(merged["batch"], dim=0)
@@ -298,6 +307,7 @@ def _merge_split_payloads(parts: Sequence[dict[str, Any]]) -> dict[str, Any]:
         "tau": torch.cat(merged["tau"], dim=0),
         "y": torch.cat(merged["y"], dim=0),
         "split": torch.cat(merged["split"], dim=0),
+        "node_role": torch.cat(merged["node_role"], dim=0),
         "num_graphs": num_graphs,
         "num_nodes": int(batch_ids.numel()),
         "head_idx": HEAD_IDX,
@@ -326,7 +336,9 @@ def _write_graph_summary_csv(
         "y",
         "layer0_gamma_root",
         "layer1_gamma_root",
-        "delta_l1_minus_l0",
+        "layer0_gamma_mid_mean",
+        "layer1_gamma_mid_mean",
+        "delta_l1_minus_l0_root",
         "num_nodes",
         "track",
         "lr_tag",
@@ -334,6 +346,7 @@ def _write_graph_summary_csv(
         "epoch",
     ]
     csv_path.parent.mkdir(parents=True, exist_ok=True)
+    roles = payload.get("node_role")
     with csv_path.open("w", encoding="utf-8", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=fieldnames)
         writer.writeheader()
@@ -343,6 +356,15 @@ def _write_graph_summary_csv(
             # Root is the first node of each graph.
             l0 = float(gnn_node[lo, 0, HEAD_IDX].item()) if num_layers > 0 else float("nan")
             l1 = float(gnn_node[lo, 1, HEAD_IDX].item()) if num_layers > 1 else float("nan")
+            mid_l0 = float("nan")
+            mid_l1 = float("nan")
+            if roles is not None and num_layers > 0:
+                role_slice = roles[lo:hi].long()
+                mid_mask = role_slice == 1  # ROLE_MID
+                if bool(mid_mask.any()):
+                    mid_l0 = float(gnn_node[lo:hi, 0, HEAD_IDX][mid_mask].mean().item())
+                    if num_layers > 1:
+                        mid_l1 = float(gnn_node[lo:hi, 1, HEAD_IDX][mid_mask].mean().item())
             writer.writerow(
                 {
                     "graph_idx": g,
@@ -351,7 +373,9 @@ def _write_graph_summary_csv(
                     "y": int(y[g].item()),
                     "layer0_gamma_root": l0,
                     "layer1_gamma_root": l1,
-                    "delta_l1_minus_l0": l1 - l0,
+                    "layer0_gamma_mid_mean": mid_l0,
+                    "layer1_gamma_mid_mean": mid_l1,
+                    "delta_l1_minus_l0_root": l1 - l0,
                     "num_nodes": hi - lo,
                     "track": run_ref.track,
                     "lr_tag": run_ref.lr_tag,
