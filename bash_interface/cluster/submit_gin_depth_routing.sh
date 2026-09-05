@@ -60,8 +60,10 @@ if [ ! -f "${dataset_root}/processed/train.pt" ]; then
     --test "${GIN_DEPTH_TEST:-2000}"
 fi
 
-missing=0
-for track in toy sigma; do
+_check_track_cfgs() {
+  local track="$1"
+  local missing=0
+  local slug cfg
   for slug in l2_a0g1_gated l2_a0g1_ungated l1_a0g1 l2_a0g1_gin; do
     cfg="configs/synthetic/gin_depth_routing_${track}_${slug}.yaml"
     if [ ! -f "${cfg}" ]; then
@@ -69,15 +71,20 @@ for track in toy sigma; do
       missing=1
     fi
   done
-done
-if [ "${missing}" -ne 0 ]; then
-  exit 1
-fi
+  if [ "${missing}" -ne 0 ]; then
+    return 1
+  fi
+  return 0
+}
 
 chmod +x bash_interface/cluster/run_gin_depth_routing.sh
 
 _submit_one() {
   local track="$1"
+  if ! _check_track_cfgs "${track}"; then
+    exit 1
+  fi
+
   local job_name="gin_depth_rt_${track}"
   local export_list
   export_list="ALL,ENV_NAME=gnnplus"
