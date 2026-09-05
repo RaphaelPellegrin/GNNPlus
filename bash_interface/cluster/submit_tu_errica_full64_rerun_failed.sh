@@ -12,6 +12,7 @@
 #   TU_ERRICA_TIME                default: 72:00:00
 #   TU_ERRICA_NICE                default: 0
 #   TU_ERRICA_EXCLUDE             default: holygpu8a12204
+#   TU_ERRICA_SACCT_START         default: 2026-08-01 (FASRC sacct window)
 #   TU_ERRICA_DRY_RUN             if 1, only print array spec (no sbatch)
 
 set -euo pipefail
@@ -28,6 +29,7 @@ TIME="${TU_ERRICA_TIME:-72:00:00}"
 NICE="${TU_ERRICA_NICE:-0}"
 EXCLUDE="${TU_ERRICA_EXCLUDE:-holygpu8a12204}"
 DRY_RUN="${TU_ERRICA_DRY_RUN:-0}"
+SACCT_START="${TU_ERRICA_SACCT_START:-2026-08-01}"
 
 if [ -z "${GNNPLUS_OUT_DIR:-}" ]; then
   export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
@@ -40,41 +42,73 @@ LOGDIR="${GNNPLUS_OUT_DIR}/logs_tu_errica_full64_rerun"
 mkdir -p "${LOGDIR}"
 
 TMP_FAILED="$(mktemp)"
-trap 'rm -f "${TMP_FAILED}"' EXIT
+TMP_RAW="$(mktemp)"
+trap 'rm -f "${TMP_FAILED}" "${TMP_RAW}"' EXIT
 
-# Compact array jobs often show one PENDING line; expand via sacct task rows.
-# JobID forms: 44262912_1927 or 44262912_[1927-1930]
 IFS=',' read -r -a JOB_ARR <<< "${PARENT_JOBS}"
+: > "${TMP_RAW}"
 for jid in "${JOB_ARR[@]}"; do
   jid="$(echo "${jid}" | tr -d '[:space:]')"
   [ -n "${jid}" ] || continue
-  sacct -j "${jid}" -X --state=FAILED,TIMEOUT,OUT_OF_MEMORY,NODE_FAIL,CANCELLED \
-    --format=JobID -n 2>/dev/null \
-    | awk '{print $1}' \
-    | while read -r tok; do
-        case "${tok}" in
-          *_\[*\])
-            # e.g. 44262912_[1927-1930%20] — skip compact; rely on expanded rows
-            ;;
-          *_*)
-            tid="${tok##*_}"
-            tid="${tid%%.*}"
-            if [[ "${tid}" =~ ^[0-9]+$ ]]; then
-              echo "${tid}"
-            fi
-            ;;
-        esac
-      done
-done | sort -n | uniq > "${TMP_FAILED}"
+  # -S: FASRC truncates sacct history; -j alone can still miss old array rows.
+  # parsable2 avoids column truncation of compact JobIDs.
+  sacct -j "${jid}" -X -S "${SACCT_START}" \
+    --state=FAILED,TIMEOUT,OUT_OF_MEMORY,NODE_FAIL,CANCELLED \
+    --parsable2 --format=JobID,State,ExitCode -n >> "${TMP_RAW}" || true
+done
+
+N_RAW="$(wc -l < "${TMP_RAW}" | tr -d ' ')"
+echo "[full64_rerun] sacct raw lines=${N_RAW} (start=${SACCT_START})"
+
+python3 - "${TMP_RAW}" "${TMP_FAILED}" <<'PY'
+"""Parse sacct JobIDs (including compact array ranges) into task ID list."""
+from __future__ import annotations
+
+import re
+import sys
+from pathlib import Path
+
+raw_path = Path(sys.argv[1])
+out_path = Path(sys.argv[2])
+
+task_re = re.compile(r"_(\d+)(?:\.\S+)?$")
+range_re = re.compile(r"_\[(\d+)-(\d+)(?:%\d+)?\]")
+single_bracket_re = re.compile(r"_\[(\d+)(?:%\d+)?\]")
+
+ids: set[int] = set()
+for line in raw_path.read_text().splitlines():
+    if not line.strip():
+        continue
+    jobid = line.split("|", 1)[0].strip()
+    m_range = range_re.search(jobid)
+    if m_range:
+        lo, hi = int(m_range.group(1)), int(m_range.group(2))
+        ids.update(range(lo, hi + 1))
+        continue
+    m_one = single_bracket_re.search(jobid)
+    if m_one:
+        ids.add(int(m_one.group(1)))
+        continue
+    m_task = task_re.search(jobid)
+    if m_task:
+        ids.add(int(m_task.group(1)))
+
+sorted_ids = sorted(ids)
+out_path.write_text("\n".join(str(i) for i in sorted_ids) + ("\n" if sorted_ids else ""))
+print(f"[full64_rerun] parsed unique task ids={len(sorted_ids)}")
+if sorted_ids:
+    print(f"[full64_rerun] task id range={sorted_ids[0]}..{sorted_ids[-1]}")
+PY
 
 N_FAILED="$(wc -l < "${TMP_FAILED}" | tr -d ' ')"
 if [ "${N_FAILED}" -eq 0 ]; then
   echo "[full64_rerun] No FAILED task IDs found for jobs: ${PARENT_JOBS}"
-  echo "[full64_rerun] Tip: sacct -j 44262912 -X --state=FAILED --format=JobID%20,State,ExitCode,NodeList | head"
+  echo "[full64_rerun] Debug: head of sacct raw:"
+  head -20 "${TMP_RAW}" || true
+  echo "[full64_rerun] Tip: sacct -j 44262912 -X -S ${SACCT_START} --state=FAILED --parsable2 --format=JobID,State,ExitCode | head"
   exit 1
 fi
 
-# Build SLURM array compact ranges: 1,3-5,10
 ARRAY_SPEC="$(
   python3 - "${TMP_FAILED}" <<'PY'
 from pathlib import Path
@@ -82,9 +116,6 @@ import sys
 
 ids = [int(x) for x in Path(sys.argv[1]).read_text().split() if x.strip()]
 ids = sorted(set(ids))
-if not ids:
-    raise SystemExit("empty failed list")
-
 parts: list[str] = []
 start = prev = ids[0]
 for x in ids[1:]:
@@ -97,6 +128,14 @@ parts.append(str(start) if start == prev else f"{start}-{prev}")
 print(",".join(parts))
 PY
 )"
+
+# Guard: earlier bug only caught tasks 1,3-8 (~7). Real cliff is ~2k+.
+if [ "${N_FAILED}" -lt 100 ]; then
+  echo "[full64_rerun] WARNING: n_failed=${N_FAILED} looks too small (expected ~2000+)."
+  echo "[full64_rerun] ARRAY_SPEC=${ARRAY_SPEC}"
+  echo "[full64_rerun] Refusing to submit. Check sacct -S / parsable output, then rerun."
+  exit 2
+fi
 
 echo "[full64_rerun] parents=${PARENT_JOBS}"
 echo "[full64_rerun] n_failed=${N_FAILED}"
