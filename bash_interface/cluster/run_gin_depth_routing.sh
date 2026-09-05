@@ -1,11 +1,22 @@
 #!/usr/bin/env bash
 # =============================================================================
-# GIN depth-routing synthetic — SLURM worker (always 2-layer SiGMA).
+# GIN depth-routing synthetic — SLURM worker (Track A=toy / Track B=sigma).
 #
-# Models: gated vs ungated × 2 LRs × N seeds.
-# Gates: W&B ``gates_by_tau_depth/{val,test}/layer{k}/tau{0,1}/mean_gamma``.
+# Set GIN_DEPTH_ROUTING_TRACK=toy|sigma (default: toy).
 #
-# Submit: bash bash_interface/cluster/submit_gin_depth_routing.sh
+# Models (order fixed — array indices depend on this):
+#   0: l2_a0g1_gated     (SiGMA gated, L=2)
+#   1: l2_a0g1_ungated   (SiGMA ungated, L=2)
+#   2: l1_a0g1           (1-GIN specialist)
+#   3: l2_a0g1_gin       (2-GIN specialist)
+#
+# Tasks: 4 models × 2 LRs × 5 seeds = 40 per track.
+# Specialists-only fill: ARRAY=21-40
+#
+# Submit:
+#   bash bash_interface/cluster/submit_gin_depth_routing.sh toy
+#   bash bash_interface/cluster/submit_gin_depth_routing.sh sigma
+#   bash bash_interface/cluster/submit_gin_depth_routing.sh both
 # =============================================================================
 
 #SBATCH --job-name=gin_depth_rt
@@ -25,20 +36,28 @@ SCRIPT_DIR="${REPO_ROOT}/bash_interface/cluster"
 # shellcheck source=common_env.sh
 source "${SCRIPT_DIR}/common_env.sh"
 
+track="${GIN_DEPTH_ROUTING_TRACK:-toy}"
 task_id=${SLURM_ARRAY_TASK_ID:-1}
 num_seeds="${GIN_DEPTH_ROUTING_NUM_SEEDS:-5}"
 num_lrs="${GIN_DEPTH_ROUTING_NUM_LRS:-2}"
 
+if [[ "${track}" != "toy" && "${track}" != "sigma" ]]; then
+  log_message "GIN_DEPTH_ROUTING_TRACK must be toy|sigma, got ${track}"
+  exit 1
+fi
+
 models=(
-  "l2_a0g1_gated|configs/synthetic/gin_depth_routing_toy_l2_a0g1_gated.yaml|paper_gin_depth_routing_l2_a0g1_gated"
-  "l2_a0g1_ungated|configs/synthetic/gin_depth_routing_toy_l2_a0g1_ungated.yaml|paper_gin_depth_routing_l2_a0g1_ungated"
+  "l2_a0g1_gated|configs/synthetic/gin_depth_routing_${track}_l2_a0g1_gated.yaml|paper_gin_depth_routing_${track}_l2_a0g1_gated|2"
+  "l2_a0g1_ungated|configs/synthetic/gin_depth_routing_${track}_l2_a0g1_ungated.yaml|paper_gin_depth_routing_${track}_l2_a0g1_ungated|2"
+  "l1_a0g1|configs/synthetic/gin_depth_routing_${track}_l1_a0g1.yaml|paper_gin_depth_routing_${track}_l1_a0g1|1"
+  "l2_a0g1_gin|configs/synthetic/gin_depth_routing_${track}_l2_a0g1_gin.yaml|paper_gin_depth_routing_${track}_l2_a0g1_gin|2"
 )
 
 num_models=${#models[@]}
 num_tasks=$((num_models * num_lrs * num_seeds))
 
 if [ "$task_id" -lt 1 ] || [ "$task_id" -gt "$num_tasks" ]; then
-  log_message "task_id=${task_id} out of range (1..${num_tasks})"
+  log_message "task_id=${task_id} out of range (1..${num_tasks}) track=${track}"
   exit 1
 fi
 
@@ -54,7 +73,7 @@ case "${lr_idx}" in
   *) log_message "bad lr_idx=${lr_idx}"; exit 1 ;;
 esac
 
-IFS='|' read -r model_tag cfg wandb_group_base <<< "${models[$model_idx]}"
+IFS='|' read -r model_tag cfg wandb_group_base layers_mp <<< "${models[$model_idx]}"
 wandb_group="${wandb_group_base}_${lr_tag}"
 
 if [ ! -f "${cfg}" ]; then
@@ -72,20 +91,21 @@ fi
 
 job_tag="${SLURM_ARRAY_JOB_ID:-${SLURM_JOB_ID:-local}}"
 wandb_name="${wandb_group}_seed${seed}_job${job_tag}_${task_id}"
-wandb_tags="gin_depth_routing,toy,l2,${model_tag},${lr_tag},seed${seed}"
+wandb_tags="gin_depth_routing,${track},l${layers_mp},${model_tag},${lr_tag},seed${seed}"
 
 if [ -n "${GNNPLUS_OUT_DIR:-}" ]; then
-  run_dir="${GNNPLUS_OUT_DIR}/gin_routing_depth/toy/${model_tag}_${lr_tag}_seed${seed}"
+  run_dir="${GNNPLUS_OUT_DIR}/gin_routing_depth/${track}/${model_tag}_${lr_tag}_seed${seed}"
 else
-  run_dir="results/gin_routing_depth/runs/toy/${model_tag}_${lr_tag}_seed${seed}"
+  run_dir="results/gin_routing_depth/runs/${track}/${model_tag}_${lr_tag}_seed${seed}"
 fi
 mkdir -p "${run_dir}"
 
-log_message "gin_depth_routing ${task_id}/${num_tasks}: model=${model_tag} lr=${base_lr} seed=${seed}"
+log_message "gin_depth_routing track=${track} ${task_id}/${num_tasks}: model=${model_tag} layers_mp=${layers_mp} lr=${base_lr} seed=${seed}"
 log_message "cfg=${cfg}"
 log_message "run_dir=${run_dir}"
 
 cat > "${run_dir}/train_meta.txt" <<META
+track=${track}
 model=${model_tag}
 cfg=${cfg}
 seed=${seed}
@@ -94,7 +114,7 @@ lr_tag=${lr_tag}
 task_id=${task_id}
 job=${job_tag}
 wandb_group=${wandb_group}
-layers_mp=2
+layers_mp=${layers_mp}
 META
 cp -f "${cfg}" "${run_dir}/config_used.yaml"
 
@@ -115,4 +135,4 @@ python main.py \
   train.enable_ckpt True \
   train.ckpt_best True \
   train.ckpt_clean True \
-  gnn.layers_mp 2
+  gnn.layers_mp "${layers_mp}"
