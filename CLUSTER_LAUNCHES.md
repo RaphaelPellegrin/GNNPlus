@@ -11,6 +11,22 @@ Entity/project: [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/webe
 
 ## ✅ SUBMITTED (do not re-submit)
 
+### 🧪 Xu SiGMA GCN+SAGE only (a0g2/a1g2 × gated/ungated × 5 seeds)
+
+| | |
+|--|--|
+| **Status** | 🛑 **TO SUBMIT** after `git push` (GIN-free routing follow-up) |
+| **Submit** | `XU_GCS_PARTITION=gpu_h200 XU_GCS_PARALLEL=10 XU_GCS_NICE=0 bash bash_interface/cluster/submit_heterogeneity_xu_sigma_gcn_sage.sh` |
+| **When** | 2026-09-06 |
+| **Tasks** | 40 = 4 variants × 2 ds × 5 seeds |
+| **Variants** | `a0g2_gated` · `a0g2_ungated` · `a1g2_gated` · `a1g2_ungated` (`gnn_types=GCN,SAGE`) |
+| **Docs** | [`Paper_tu_gate_hetero_bridge.md`](Paper_tu_gate_hetero_bridge.md) |
+| **Logs** | `logs_gnnplus/xu_sigma_gcs_<JOBID>_<TASK>.log` |
+| **Outs** | `$GNNPLUS_OUT_DIR/heterogeneity/powerful_gnns/tu_xu_sigma_gcn_sage/<ds>_SiGMA_hetero_<variant>_seed<s>/` |
+| **Configs** | `configs/heterogeneity/powerful_gnns/sigma-gcn-sage-{a0g2,a1g2}-{gated,ungated}-ckpt.yaml` |
+
+Paste JOBID here after submit. Join with `--operators GCN,SAGE --lr-tag <variant>`.
+
 ### 🧪 GIN depth-routing synthetic (2-layer SiGMA, 20 jobs)
 
 | | |
@@ -874,28 +890,29 @@ git pull
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  PENDING  ·  TU Tab.17/18 L×d_h×H gated vs ungated (4800 jobs)       ║
-║  🎯  L∈{1,2,4,8,16} · d_h∈{1,2,4,16} · H∈{64,8} · hetero a2g4           ║
+║  🔄  RUNNING  ·  smoke 44876758 · MUTAG 44876760 (1-800)                 ║
+║  🎯  TU Tab.17/18 L×d_h×H gated vs ungated                               ║
 ║  📄  Paper_tu_sigma_depth_dh_h.md                                        ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
 ```bash
-source ~/.gnnplus_env
-export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
-export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
-cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-git pull
-
-# smoke MUTAG L1 dh1 H64 gated+ungated:
-TU_LDHH_ARRAY=1,11 TU_LDHH_PARALLEL=2 \
-  bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh
-# then MUTAG 1-800; later 801-1600 ENZYMES · … · 4001-4800 REDDIT
+# already submitted:
+# smoke  44876758  ·  1,11%2
+# MUTAG  44876760  ·  1-800%20
+# next:
+TU_LDHH_ARRAY=801-1600  bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh  # ENZYMES
+TU_LDHH_ARRAY=1601-2400 bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh  # PROTEINS
+TU_LDHH_ARRAY=2401-3200 bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh  # COLLAB
+TU_LDHH_ARRAY=3201-4000 bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh  # IMDB
+TU_LDHH_ARRAY=4001-4800 bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh  # REDDIT
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *paste JOBID* |
+| **Smoke** | ✅ **`44876758`** · `1,11` · `%2` |
+| **MUTAG** | ✅ **`44876760`** · `1-800` · `%20` |
+| **Rest** | 🛑 ENZYMES…REDDIT not yet |
 | **Submit** | `bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh` |
 | **Tasks** | **4800** · dataset blocks of 800 · mem 128GB · 96h |
 | **Grid** | L∈{1,2,4,8,16} · d_h∈{1,2,4,16} · H∈{64,8} · gated/ungated · 2 LR · 5 seeds |

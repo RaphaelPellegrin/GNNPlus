@@ -2,11 +2,68 @@
 
 ```text
 ╔══════════════════════════════════════════════════════════════════╗
-║  Xu L=4 SiGMA a2g4 × 5 seeds  🔄 44258255  (gpu_h200 1-10%10)   ║
-║  GAT specialist prefs (≥100)  🛑 TO SUBMIT after git push        ║
-║  L=12 a2g4 join: all 12 MP layers scanned — no routing signal   ║
+║  NEXT: Xu SiGMA GCN+SAGE a0g2/a1g2 × gated/ungated (40 jobs)    ║
+║  Xu a2g4 join: NO routing — GIN γ dominates all pref bins       ║
+║  GAT specialist prefs (≥100)  ✅ mutag + enzymes on disk        ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
+
+## Xu SiGMA GCN+SAGE only (no GIN) — follow-up
+
+GIN mass dominated a2g4 gates, so re-run protocol-matched Xu L=4 SiGMA with
+**only GCN+SAGE** MP heads, gated and ungated, with and without one attention head.
+
+| Variant | Attn | MP | Gate | `d_h` |
+|---------|------|----|------|-------|
+| `a0g2_gated` | 0 | GCN,SAGE | headwise | 32 |
+| `a0g2_ungated` | 0 | GCN,SAGE | none | 32 |
+| `a1g2_gated` | 1 | GCN,SAGE | headwise | 16 |
+| `a1g2_ungated` | 1 | GCN,SAGE | none | 16 |
+
+| Field | Value |
+|-------|-------|
+| **Jobs** | 40 (4 × 2 ds × 5 seeds) |
+| **Submit** | `bash bash_interface/cluster/submit_heterogeneity_xu_sigma_gcn_sage.sh` |
+| **Outs** | `$GNNPLUS_OUT_DIR/heterogeneity/powerful_gnns/tu_xu_sigma_gcn_sage/<ds>_SiGMA_hetero_<variant>_seed<s>/` |
+| **Configs** | `configs/heterogeneity/powerful_gnns/sigma-gcn-sage-{a0g2,a1g2}-{gated,ungated}-ckpt.yaml` |
+| **SLURM** | 🛑 TO SUBMIT |
+
+```bash
+XU_GCS_PARTITION=gpu_h200 XU_GCS_PARALLEL=10 XU_GCS_NICE=0 \
+  bash bash_interface/cluster/submit_heterogeneity_xu_sigma_gcn_sage.sh
+```
+
+After dumps land, join each gated variant against existing GCN/SAGE pickles:
+
+```bash
+for tag in a0g2_gated a1g2_gated; do
+  python scripts/heterogeneity/join_tu_gate_operator_preference.py \
+    --datasets mutag,enzymes \
+    --hetero-root results/heterogeneity/powerful_gnns/tu_gate_bridge \
+    --gate-root results/heterogeneity/powerful_gnns/tu_xu_sigma_gcn_sage \
+    --lr-tag "${tag}" --seeds 0,1,2,3,4 --operators GCN,SAGE \
+    --splits val,test \
+    --out-dir "results/heterogeneity/tu_gate_bridge_analysis_gcs_${tag}"
+done
+```
+
+(Ungated is the control: gates should be flat / non-informative.)
+
+## Xu-protocol join result (2026-09-05)
+
+Out: `results/heterogeneity/tu_gate_bridge_analysis_xu/`  
+Same recipe both sides: L=4, GCN/GIN/SAGE/GAT, val+test, 5 seeds.
+
+**Verdict: still no preference→gate routing.**
+
+| Dataset | What preference says | What SiGMA gates do |
+|---------|----------------------|---------------------|
+| MUTAG | GIN 65% of untied; ~50% ties; GAT 14% | γ_GIN ≈ **0.86** on *all* pref groups |
+| ENZYMES | GIN 34%, GCN 28%, GAT 25%, SAGE 13% | γ_GIN ≈ **0.48** everywhere; others ≲ 0.1 |
+
+Last-layer Δγ (pref H − other) all |\Deltaγ| ≲ 0.01 and usually inside seed std — often **negative** (ENZYMES GIN −0.011, SAGE −0.010; MUTAG GAT −0.010). Layer scan L0–L3 same story.
+
+So even with protocol-matched Xu SiGMA + GAT specialists, the gate does **not** open the specialist that wins the hetero profile; it mostly parks mass on GIN.
 
 ## GAT specialist preference (Xu recipe)
 
@@ -19,14 +76,8 @@ as SAGE: L=4, H=64, 350 ep, sum pool).
 | **Jobs** | 2 (mutag_gat, enzymes_gat) |
 | **Configs** | `configs/heterogeneity/powerful_gnns/{mutag,enzymes}-gat.yaml` |
 | **Outs** | `$GNNPLUS_OUT_DIR/heterogeneity/powerful_gnns/tu_gate_bridge/{mutag,enzymes}_gat/` |
-| **Join** | `--operators GCN,GIN,SAGE,GAT` after pickles land |
-
-```bash
-HETERO_DATASETS=mutag,enzymes HETERO_MODELS=gat \
-  HETERO_NUM_TASKS=2 HETERO_ARRAY=1-2 \
-  HETERO_PARTITION=gpu_h200 HETERO_PARALLEL=2 \
-  bash bash_interface/cluster/submit_heterogeneity_tu_gate_bridge.sh
-```
+| **SLURM** | ✅ **`44507938`** enzymes_gat · **`44264271_1`** mutag_gat (2026-09-05) |
+| **Pickles** | `tu_gate_bridge/{mutag,enzymes}_gat/*_GAT_L4_graph_dict.pickle` |
 
 
 ## Xu-protocol SiGMA a2g4 (5 seeds, checkpoint + gates)
@@ -40,13 +91,7 @@ pickles. Not the old `mutag-sigma.yaml` `GIN,GIN` a2g2.
 | **Jobs** | 10 (mutag seeds 0–4, enzymes seeds 0–4) |
 | **Submit** | `bash bash_interface/cluster/submit_heterogeneity_xu_sigma_a2g4_ckpt.sh` |
 | **Outs** | `$GNNPLUS_OUT_DIR/heterogeneity/powerful_gnns/tu_xu_sigma_a2g4/<ds>_SiGMA_hetero_xu_seed<s>/` |
-| **SLURM** | 🔄 **`44258255`** `gpu_h200` `1-10%10` (2026-09-03 ~18:54 ET) · cancelled `44229226` |
-
-```bash
-squeue -u $USER -j 44258255
-head -40 logs_gnnplus/xu_sigma_a2g4_44258255_1.log   # mutag seed 0
-# first lines: Training / Trial, not import errors
-```
+| **SLURM** | ✅ **10/10** gates · retry **`44507936`** + keep **`44264269`** 2/5/8 (2026-09-05) |
 
 When all 10 finish, each run dir should have `ckpt/` + `gate_values_per_graph.pt`. Then pull and re-join:
 
@@ -140,8 +185,29 @@ Why this is unsurprising on these dumps: Xu L=4 specialists vs SiGMA **L=12**
 `a2g4`; preference ≠ graph type; GAT specialist pickles **pending** (see banner);
 MUTAG ~48% ties.
 
-**Next:** when **`44258255`** finishes, pull `tu_xu_sigma_a2g4` dumps (L=4,
-same recipe as pickles) and re-join + re-scan 4 layers.
+**Next (ready):** pull Xu gates + GAT pickles, then re-join L=4 protocol-matched
+dumps with GAT preference:
+
+```bash
+# from laptop
+rsync -avz --include='*/' --include='gate_values_per_graph.pt' --include='config_used.yaml' --exclude='*' \
+  rpellegrinext@holylogin.rc.fas.harvard.edu:/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results/heterogeneity/powerful_gnns/tu_xu_sigma_a2g4/ \
+  results/heterogeneity/powerful_gnns/tu_xu_sigma_a2g4/
+
+rsync -avz --include='*/' --include='*graph_dict.pickle' --include='*test_appearances.csv' --exclude='*' \
+  rpellegrinext@holylogin.rc.fas.harvard.edu:/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results/heterogeneity/powerful_gnns/tu_gate_bridge/ \
+  results/heterogeneity/powerful_gnns/tu_gate_bridge/
+
+python scripts/heterogeneity/join_tu_gate_operator_preference.py \
+  --datasets mutag,enzymes \
+  --hetero-root results/heterogeneity/powerful_gnns/tu_gate_bridge \
+  --gate-root results/heterogeneity/powerful_gnns/tu_xu_sigma_a2g4 \
+  --lr-tag xu \
+  --seeds 0,1,2,3,4 \
+  --operators GCN,GIN,SAGE,GAT \
+  --splits val,test \
+  --out-dir results/heterogeneity/tu_gate_bridge_analysis_xu
+```
 
 ```bash
 python scripts/heterogeneity/join_tu_gate_operator_preference.py \
@@ -298,6 +364,12 @@ vs not (printed by join script; extend for paper LaTeX).
 
 | Date | Event |
 |------|-------|
+| 2026-09-06 | Added Xu SiGMA **GCN+SAGE only** a0g2/a1g2 × gated/ungated (40-job submit) |
+| 2026-09-05 | Xu join done: **no routing** (GIN γ dominates; |\Deltaγ| ≲ 0.01 all layers) |
+| 2026-09-05 | ✅ Xu 10/10 gates + GAT mutag/enzymes pickles; ready to pull + re-join |
+| 2026-09-04 | CUDA retry: Xu **`44507936`** `1,3,4,6,7,9,10` · enzymes GAT **`44507938`** task 2 |
+| 2026-09-03 | Resubmitted **nice=0**: Xu **`44264269`**, GAT **`44264271`** (cancelled nice=10k `44258255`/`44261036`) |
+| 2026-09-03 | Submitted GAT specialists **`44261036`** `gpu_h200` `1-2%2` (later cancelled) |
 | 2026-09-03 | Added Xu-recipe **GAT** specialist yamls; ready to submit 2-task bridge array |
 | 2026-09-03 | Resubmitted Xu SiGMA a2g4 on **`gpu_h200`** **`44258255`**; cancelled PD **`44229226`** |
 | 2026-09-03 | All 12 MP layers scanned on L=12 dumps: no routing (|\Deltaγ| ≲ 0.03, r~0) |
