@@ -341,7 +341,7 @@ python scripts/gate_viz/plot_per_node_gates.py \
   --pt-node results/tu_sigma_homo_hetero/mutag_SiGMA_hetero_lr001_seed2/gate_values_per_node.pt \
   --out_dir results/gate_viz/tu_hh_hetero/mutag_SiGMA_hetero_lr001_seed2 \
   --color-by-class \
-  --band p10_p90 \
+  --band p10_p90,minmax \
   --sort-head 1 \
   --draw-head 1 \
   --n-draw 8
@@ -359,10 +359,10 @@ Outputs (alongside existing `*_by_rank_by_class.png`):
 
 | File | Contents |
 |------|----------|
-| `*_gates_{attn,gnn}_nodeband_shared_order_by_class.png` | Graph-mean γ + within-graph node percentile band, shared rank |
+| `*_gates_{attn,gnn}_nodeband_shared_order_by_class.png` | Graph-mean γ + dual within-graph bands (light min–max under darker p10–p90), shared rank |
 | `*_gates_gnn_L{k}_{GIN}_node_graphs.png` | Top/bottom ranked graphs, nodes colored by γ |
 
-Band modes: `p10_p90` (default), `p25_p75`, `minmax`, `std`.
+Band modes (comma-separated, all drawn on the same plot): `p10_p90`, `p25_p75`, `minmax`/`full`, `std`. Default: `p10_p90,minmax`.
 
 If a `.pt` is missing but `ckpt/` exists, re-dump (same 1–150 task map; GCN no-op):
 
@@ -527,3 +527,60 @@ Per-dataset task block (30 tasks, seeds 0–4):
 | 26–30 | GPS a1g1 | 0.01 |
 
 Dataset order: MUTAG → ENZYMES → PROTEINS → COLLAB → IMDB-BINARY → REDDIT-BINARY.
+
+---
+
+## W&B verification (gated Tables 17 / 18)
+
+All reported SiGMA cells recomputed from W&B `best_test_perf` (5 seeds) match the
+paper numbers (±0.05), with one footnote fix:
+
+| Issue | Detail |
+|-------|--------|
+| **COLLAB hetero (Tab.17)** | Paper **77.25±0.95** is **`lr=0.01`** (`h1cu3mag`, `6qw8bq4u`, `aqd3csla`, `481cw852`, `fmhrfdl4`). An older W&B ID note listed the `lr=0.001` group (`76.83±1.18`) by mistake. |
+| **REDDIT-BINARY (Tab.17)** | Homo `87.92±7.51` / hetero `92.72±1.01` at `lr=0.001` (`tu_hh_reddit_binary_SiGMA_{homo,hetero}_lr001`). |
+
+Re-run locally:
+
+```bash
+python scripts/api_wanndb_query/verify_tu_sigma_tables.py
+```
+
+---
+
+## SiGMA ungated column (rebuttal — Tab.17 + Tab.18)
+
+**Goal:** add **SiGMA (ungated)** next to gated SiGMA (hetero): same a2g4 hetero
+heads, `gnn.hybrid.gate=none` (Table 5 `SiGMA_ungated` semantics). Report better
+of `{1e-3, 1e-2}`; hope ungated ≤ gated hetero.
+
+Does **not** re-run GCN / GIN / SAGE / GAT / gated SiGMA.
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+bash bash_interface/cluster/submit_tu_sigma_ungated.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *paste JOBID* |
+| **Submit** | `bash_interface/cluster/submit_tu_sigma_ungated.sh` |
+| **Tasks** | `1-120%20` · 2 tables × 6 ds × 2 LR × 5 seeds |
+| **Tab.17 (1–60)** | `d_h=16` · `sigma-hetero-a2g4-anchor.yaml` · W&B `tu_hh_<ds>_SiGMA_ungated_{lr001,lr01}` |
+| **Tab.18 (61–120)** | `d_h=4` · matched anchor · W&B `tu_1x_<ds>_SiGMA_ungated_{lr001,lr01}` |
+| **Override** | `gnn.hybrid.gate none` |
+| **Batches** | bio 64 · COLLAB 32 · IMDB 64 · REDDIT 16 |
+| **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_{homo_hetero,1x_gcn}/<ds>_SiGMA_ungated_<lr>_seed<s>/` |
+| **Logs** | `logs_gnnplus/tu_sigma_ung_<JOBID>_<TASK>.log` |
+
+Tab-only:
+
+```bash
+TU_UNGATED_ARRAY=1-60   bash bash_interface/cluster/submit_tu_sigma_ungated.sh   # Tab.17
+TU_UNGATED_ARRAY=61-120 bash bash_interface/cluster/submit_tu_sigma_ungated.sh   # Tab.18
+```
