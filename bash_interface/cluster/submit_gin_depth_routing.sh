@@ -9,14 +9,20 @@
 # Models per track (40 tasks = 4 × 2 lr × 5 seeds):
 #   1–10:  l2_a0g1_gated
 #  11–20:  l2_a0g1_ungated
-#  21–30:  l1_a0g1          (1-GIN specialist)
-#  31–40:  l2_a0g1_gin      (2-GIN specialist)
+#  21–30:  l1_a0g1          (1-layer specialist)
+#  31–40:  l2_a0g1_gin      (2-layer specialist)
 #
-# Track A already ran gated+ungated (tasks 1–20). Specialists fill:
+# Dataset labels are residual-faithful (label_rule=residual_r2_v1):
+#   τ=0 → y=1[R1>0], R1=S1
+#   τ=1 → y=1[R2>0], R2=2·S1+S2
+# Auto-regenerates if processed data is missing or label_rule mismatches.
+# Force: GIN_DEPTH_FORCE_REGEN=1 bash .../submit_gin_depth_routing.sh toy
+#
+# Full retrain after label change:
+#   bash .../submit_gin_depth_routing.sh toy
+#
+# Specialists-only fill (after gated/ungated already done on same labels):
 #   GIN_DEPTH_ROUTING_ARRAY=21-40 bash .../submit_gin_depth_routing.sh toy
-#
-# Track B (full):
-#   bash .../submit_gin_depth_routing.sh sigma
 
 set -euo pipefail
 
@@ -51,13 +57,29 @@ fi
 
 dataset_parent="${GIN_DEPTH_DATASET_DIR:-${GNNPLUS_DATASET_DIR}}"
 dataset_root="${dataset_parent}/GinDepthRouting"
-if [ ! -f "${dataset_root}/processed/train.pt" ]; then
-  echo "[submit_gin_depth_routing] Generating dataset at ${dataset_root}..."
+EXPECTED_LABEL_RULE="${GIN_DEPTH_LABEL_RULE:-residual_r2_v1}"
+FORCE_REGEN="${GIN_DEPTH_FORCE_REGEN:-0}"
+need_regen=0
+if [ "${FORCE_REGEN}" = "1" ]; then
+  need_regen=1
+elif [ ! -f "${dataset_root}/processed/train.pt" ]; then
+  need_regen=1
+elif [ -f "${dataset_root}/raw/spec.json" ]; then
+  if ! grep -q "\"label_rule\": \"${EXPECTED_LABEL_RULE}\"" "${dataset_root}/raw/spec.json"; then
+    echo "[submit_gin_depth_routing] label_rule mismatch → regenerating dataset"
+    need_regen=1
+  fi
+else
+  need_regen=1
+fi
+if [ "${need_regen}" -eq 1 ]; then
+  echo "[submit_gin_depth_routing] Generating dataset at ${dataset_root} (label_rule=${EXPECTED_LABEL_RULE})..."
   python scripts/synthetic/generate_gin_depth_routing_dataset.py \
     --root "${dataset_root}" \
     --train "${GIN_DEPTH_TRAIN:-10000}" \
     --val "${GIN_DEPTH_VAL:-2000}" \
-    --test "${GIN_DEPTH_TEST:-2000}"
+    --test "${GIN_DEPTH_TEST:-2000}" \
+    --force
 fi
 
 _check_track_cfgs() {

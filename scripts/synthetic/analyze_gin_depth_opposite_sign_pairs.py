@@ -2,10 +2,11 @@
 """Opposite-sign τ-twin analysis for GIN depth-routing.
 
 Opposite-sign pairs share identical trees and features; only τ (and thus the
-labeling rule) differs. Oracles:
+labeling rule) differs. Residual-faithful oracles:
 
-  - ``oracle_s1_rule``: always predict ``1[S1 > 0]`` (shallow / 1-GIN)
-  - ``oracle_s2_rule``: always predict ``1[S2 > 0]`` (deep / 2-GIN)
+  - ``oracle_s1_rule``: always predict ``1[R1 > 0]`` with ``R1 = S1`` (1-layer)
+  - ``oracle_s2_rule``: always predict ``1[R2 > 0]`` with ``R2 = 2·S1 + S2``
+    (2-layer + residual)
 
 A fixed depth rule cannot be correct on both members of an opposite-sign pair.
 Trained SiGMA gated / ungated should approach ``both_correct`` if they route by τ.
@@ -36,7 +37,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from statistics import mean
-from typing import Literal, Optional, Sequence
+from typing import Any, Literal, Optional, Sequence
 
 import matplotlib
 
@@ -50,18 +51,37 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 PairOutcome = Literal["both_correct", "only_tau0", "only_tau1", "both_wrong"]
-ModelKind = Literal["oracle_s1_rule", "oracle_s2_rule", "gated", "ungated"]
+ModelKind = Literal[
+    "oracle_s1_rule",
+    "oracle_s2_rule",
+    "gated",
+    "ungated",
+    "gin1",
+    "gin2",
+]
 
 _MODEL_SLUGS: dict[ModelKind, str] = {
     "gated": "l2_a0g1_gated",
     "ungated": "l2_a0g1_ungated",
+    "gin1": "l1_a0g1",
+    "gin2": "l2_a0g1_gin",
 }
 _MODEL_LABELS: dict[ModelKind, str] = {
-    "oracle_s1_rule": r"Oracle $S_1$ (1-GIN)",
-    "oracle_s2_rule": r"Oracle $S_2$ (2-GIN)",
+    "oracle_s1_rule": r"Oracle $R_1$ (1-layer)",
+    "oracle_s2_rule": r"Oracle $R_2$ (2-layer+res)",
     "gated": "SiGMA gated",
     "ungated": "SiGMA ungated",
+    "gin1": "1-GIN specialist",
+    "gin2": "2-GIN specialist",
 }
+_MODEL_PLOT_ORDER: tuple[ModelKind, ...] = (
+    "oracle_s1_rule",
+    "oracle_s2_rule",
+    "gated",
+    "ungated",
+    "gin1",
+    "gin2",
+)
 _OUTCOME_ORDER: tuple[PairOutcome, ...] = (
     "both_correct",
     "only_tau0",
@@ -91,6 +111,8 @@ class TestGraphMeta:
     label: int
     s1_score: float
     s2_score: float
+    r1_score: float
+    r2_score: float
     difficulty: str
     pair_id: Optional[int]
 
@@ -107,6 +129,8 @@ class OppositeSignPair:
     label_tau1: int
     s1_score: float
     s2_score: float
+    r1_score: float
+    r2_score: float
 
 
 @dataclass(frozen=True)
@@ -176,7 +200,7 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         default=None,
         help="Parent of toy/ for gated/ungated checkpoint eval.",
     )
-    parser.add_argument("--tracks", type=str, default="toy")
+    parser.add_argument("--tracks", type=str, default="toy,sigma")
     parser.add_argument("--lr-tag", type=str, default="lr001")
     parser.add_argument(
         "--seeds",
@@ -211,10 +235,28 @@ def _oracle_rule_correct(
     rule: Literal["s1", "s2"],
     tau_member: Literal[0, 1],
 ) -> bool:
-    """Whether a fixed depth rule matches the ground truth on one pair member."""
-    pred = int(pair.s1_score > 0.0) if rule == "s1" else int(pair.s2_score > 0.0)
+    """Whether a fixed residual-depth rule matches GT on one pair member.
+
+    ``s1`` / ``s2`` keys are historical; they now mean residual ``R1`` / ``R2``.
+    """
+    pred = int(pair.r1_score > 0.0) if rule == "s1" else int(pair.r2_score > 0.0)
     label = pair.label_tau0 if tau_member == 0 else pair.label_tau1
     return pred == label
+
+
+def _scores_from_data(data: Any) -> tuple[float, float, float, float]:
+    """Return ``(s1, s2, r1, r2)`` from a PyG graph (with fallbacks)."""
+    s1 = float(data.s1_score.view(-1)[0].item())
+    s2 = float(data.s2_score.view(-1)[0].item())
+    if hasattr(data, "r1_score") and data.r1_score is not None:
+        r1 = float(data.r1_score.view(-1)[0].item())
+    else:
+        r1 = s1
+    if hasattr(data, "r2_score") and data.r2_score is not None:
+        r2 = float(data.r2_score.view(-1)[0].item())
+    else:
+        r2 = 2.0 * s1 + s2
+    return s1, s2, r1, r2
 
 
 def load_test_graph_meta(dataset_dir: str) -> list[TestGraphMeta]:
@@ -230,13 +272,16 @@ def load_test_graph_meta(dataset_dir: str) -> list[TestGraphMeta]:
         if hasattr(data, "pair_id") and data.pair_id is not None:
             raw_pair_id = int(data.pair_id.view(-1)[0].item())
             pair_id = raw_pair_id if raw_pair_id >= 0 else None
+        s1, s2, r1, r2 = _scores_from_data(data)
         records.append(
             TestGraphMeta(
                 graph_idx=graph_idx,
                 tau=int(data.tau.view(-1)[0].item()),
                 label=int(data.y.view(-1)[0].item()),
-                s1_score=float(data.s1_score.view(-1)[0].item()),
-                s2_score=float(data.s2_score.view(-1)[0].item()),
+                s1_score=s1,
+                s2_score=s2,
+                r1_score=r1,
+                r2_score=r2,
                 difficulty=str(data.difficulty),
                 pair_id=pair_id,
             ),
@@ -255,7 +300,7 @@ def build_opposite_sign_pairs(meta: Sequence[TestGraphMeta]) -> list[OppositeSig
         if record.pair_id is not None:
             by_pair_id[record.pair_id].append(record)
         else:
-            key = (round(record.s1_score, 8), round(record.s2_score, 8))
+            key = (round(record.r1_score, 8), round(record.r2_score, 8))
             by_score[key].append(record)
 
     pairs: list[OppositeSignPair] = []
@@ -300,6 +345,8 @@ def _pair_from_members(
         label_tau1=tau1.label,
         s1_score=tau0.s1_score,
         s2_score=tau0.s2_score,
+        r1_score=tau0.r1_score,
+        r2_score=tau0.r2_score,
     )
 
 
@@ -553,12 +600,12 @@ def _plot_outcomes(
 ) -> None:
     """Stacked bar chart of pair outcomes by model."""
     means = _mean_summary_fractions(summary)
-    models = [m for m in _MODEL_LABELS if m in means]
+    models = [m for m in _MODEL_PLOT_ORDER if m in means]
     if not models:
         logging.warning("No summary rows for outcome plot.")
         return
 
-    fig, ax = plt.subplots(figsize=(8.0, 4.6))
+    fig, ax = plt.subplots(figsize=(max(8.0, 1.3 * len(models)), 4.6))
     x = np.arange(len(models))
     bottoms = np.zeros(len(models))
     for outcome in _OUTCOME_ORDER:
@@ -593,7 +640,7 @@ def _plot_table(
 ) -> None:
     """Numeric table figure of mean outcome fractions."""
     means = _mean_summary_fractions(summary)
-    models = [m for m in _MODEL_LABELS if m in means]
+    models = [m for m in _MODEL_PLOT_ORDER if m in means]
     if not models:
         return
     col_labels = [_OUTCOME_LABELS[o] for o in _OUTCOME_ORDER]
@@ -660,7 +707,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         results_root = Path(args.results_root)
         for track in tracks:
             for seed in seeds:
-                for model in ("gated", "ungated"):
+                for model in ("gated", "ungated", "gin1", "gin2"):
                     preds = _collect_model_predictions(
                         track,
                         args.lr_tag,

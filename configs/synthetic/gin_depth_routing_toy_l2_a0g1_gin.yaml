@@ -8,11 +8,12 @@ wandb:
   - gnnplus
   - hybrid_gnn
   - gin_depth_routing
+  - gin_depth_routing_residual_r2
   - gin_depth_routing_toy
   - gin_depth_routing_l2_a0g1_gin
 dataset:
   format: PyG-GinDepthRouting
-  name: v1
+  name: v2_residual
   task: graph
   task_type: classification
   transductive: false

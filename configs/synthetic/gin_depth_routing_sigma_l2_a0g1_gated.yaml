@@ -9,7 +9,7 @@ wandb:
   - hybrid_gnn
   - gin_depth_routing
   - gin_depth_routing_residual_r2
-  - gin_depth_routing_toy
+  - gin_depth_routing_sigma
   - gin_depth_routing_l2_a0g1_gated
 dataset:
   format: PyG-GinDepthRouting
@@ -37,18 +37,18 @@ gnn:
   layers_pre_mp: 0
   layers_mp: 2
   layers_post_mp: 1
-  dim_inner: 2
+  dim_inner: 4
   act: relu
   residual: true
   dropout: 0.0
   hybrid:
     num_attn_heads: 0
     num_gnn_heads: 1
-    d_h: 1
+    d_h: 4
     attn_mask: full
     gate: headwise
     norm: none
-    gnn_types: ROUTING_SUM
+    gnn_types: GIN
     attn_dropout: 0.0
     mp_dropout: 0.0
     block_bn: false

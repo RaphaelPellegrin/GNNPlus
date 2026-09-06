@@ -1,16 +1,24 @@
-"""Synthetic GIN depth-routing trees (1-layer vs 2-layer GIN).
+"""Synthetic GIN depth-routing trees (1-layer vs 2-layer residual SUM).
 
 Each graph is a rooted depth-2 tree: root ``r``, hop-1 mid nodes with signals
 ``x_u ∈ {-1,+1}``, and hop-2 leaves with signals ``z_v ∈ {-1,+1}``.
 
-Under neighbor-sum GIN (no self-loops, identity MLP):
+Structural hop sums (no-self undirected SumConv, identity features):
 
-* ``S1 = h_r^(1) = sum_u x_u``  (one GIN update at the root)
-* ``S2 = h_r^(2) = sum_v z_v``  (GIN ∘ GIN at the root)
+* ``S1 = sum_u x_u``   (one SUM update at the root)
+* ``S2 = sum_v z_v``   (SUM∘SUM leaf mass at the root)
 
-Labels follow graph type ``tau``:
-  tau=0 (shallow / 1-GIN): y = 1[ S1 > 0 ]
-  tau=1 (deep / 2-GIN):    y = 1[ S2 > 0 ]
+With **residual** connections the root readouts become:
+
+* ``R1 = S1``                 (1 layer; root signal is 0)
+* ``R2 = 2·S1 + S2``          (2 layers + residual)
+
+Labels follow graph type ``tau`` (residual-faithful):
+
+  tau=0 (shallow / 1-GIN): y = 1[ R1 > 0 ]
+  tau=1 (deep / 2-GIN):    y = 1[ R2 > 0 ]
+
+Opposite-sign pairs are graphs where ``sign(R1) ≠ sign(R2)``.
 """
 
 from __future__ import annotations
@@ -34,6 +42,9 @@ NUM_NODE_FEATURES: Final[int] = 2
 ROLE_ROOT: Final[int] = 0
 ROLE_MID: Final[int] = 1
 ROLE_LEAF: Final[int] = 2
+
+# Bump when label rule / generation semantics change (forces cluster regen).
+LABEL_RULE: Final[str] = "residual_r2_v1"
 
 
 @dataclass(frozen=True)
@@ -83,31 +94,49 @@ class DepthRoutingGraphSpec:
         return out
 
     def s1_score(self) -> float:
-        """One-layer GIN score at the root: sum of hop-1 features."""
+        """Hop-1 sum S1 = sum_u x_u."""
         return gin1_score(self.mid_features())
 
     def s2_score(self) -> float:
-        """Two-layer GIN score at the root: sum of hop-2 features."""
+        """Hop-2 sum S2 = sum_v z_v."""
         return gin2_score(self.leaf_features())
 
+    def r1_score(self) -> float:
+        """Residual 1-layer root readout R1 = S1."""
+        return residual_r1_score(self.s1_score())
+
+    def r2_score(self) -> float:
+        """Residual 2-layer root readout R2 = 2·S1 + S2."""
+        return residual_r2_score(self.s1_score(), self.s2_score())
+
     def label(self) -> int:
-        """Binary label for this depth type."""
-        score = self.s1_score() if self.tau == 0 else self.s2_score()
+        """Binary label for this depth type (residual-faithful)."""
+        score = self.r1_score() if self.tau == 0 else self.r2_score()
         return int(score > 0.0)
 
     def scores_disagree(self) -> bool:
-        """True when 1-GIN and 2-GIN rules assign opposite classes."""
-        return (self.s1_score() > 0.0) != (self.s2_score() > 0.0)
+        """True when residual 1-layer and 2-layer rules assign opposite classes."""
+        return (self.r1_score() > 0.0) != (self.r2_score() > 0.0)
 
 
 def gin1_score(mid_features: Sequence[int]) -> float:
-    """Compute S1 = sum_u x_u (1× GIN at root)."""
+    """Compute S1 = sum_u x_u (1× SUM at root)."""
     return float(sum(mid_features))
 
 
 def gin2_score(leaf_features: Sequence[int]) -> float:
-    """Compute S2 = sum_v z_v (GIN∘GIN at root under no-self SumConv)."""
+    """Compute S2 = sum_v z_v (SUM∘SUM leaf mass under no-self SumConv)."""
     return float(sum(leaf_features))
+
+
+def residual_r1_score(s1: float) -> float:
+    """Residual 1-layer root score (root init 0 ⇒ R1 = S1)."""
+    return float(s1)
+
+
+def residual_r2_score(s1: float, s2: float) -> float:
+    """Residual 2-layer root score R2 = 2·S1 + S2."""
+    return float(2.0 * s1 + s2)
 
 
 def build_depth2_tree(spec: DepthRoutingGraphSpec) -> Data:
@@ -158,6 +187,8 @@ def build_depth2_tree(spec: DepthRoutingGraphSpec) -> Data:
     data.tau = torch.tensor([spec.tau], dtype=torch.long)
     data.s1_score = torch.tensor([spec.s1_score()], dtype=torch.float32)
     data.s2_score = torch.tensor([spec.s2_score()], dtype=torch.float32)
+    data.r1_score = torch.tensor([spec.r1_score()], dtype=torch.float32)
+    data.r2_score = torch.tensor([spec.r2_score()], dtype=torch.float32)
     data.opposite_sign = torch.tensor([spec.scores_disagree()], dtype=torch.bool)
     data.root_index = torch.tensor([0], dtype=torch.long)
     data.node_role = torch.tensor(node_roles, dtype=torch.long)
@@ -173,10 +204,13 @@ def spec_to_metadata(spec: DepthRoutingGraphSpec) -> dict[str, Any]:
         **asdict(spec),
         "s1_score": spec.s1_score(),
         "s2_score": spec.s2_score(),
+        "r1_score": spec.r1_score(),
+        "r2_score": spec.r2_score(),
         "label": spec.label(),
         "opposite_sign": spec.scores_disagree(),
         "num_mids": spec.num_mids,
         "num_leaves": spec.num_leaves,
+        "label_rule": LABEL_RULE,
     }
 
 
@@ -212,7 +246,7 @@ def iter_random_specs(
     min_total_leaves: int = 2,
     opposite_sign_fraction: float = 0.25,
 ) -> Iterator[DepthRoutingGraphSpec]:
-    """Yield random depth-2 specs with optional opposite-sign pairs."""
+    """Yield random depth-2 specs with optional residual opposite-sign pairs."""
     if not 0.0 <= opposite_sign_fraction <= 1.0:
         raise ValueError("opposite_sign_fraction must be in [0, 1]")
 
@@ -262,7 +296,7 @@ def iter_random_specs(
         difficulty: Difficulty = "medium"
         if not disagree:
             difficulty = "easy"
-        elif abs(base.s1_score()) < 1.5 or abs(base.s2_score()) < 1.5:
+        elif abs(base.r1_score()) < 1.5 or abs(base.r2_score()) < 1.5:
             difficulty = "hard"
 
         yield DepthRoutingGraphSpec(
@@ -277,7 +311,7 @@ def curated_example_specs() -> list[tuple[DepthRoutingGraphSpec, str]]:
     """Hand-picked examples for documentation figures (spec, caption)."""
     examples: list[tuple[DepthRoutingGraphSpec, str]] = []
 
-    # 1. Easy aligned (both depths say y=1), τ=0
+    # 1. Easy aligned (both residual depths say y=1), τ=0
     ex1 = DepthRoutingGraphSpec(
         tau=0,
         branches=(
@@ -290,10 +324,10 @@ def curated_example_specs() -> list[tuple[DepthRoutingGraphSpec, str]]:
     examples.append(
         (
             ex1,
-            "Easy (aligned depths, shallow). Three mids with x=+1 and one +1 leaf "
-            f"each. S1={ex1.s1_score():.0f}, S2={ex1.s2_score():.0f} → both 1-GIN and "
-            "2-GIN predict y=1. τ=0 selects the shallow rule; a deep-only model still "
-            "succeeds here.",
+            "Easy (aligned residual depths, shallow). "
+            f"S1={ex1.s1_score():.0f}, S2={ex1.s2_score():.0f} ⇒ "
+            f"R1={ex1.r1_score():.0f}, R2={ex1.r2_score():.0f} → both rules predict "
+            "y=1. τ=0 selects the shallow residual rule.",
         ),
     )
 
@@ -310,14 +344,13 @@ def curated_example_specs() -> list[tuple[DepthRoutingGraphSpec, str]]:
     examples.append(
         (
             ex2,
-            "Easy (aligned depths, deep). S1="
-            f"{ex2.s1_score():.0f} and S2={ex2.s2_score():.0f} both negative → y=0 "
-            "under either rule. τ=1 asks for 2-GIN; gates should prefer the deep head "
-            "even though a shallow specialist would also be correct.",
+            "Easy (aligned residual depths, deep). "
+            f"R1={ex2.r1_score():.0f} and R2={ex2.r2_score():.0f} both ≤0 → y=0 "
+            "under either rule. τ=1 asks for residual 2-SUM.",
         ),
     )
 
-    # 3–4. Opposite-sign pair from the design discussion
+    # 3–4. Opposite-sign pair (R1>0, R2<0)
     shared_opp = (
         MidBranchSpec(+1, (-1, -1)),
         MidBranchSpec(+1, (-1,)),
@@ -338,21 +371,22 @@ def curated_example_specs() -> list[tuple[DepthRoutingGraphSpec, str]]:
     examples.append(
         (
             ex3a,
-            "Hard (opposite-sign pair, 1-GIN / τ=0). Identical tree as the next panel. "
-            f"S1={ex3a.s1_score():.0f} → y=1, but S2={ex3a.s2_score():.0f} → y=0. "
-            "A forced 2-layer GIN misclassifies; SiGMA must open the shallow head.",
+            "Hard (opposite-sign pair, residual 1-SUM / τ=0). Identical tree as next. "
+            f"R1={ex3a.r1_score():.0f} → y=1, but R2={ex3a.r2_score():.0f} → y=0 "
+            f"(S1={ex3a.s1_score():.0f}, S2={ex3a.s2_score():.0f}). "
+            "A forced residual 2-layer SUM misclassifies; SiGMA must open the shallow head.",
         ),
     )
     examples.append(
         (
             ex3b,
-            "Hard (opposite-sign pair, 2-GIN / τ=1). Same features/topology, τ=1. "
-            f"S2={ex3b.s2_score():.0f} → y=0 while S1={ex3b.s1_score():.0f} → y=1. "
-            "Critical depth test: one model, two graphs, different correct depths.",
+            "Hard (opposite-sign pair, residual 2-SUM / τ=1). Same features/topology. "
+            f"R2={ex3b.r2_score():.0f} → y=0 while R1={ex3b.r1_score():.0f} → y=1. "
+            "Critical depth test under residual connections.",
         ),
     )
 
-    # 5–6. Mirrored opposite-sign (S1<0, S2>0)
+    # 5–6. Mirrored opposite-sign (R1<0, R2>0)
     shared_mir = (
         MidBranchSpec(-1, (+1, +1)),
         MidBranchSpec(-1, (+1,)),
@@ -374,20 +408,20 @@ def curated_example_specs() -> list[tuple[DepthRoutingGraphSpec, str]]:
         (
             ex4a,
             "Hard (mirrored opposite-sign, τ=0). "
-            f"S1={ex4a.s1_score():.0f} → y=0, S2={ex4a.s2_score():.0f} → y=1. "
-            "Shallow rule wins; deep-only baseline fails.",
+            f"R1={ex4a.r1_score():.0f} → y=0, R2={ex4a.r2_score():.0f} → y=1. "
+            "Shallow residual rule wins; deep-only baseline fails.",
         ),
     )
     examples.append(
         (
             ex4b,
-            "Hard (mirrored opposite-sign, τ=1). Same graph, deep rule: "
-            f"S2={ex4b.s2_score():.0f} → y=1. Leaf majority is positive while mid "
-            "majority is negative — depth choice flips the label.",
+            "Hard (mirrored opposite-sign, τ=1). Same graph, deep residual rule: "
+            f"R2={ex4b.r2_score():.0f} → y=1. Leaves flip the residual-2 score "
+            "relative to mids.",
         ),
     )
 
-    # 7. Near-threshold / sparse leaves
+    # 7. Near-threshold residual deep score
     ex5 = DepthRoutingGraphSpec(
         tau=1,
         branches=(
@@ -401,9 +435,9 @@ def curated_example_specs() -> list[tuple[DepthRoutingGraphSpec, str]]:
     examples.append(
         (
             ex5,
-            "Hard (near threshold, deep). "
-            f"S1={ex5.s1_score():.0f}, S2={ex5.s2_score():.0f}. One leaf flip changes "
-            "the 2-GIN class; mids alone (S1) already disagree with leaves.",
+            "Hard (near threshold, deep residual). "
+            f"S1={ex5.s1_score():.0f}, S2={ex5.s2_score():.0f} ⇒ "
+            f"R1={ex5.r1_score():.0f}, R2={ex5.r2_score():.0f}.",
         ),
     )
 
@@ -423,9 +457,8 @@ def curated_example_specs() -> list[tuple[DepthRoutingGraphSpec, str]]:
         (
             ex6,
             "Medium (larger tree, k=5 mids). "
-            f"S1={ex6.s1_score():.0f}, S2={ex6.s2_score():.0f}, opposite_sign="
-            f"{ex6.scores_disagree()}. Representative of training graphs with mixed "
-            "branching.",
+            f"R1={ex6.r1_score():.0f}, R2={ex6.r2_score():.0f}, opposite_sign="
+            f"{ex6.scores_disagree()}. Representative training graph.",
         ),
     )
 
@@ -471,6 +504,7 @@ class GinDepthRoutingDataset(InMemoryDataset):
             "test": 2_000,
             "seed": 42,
             "opposite_sign_fraction": 0.25,
+            "label_rule": LABEL_RULE,
         }
         with (raw_path / "spec.json").open("w", encoding="utf-8") as fh:
             json.dump(spec, fh, indent=2)

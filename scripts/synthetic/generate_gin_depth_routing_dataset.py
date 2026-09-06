@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """Generate GIN depth-routing synthetic dataset on disk.
 
+Uses residual-faithful labels (``label_rule=residual_r2_v1``):
+  τ=0 → y = 1[R1 > 0],  R1 = S1
+  τ=1 → y = 1[R2 > 0],  R2 = 2·S1 + S2
+
 Example::
 
   python scripts/synthetic/generate_gin_depth_routing_dataset.py \\
-    --root results/gin_routing_depth/data/GinDepthRouting
+    --root results/gin_routing_depth/data/GinDepthRouting --force
 """
 
 from __future__ import annotations
@@ -12,6 +16,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import shutil
 import sys
 from pathlib import Path
 from typing import Any
@@ -21,8 +26,8 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 
-def _load_dataset_class() -> Any:
-    """Load ``GinDepthRoutingDataset`` without importing full ``GNNPlus`` package."""
+def _load_dataset_module() -> Any:
+    """Load ``gin_depth_routing`` without importing full ``GNNPlus`` package."""
     module_path = _REPO_ROOT / "GNNPlus" / "loader" / "dataset" / "gin_depth_routing.py"
     spec = importlib.util.spec_from_file_location(
         "gin_depth_routing_dataset",
@@ -33,7 +38,7 @@ def _load_dataset_class() -> Any:
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
-    return module.GinDepthRoutingDataset
+    return module
 
 
 def _parse_args() -> argparse.Namespace:
@@ -50,14 +55,27 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--test", type=int, default=2_000)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--opposite-sign-fraction", type=float, default=0.25)
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Delete processed/ (and rewrite raw/spec.json) before generating.",
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     """Write raw spec and process all splits."""
     args = _parse_args()
+    module = _load_dataset_module()
+    label_rule = str(module.LABEL_RULE)
     root = Path(args.root)
     raw_dir = root / "raw"
+    processed_dir = root / "processed"
+
+    if args.force and processed_dir.exists():
+        print(f"--force: removing {processed_dir}")
+        shutil.rmtree(processed_dir)
+
     raw_dir.mkdir(parents=True, exist_ok=True)
     spec = {
         "train": args.train,
@@ -65,12 +83,14 @@ def main() -> None:
         "test": args.test,
         "seed": args.seed,
         "opposite_sign_fraction": args.opposite_sign_fraction,
+        "label_rule": label_rule,
     }
     with (raw_dir / "spec.json").open("w", encoding="utf-8") as fh:
         json.dump(spec, fh, indent=2)
+    print(f"Wrote {raw_dir / 'spec.json'} (label_rule={label_rule})")
 
+    dataset_cls = module.GinDepthRoutingDataset
     for split in ("train", "val", "test"):
-        dataset_cls = _load_dataset_class()
         ds = dataset_cls(str(root), split=split)  # type: ignore[arg-type]
         print(f"{split}: {len(ds)} graphs -> {ds.processed_paths[0]}")
 

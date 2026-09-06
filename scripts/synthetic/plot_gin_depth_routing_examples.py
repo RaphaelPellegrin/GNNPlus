@@ -105,6 +105,12 @@ def _draw_graph(ax: Any, data: Any, *, title: str) -> None:
     y = int(data.y.item())
     s1 = float(data.s1_score.item())
     s2 = float(data.s2_score.item())
+    r1 = float(data.r1_score.item()) if hasattr(data, "r1_score") else s1
+    r2 = (
+        float(data.r2_score.item())
+        if hasattr(data, "r2_score")
+        else (2.0 * s1 + s2)
+    )
 
     g = nx.Graph()
     n = int(data.num_nodes)
@@ -163,9 +169,10 @@ def _draw_graph(ax: Any, data: Any, *, title: str) -> None:
     ax.text(
         0.02,
         0.02,
-        f"S1(1-GIN)={s1:+.0f}  →  class {int(s1 > 0)}\n"
-        f"S2(2-GIN)={s2:+.0f}  →  class {int(s2 > 0)}\n"
-        f"label y={y}  (τ={tau}: {'1-GIN' if tau == 0 else '2-GIN'})",
+        f"S1={s1:+.0f}  S2={s2:+.0f}\n"
+        f"R1={r1:+.0f} → class {int(r1 > 0)}   (1-layer)\n"
+        f"R2={r2:+.0f} → class {int(r2 > 0)}   (2-layer+res)\n"
+        f"label y={y}  (τ={tau}: {'R1' if tau == 0 else 'R2'})",
         transform=ax.transAxes,
         fontsize=9,
         va="bottom",
@@ -200,7 +207,7 @@ def main() -> None:
             gridspec_kw={"height_ratios": [3.2, 1.0]},
         )
         title = (
-            f"Ex {idx}: τ={spec.tau} ({'1-GIN / shallow' if spec.tau == 0 else '2-GIN / deep'})"
+            f"Ex {idx}: τ={spec.tau} ({'R1 / 1-layer' if spec.tau == 0 else 'R2 / 2-layer+res'})"
             f" · y={spec.label()} · opposite_sign={spec.scores_disagree()}"
         )
         _draw_graph(axes[0], data, title=title)
@@ -231,7 +238,8 @@ def main() -> None:
         meta_rows.append(row)
         print(
             f"[{idx}] τ={spec.tau} y={spec.label()} "
-            f"S1={spec.s1_score():+.0f} S2={spec.s2_score():+.0f} "
+            f"R1={spec.r1_score():+.0f} R2={spec.r2_score():+.0f} "
+            f"(S1={spec.s1_score():+.0f} S2={spec.s2_score():+.0f}) "
             f"opp={spec.scores_disagree()} -> {png_path}"
         )
 

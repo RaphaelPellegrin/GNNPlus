@@ -2,8 +2,9 @@
 """Aggregate per-τ test accuracy and per-layer root gates for GIN depth-routing.
 
 Loads best checkpoints under ``<results_root>/toy/``, evaluates on the test
-split, and reports accuracy for ``tau=0`` (1-GIN / shallow) vs ``tau=1``
-(2-GIN / deep). For gated models, also collects root MP gates at each layer.
+split, and reports accuracy for ``tau=0`` (residual 1-layer / ``R1=S1``) vs
+``tau=1`` (residual 2-layer / ``R2=2·S1+S2``). For gated models, also collects
+root MP gates at each layer.
 
 Outputs (under ``--out-dir``):
   - ``per_run_metrics.csv``
@@ -64,10 +65,18 @@ RUN_NAME_RE = re.compile(
 MODEL_ORDER: tuple[str, ...] = (
     "l2_a0g1_gated",
     "l2_a0g1_ungated",
+    "l1_a0g1",
+    "l2_a0g1_gin",
 )
 MODEL_LABELS: dict[str, str] = {
     "l2_a0g1_gated": "SiGMA gated (L=2)",
     "l2_a0g1_ungated": "SiGMA ungated (L=2)",
+    "l1_a0g1": "1-GIN specialist",
+    "l2_a0g1_gin": "2-GIN specialist",
+}
+TRACK_LABELS: dict[str, str] = {
+    "toy": r"Track A (toy, $d_h{=}1$, ROUTING_SUM)",
+    "sigma": r"Track B (sigma, $d_h{=}4$, GIN)",
 }
 
 
@@ -138,7 +147,7 @@ def _parse_cli(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         type=str,
         default="results/gin_routing_depth/analysis",
     )
-    parser.add_argument("--tracks", type=str, default="toy")
+    parser.add_argument("--tracks", type=str, default="toy,sigma")
     parser.add_argument("--lr-tag", type=str, default="")
     parser.add_argument(
         "--device",
@@ -407,24 +416,40 @@ def _summarize(rows: Sequence[RunMetrics]) -> list[dict[str, Any]]:
     return out
 
 
-def _plot_acc(summary: Sequence[dict[str, Any]], out_path: Path, dpi: int) -> None:
-    """Bar chart: test accuracy by τ for each model."""
+def _plot_acc(
+    summary: Sequence[dict[str, Any]],
+    out_path: Path,
+    dpi: int,
+    *,
+    track: Optional[str] = None,
+) -> None:
+    """Bar chart: test accuracy by τ for each model (optionally one track)."""
     # Prefer lr001 if present
     lr_tags = sorted({str(r["lr_tag"]) for r in summary})
     preferred = "lr001" if "lr001" in lr_tags else lr_tags[0]
     subset = [r for r in summary if r["lr_tag"] == preferred]
+    if track is not None:
+        subset = [r for r in subset if str(r["track"]) == track]
+    if not subset:
+        logging.warning("No summary rows for acc plot (track=%s)", track)
+        return
+    # If multiple tracks remain, keep first track only to avoid collisions.
+    tracks_present = sorted({str(r["track"]) for r in subset})
+    if len(tracks_present) > 1 and track is None:
+        track = tracks_present[0]
+        subset = [r for r in subset if str(r["track"]) == track]
     models = [m for m in MODEL_ORDER if any(r["model"] == m for r in subset)]
     by_model = {str(r["model"]): r for r in subset}
     x = list(range(len(models)))
     bar_w = 0.36
-    fig, ax = plt.subplots(figsize=(7.0, 4.4))
+    fig, ax = plt.subplots(figsize=(8.0, 4.4))
     ax.bar(
         [xi - bar_w / 2 for xi in x],
         [float(by_model[m]["acc_tau0_mean"]) for m in models],
         width=bar_w,
         yerr=[float(by_model[m]["acc_tau0_std"]) for m in models],
         capsize=3,
-        label=r"$\tau=0$ (1-GIN / shallow)",
+        label=r"$\tau=0$ ($R_1$ / 1-layer)",
         color="#4C72B0",
     )
     ax.bar(
@@ -433,14 +458,15 @@ def _plot_acc(summary: Sequence[dict[str, Any]], out_path: Path, dpi: int) -> No
         width=bar_w,
         yerr=[float(by_model[m]["acc_tau1_std"]) for m in models],
         capsize=3,
-        label=r"$\tau=1$ (2-GIN / deep)",
+        label=r"$\tau=1$ ($R_2$ / 2-layer+res)",
         color="#DD8452",
     )
     ax.set_xticks(x)
-    ax.set_xticklabels([MODEL_LABELS.get(m, m) for m in models], rotation=10, ha="right")
+    ax.set_xticklabels([MODEL_LABELS.get(m, m) for m in models], rotation=12, ha="right")
     ax.set_ylim(0.0, 1.05)
     ax.set_ylabel("Test accuracy")
-    ax.set_title(f"GIN depth-routing · per-τ accuracy ({preferred})")
+    track_lbl = TRACK_LABELS.get(str(track), str(track)) if track else ""
+    ax.set_title(f"GIN depth-routing · per-τ accuracy ({preferred}) · {track_lbl}")
     ax.axhline(0.5, color="gray", linestyle=":", linewidth=0.8)
     ax.legend(loc="lower right")
     ax.grid(axis="y", alpha=0.25)
@@ -592,17 +618,47 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     summary_path = out_dir / "summary_by_model.csv"
     _write_csv(summary_path, summary, list(summary[0].keys()) if summary else [])
 
-    _plot_acc(summary, out_dir / "fig_baseline_per_type.png", args.dpi)
     paper = out_dir / "paper_figures"
     paper.mkdir(parents=True, exist_ok=True)
-    _plot_acc(summary, paper / "fig_acc_by_tau.png", args.dpi)
-    _plot_gates(rows, out_dir / "fig_gate_by_layer_tau.png", args.dpi, args.lr_tag)
-    _plot_gates(rows, paper / "fig_gate_by_layer_tau.png", args.dpi, args.lr_tag)
+    tracks_in_summary = sorted({str(r["track"]) for r in summary})
+    for track in tracks_in_summary:
+        _plot_acc(
+            summary,
+            out_dir / f"fig_baseline_per_type_{track}.png",
+            args.dpi,
+            track=track,
+        )
+        _plot_acc(
+            summary,
+            paper / f"fig_acc_by_tau_{track}.png",
+            args.dpi,
+            track=track,
+        )
+        _plot_gates(
+            [r for r in rows if r.track == track],
+            out_dir / f"fig_gate_by_layer_tau_{track}.png",
+            args.dpi,
+            args.lr_tag,
+        )
+        _plot_gates(
+            [r for r in rows if r.track == track],
+            paper / f"fig_gate_by_layer_tau_{track}.png",
+            args.dpi,
+            args.lr_tag,
+        )
+
+    # Convenience aliases for single-track / toy-first viewing.
+    if "toy" in tracks_in_summary:
+        _plot_acc(summary, out_dir / "fig_baseline_per_type.png", args.dpi, track="toy")
+        _plot_acc(summary, paper / "fig_acc_by_tau.png", args.dpi, track="toy")
+        _plot_gates(rows, out_dir / "fig_gate_by_layer_tau.png", args.dpi, args.lr_tag)
+        _plot_gates(rows, paper / "fig_gate_by_layer_tau.png", args.dpi, args.lr_tag)
 
     print(f"Wrote {metrics_path} ({len(rows)} runs)")
     print(f"Wrote {summary_path}")
-    print(f"Wrote {out_dir / 'fig_baseline_per_type.png'}")
-    print(f"Wrote {out_dir / 'fig_gate_by_layer_tau.png'}")
+    for track in tracks_in_summary:
+        print(f"Wrote {out_dir / f'fig_baseline_per_type_{track}.png'}")
+        print(f"Wrote {out_dir / f'fig_gate_by_layer_tau_{track}.png'}")
 
 
 if __name__ == "__main__":
