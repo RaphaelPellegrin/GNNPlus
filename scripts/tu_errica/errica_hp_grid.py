@@ -130,9 +130,25 @@ SIGMA_CANONICAL: dict[str, Any] = {
     "early_stop_use_loss": False,
 }
 
+# Anchor-boost SiGMA grid for PROTEINS / REDDIT-BINARY under Errica CV.
+# Includes the winning paper-table a2g4 recipe (random-split table):
+#   L=12, H=64, d_h=16, lr=1e-3, bs=64 (PROTEINS) / bs=16 (REDDIT),
+# plus nearby LR / depth / d_h / batch variants. Count: 2×2×2×1×3 = 24.
+# Fixed8 missed bs=64 (only 32/128), which is the paper PROTEINS batch.
+SIGMA_ANCHOR_BOOST_GRID: dict[str, list[Any]] = {
+    "batch_size": [16, 64],
+    "base_lr": [0.001, 0.01],
+    "layers_mp": [8, 12],
+    "dim_inner": [64],
+    "d_h": [8, 16, 32],
+    "early_stop_use_loss": [False],
+}
+
 # Dataset families for hybrid SiGMA search (Option 3).
 BIO_DS_TAGS: frozenset[str] = frozenset({"enzymes", "proteins", "nci1", "dd"})
 SOCIAL_DS_TAGS: frozenset[str] = frozenset({"imdb-b", "reddit-b", "collab"})
+# Errica datasets to push with the paper a2g4 anchor recipe.
+ANCHOR_BOOST_DS_TAGS: frozenset[str] = frozenset({"proteins", "reddit-b"})
 
 DS_TAG_TO_NAME: dict[str, str] = {
     "enzymes": "ENZYMES",
@@ -185,6 +201,11 @@ def social_sigma_grid_entries() -> list[dict[str, Any]]:
 def full64_sigma_grid_entries() -> list[dict[str, Any]]:
     """GIN-isomorphic 64-config SiGMA grid (``full64`` mode)."""
     return expand_grid(SIGMA_FULL64_GRID)
+
+
+def anchor_boost_sigma_grid_entries() -> list[dict[str, Any]]:
+    """Paper a2g4-centered SiGMA grid (``anchor_boost`` mode)."""
+    return expand_grid(SIGMA_ANCHOR_BOOST_GRID)
 
 
 def expand_grid(grid: dict[str, list[Any]]) -> list[dict[str, Any]]:

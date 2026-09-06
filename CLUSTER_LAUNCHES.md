@@ -874,30 +874,28 @@ git pull
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  PENDING  ·  Tab.3/4 progressive d_h × gated vs ungated (400 jobs)   ║
-║  🎯  PATTERN/CLUSTER/MNIST/Pep-func · App. H capacity stress on main text║
+║  🔄  RUNNING  ·  smoke 44752943 · PATTERN 44752944                       ║
+║  🎯  Tab.3/4 progressive d_h × gated vs ungated (PATTERN first)          ║
 ║  📄  Paper_sigma_dh_matched_ungated.md                                   ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
 ```bash
-source ~/.gnnplus_env
-export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
-export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
-cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-git pull
-
-# smoke PATTERN dh1 gated+ungated:
-# SIGMA_DH_PROG_ARRAY=81,91 SIGMA_DH_PROG_PARALLEL=2 bash .../submit_sigma_dh_prog_ungated.sh
-# then PATTERN ladder: SIGMA_DH_PROG_ARRAY=1-100 bash .../submit_sigma_dh_prog_ungated.sh
-bash bash_interface/cluster/submit_sigma_dh_prog_ungated.sh
+# already submitted:
+# smoke  44752943  ·  81,91%2
+# PATTERN 44752944 ·  1-100%20
+# next:
+SIGMA_DH_PROG_ARRAY=101-200 bash bash_interface/cluster/submit_sigma_dh_prog_ungated.sh  # CLUSTER
+SIGMA_DH_PROG_ARRAY=201-300 bash bash_interface/cluster/submit_sigma_dh_prog_ungated.sh  # MNIST
+SIGMA_DH_PROG_ARRAY=301-400 bash bash_interface/cluster/submit_sigma_dh_prog_ungated.sh  # Pep-func
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *paste JOBID* |
+| **Smoke** | ✅ **`44752943`** · `81,91` · `%2` |
+| **PATTERN** | ✅ **`44752944`** · `1-100` · `%20` |
+| **Rest** | 🛑 CLUSTER / MNIST / Pep-func not yet |
 | **Submit** | `bash_interface/cluster/submit_sigma_dh_prog_ungated.sh` |
-| **Tasks** | `1-400%20` · mem 128GB · 120h |
 | **Ladders** | PATTERN 16→1 · CLUSTER 24→1 · MNIST 37→1 · Pep-func 23→1 |
 | **W&B** | `paper_sigma_dh_prog_<fam>_dh<k>_{gated,ungated}_{lr001,lr01}` |
 | **Out** | `$GNNPLUS_OUT_DIR/sigma_dh_prog/` |
@@ -1060,8 +1058,9 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **full64 REDDIT only (no cancel)** | **44750843** | 640 (3201–3840) | ❌ scancel · REDDIT via **44509970** |
 | **full64 FAILED rerun** | **44509970** | 2479 | 🔄 ~464 COMP · 20 run · 12 FAIL |
 | **fixed8 COLLAB fill** | **44507757** | 1 (task 560) | ✅ COMPLETED |
-| **`sigma_grid_eval_fixed8`** | **44621846** | 210 | 🔄 208 COMP · 1 FAIL → fill **44748166** |
-| **eval COLLAB f0 s0 fill** | **44748166** | 1 (task 181) | 🔄 PENDING |
+| **`sigma_grid_eval_fixed8`** | **44621846** | 210 | ✅ 209 + fill **44748166** |
+| **eval COLLAB f0 s0 fill** | **44748166** | 1 (task 181) | ✅ COMPLETED |
+| **`anchor_boost` select** | *(pending)* | 480 | PROTEINS+REDDIT paper a2g4 + variants |
 | `aggregate_sigma` → `sigma_grid_eval_fixed8` | — | 210 | ✅ selection done · eval **44621846** |
 
 ```bash

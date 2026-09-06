@@ -62,14 +62,14 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 | **3a§** | `sigma_grid_select` **full64** | **44262912** | ⚠️ **1920 OK / 1920 FAIL** | cliff after NCI1 (DD→…) · rerun via `submit_tu_errica_full64_rerun_failed.sh` |
 | **3a-R** | fixed8 **REDDIT only** | **44266489** | ✅ **80/80** | tasks **401–480** |
 | **3a-R§** | full64 **REDDIT only** | **44266493** | ⚠️ **81 OK / 559 FAIL** | included in FAILED rerun list |
-| **3a-R§2** | full64 **REDDIT only** (no cancel) | *(submit)* | ⏳ | `submit_tu_errica_full64_reddit_only.sh` · 3201–3840 · leaves **44509970** alone |
+| **3a-R§2** | full64 **REDDIT only** (no cancel) | **44750843** | ❌ **scancel** | was mweber parallel; REDDIT continues via **44509970** |
 | **3a§-rerun** | full64 FAILED relaunch | **44509970** | 🔄 **464+ done** | 2479 tasks · ~20 run · 12 FAILED so far |
 | **3a-fill** | fixed8 **COLLAB f9 hp7** fill | **44507757** | ✅ **COMPLETED** | task **560** · netscratch logs |
 | **3b** | `aggregate_sigma` | — | ✅ **70/70 folds** | `sigma_fixed8_per_fold.json` |
 | **4a–d** | `grid_eval` GIN/SAGE/GCN/GAT | 44100531 / 66 / 96 / **44165919** | ✅ **done** | classical column frozen |
 | **4e†** | `sigma_grid_eval` budget_bio | **44165958** | ignore / cancel | HPs from obsolete select |
-| **4e** | `sigma_grid_eval` **fixed8** | **44621846** | 🔄 **208 done** | 1 RUNNING left · FAILED task **181** → fill **44748166** |
-| **4e-fill** | eval COLLAB f0 seed0 | **44748166** | 🔄 **PENDING** | task **181** · netscratch log |
+| **4e** | `sigma_grid_eval` **fixed8** | **44621846** | ✅ **209/210** | FAILED task **181** filled by **44748166** |
+| **4e-fill** | eval COLLAB f0 seed0 | **44748166** | ✅ **COMPLETED** | → rebuild table |
 
 ### grid_select progress summary
 
@@ -130,22 +130,54 @@ python scripts/tu_errica/aggregate_sigma_hp_selection.py
 bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval
 ```
 
-### Final `grid_eval` (3 seeds) — 2026-09-03
+### Final `grid_eval` (3 seeds) — fixed8 SiGMA (2026-09-06)
 
 Mean±std over **10 folds** after averaging 3 seeds per fold.
 LaTeX: [`results/tu_errica/analysis/tab_tu_errica_grid_eval.tex`](results/tu_errica/analysis/tab_tu_errica_grid_eval.tex).
+SiGMA-only dump: [`tab_tu_errica_sigma_fixed8.tex`](results/tu_errica/analysis/tab_tu_errica_sigma_fixed8.tex).
 
-| Dataset | GCN | GIN | GraphSAGE | GAT | SiGMA (budget-bio, provisional) | Errica GIN [1] |
-|---------|-----|-----|-----------|-----|----------------------------------|----------------|
-| ENZYMES | 50.4±5.2 | 45.4±5.2 | 51.0±4.7 | 42.1±7.0 | **52.4±3.6** | 59.6±4.5 |
-| PROTEINS | **73.9±4.0** | 73.4±4.4 | 73.0±3.2 | 72.7±3.1 | 71.6±3.8 | 73.3±4.0 |
-| NCI1 | 80.7±1.5 | 80.4±1.5 | **81.6±2.3** | 75.4±2.4 | 80.3±2.5 | 80.0±1.4 |
-| DD | 71.9±4.2 | 73.7±5.2 | 72.8±3.0 | 72.9±9.2 | **74.7±3.4** | 75.3±2.9 |
-| IMDB-BINARY | 65.7±3.5 | 71.1±4.5 | 50.5±1.1 | 50.4±2.0 | **72.3±4.3** | 71.2±3.9 |
-| REDDIT-BINARY | **92.6±1.0** | 92.5±1.1 | 73.4±4.0 | 74.7±2.3 | 88.4±3.9 | 89.9±1.9 |
-| COLLAB | 77.0±2.1 | 76.5±2.5 | 52.5±3.2 | 47.6±7.9 | **78.3±2.4*** (5/10 folds) | 75.6±2.3 |
+| Dataset | GCN | GIN | GraphSAGE | GAT | SiGMA (fixed8) | Errica GIN [1] |
+|---------|-----|-----|-----------|-----|----------------|----------------|
+| ENZYMES | 50.4±5.2 | 45.4±5.2 | 51.0±4.7 | 42.1±7.0 | **52.4±4.6** | 59.6±4.5 |
+| PROTEINS | **73.9±4.0** | 73.4±4.4 | 73.0±3.2 | 72.7±3.1 | 72.6±4.1 | 73.3±4.0 |
+| NCI1 | 80.7±1.5 | 80.4±1.5 | **81.6±2.3** | 75.4±2.4 | 80.7±1.9 | 80.0±1.4 |
+| DD | 71.9±4.2 | 73.7±5.2 | 72.8±3.0 | 72.9±9.2 | **73.9±2.3** | 75.3±2.9 |
+| IMDB-BINARY | 65.7±3.5 | **71.1±4.5** | 50.5±1.1 | 50.4±2.0 | 70.9±5.4 | 71.2±3.9 |
+| REDDIT-BINARY | **92.6±1.0** | 92.5±1.1 | 73.4±4.0 | 74.7±2.3 | 88.0±3.3 | 89.9±1.9 |
+| COLLAB | 77.0±2.1 | 76.5±2.5 | 52.5±3.2 | 47.6±7.9 | **78.2±1.2** | 75.6±2.3 |
 
-\*Classical columns frozen. Final SiGMA = fixed8 (**44507757** fill → aggregate → eval) / full64 rerun **44509970**.
+\*Classical columns frozen. SiGMA = fixed8 eval **44621846**+**44748166**. full64 sensitivity still via **44509970**.
+
+Delta vs obsolete budget-bio: PROTEINS/NCI1 up; DD/IMDB/REDDIT slightly down; COLLAB complete (was 5/10).
+
+### Push PROTEINS + REDDIT (`anchor_boost`, 2026-09-06)
+
+Fixed8 never searched **bs=64** (paper PROTEINS batch) and forced REDDIT to bs=16 outside the grid.
+New campaign reuses the **paper a2g4** recipe (`sigma-hetero-a2g4-anchor.yaml`: L12/H64/d_h16, lr∈{1e-3,1e-2}) under **Errica CV**, plus nearby depth / d_h / batch:
+
+| Axis | Values |
+|------|--------|
+| `batch_size` | **16**, **64** (paper REDDIT / PROTEINS) |
+| `base_lr` | 0.001, 0.01 |
+| `layers_mp` | 8, **12** |
+| `dim_inner` | **64** |
+| `d_h` | 8, **16**, 32 |
+
+→ **24** configs × 2 datasets × 10 folds = **480** select · eval = **60** (2×10×3). No forced batch override.
+
+```bash
+# local: generate grids (already in repo after commit)
+python scripts/tu_errica/generate_sigma_errica_grids.py --mode anchor_boost
+
+# cluster select
+bash bash_interface/cluster/submit_tu_errica_anchor_boost_select.sh
+# after select:
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_anchor_boost
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_anchor_boost
+```
+
+Blend into the main table: keep fixed8 for other datasets; replace PROTEINS/REDDIT with `sigma_grid_eval_anchor_boost`.
+
 
 ### Priority: REDDIT-BINARY first (2026-09-03)
 

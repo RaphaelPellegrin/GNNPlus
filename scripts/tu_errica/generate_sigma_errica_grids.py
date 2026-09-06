@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Build per-fold SiGMA grids for Errica hybrid search.
 
 Default (``--mode fixed8``): every dataset/fold uses the fixed 8-config
@@ -7,6 +6,9 @@ Default (``--mode fixed8``): every dataset/fold uses the fixed 8-config
 
 ``--mode full64``: GIN-isomorphic 64-config grid (same search budget as GIN).
 Writes ``configs/tu_errica/sigma_grids_full64/`` so it does not clobber fixed8.
+
+``--mode anchor_boost``: paper a2g4-centered 24-config grid on PROTEINS +
+REDDIT-BINARY only. Writes ``configs/tu_errica/sigma_grids_anchor_boost/``.
 
 Legacy (``--mode budget_bio``): bio folds lock depth/width to the GIN winner
 and keep SiGMA params ≤ that GIN budget; social folds use ``SIGMA_GRID``.
@@ -22,7 +24,7 @@ from typing import Any, Literal
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
-SigmaGridMode = Literal["fixed8", "budget_bio", "full64"]
+SigmaGridMode = Literal["fixed8", "budget_bio", "full64", "anchor_boost"]
 
 
 def _load_module(name: str, rel_path: str) -> Any:
@@ -39,19 +41,34 @@ def _load_module(name: str, rel_path: str) -> Any:
 
 _hp = _load_module("errica_hp_grid", "scripts/tu_errica/errica_hp_grid.py")
 
+ANCHOR_BOOST_DS_TAGS = _hp.ANCHOR_BOOST_DS_TAGS
 BIO_DS_TAGS = _hp.BIO_DS_TAGS
 DS_TAG_TO_NAME = _hp.DS_TAG_TO_NAME
 SOCIAL_DS_TAGS = _hp.SOCIAL_DS_TAGS
+anchor_boost_sigma_grid_entries = _hp.anchor_boost_sigma_grid_entries
 build_bio_sigma_micro_grid = _hp.build_bio_sigma_micro_grid
-social_sigma_grid_entries = _hp.social_sigma_grid_entries
 full64_sigma_grid_entries = _hp.full64_sigma_grid_entries
+social_sigma_grid_entries = _hp.social_sigma_grid_entries
 
 
 def grids_dir_for_mode(mode: SigmaGridMode) -> Path:
-    """Return the on-disk grid directory for ``mode`` (full64 is separate)."""
+    """Return the on-disk grid directory for ``mode`` (non-fixed8 are separate)."""
     if mode == "full64":
         return _REPO_ROOT / "configs/tu_errica/sigma_grids_full64"
+    if mode == "anchor_boost":
+        return _REPO_ROOT / "configs/tu_errica/sigma_grids_anchor_boost"
     return _REPO_ROOT / "configs/tu_errica/sigma_grids"
+
+
+def _dataset_items_for_mode(mode: SigmaGridMode) -> list[tuple[str, str]]:
+    """Return ``(ds_tag, ds_name)`` pairs included in ``mode``."""
+    if mode == "anchor_boost":
+        return [
+            (tag, DS_TAG_TO_NAME[tag])
+            for tag in ("proteins", "reddit-b")
+            if tag in ANCHOR_BOOST_DS_TAGS
+        ]
+    return list(DS_TAG_TO_NAME.items())
 
 
 def _budget_module() -> Any:
@@ -110,6 +127,15 @@ def _grid_for_fold(
     if mode == "full64":
         return _annotate_grid(
             full64_sigma_grid_entries(),
+            dataset_name=ds_name,
+            gin_params=None,
+            with_params=False,
+        )
+    if mode == "anchor_boost":
+        if ds_tag not in ANCHOR_BOOST_DS_TAGS:
+            raise KeyError(f"anchor_boost skips dataset {ds_tag}")
+        return _annotate_grid(
+            anchor_boost_sigma_grid_entries(),
             dataset_name=ds_name,
             gin_params=None,
             with_params=False,
@@ -173,7 +199,7 @@ def build_manifest(
     tasks: list[dict[str, Any]] = []
     grid_files: dict[str, list[dict[str, Any]]] = {}
 
-    for ds_tag, ds_name in DS_TAG_TO_NAME.items():
+    for ds_tag, ds_name in _dataset_items_for_mode(mode):
         for fold in range(num_folds):
             try:
                 grid = _grid_for_fold(
@@ -204,6 +230,7 @@ def build_manifest(
     return {
         "mode": mode,
         "gin_selection": str(gin_selection_path) if gin_selection_path else None,
+        "datasets": [tag for tag, _ in _dataset_items_for_mode(mode)],
         "num_tasks": len(tasks),
         "tasks": tasks,
         "grid_files": list(grid_files.keys()),
@@ -250,16 +277,38 @@ def write_grids(
     manifest_path = grids_dir / "manifest.json"
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
+    # Vendored single-file copy of the shared grid (documentation / inspection).
+    if mode == "anchor_boost" and written:
+        sample = next(iter(written))
+        sample_grid = json.loads((grids_sub / sample).read_text(encoding="utf-8"))
+        vendored = _REPO_ROOT / "configs/tu_errica/sigma_hetero_anchor_boost_hp_grid.json"
+        vendored.write_text(
+            json.dumps(
+                {
+                    "model": "sigma_hetero",
+                    "mode": "anchor_boost",
+                    "note": (
+                        "Paper a2g4 anchor (L12/H64/d_h16/lr1e-3) + LR/depth/d_h/batch "
+                        "variants; PROTEINS+REDDIT-BINARY Errica select only."
+                    ),
+                    "grid": sample_grid["grid"],
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+
 
 def main() -> None:
     """CLI entry point."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--mode",
-        choices=("fixed8", "budget_bio", "full64"),
+        choices=("fixed8", "budget_bio", "full64", "anchor_boost"),
         default="fixed8",
         help="fixed8: 8-config SIGMA_GRID (default). "
         "full64: GIN-isomorphic 64-config grid. "
+        "anchor_boost: paper a2g4-centered grid on PROTEINS+REDDIT. "
         "budget_bio: legacy GIN-budgeted bio micro-grid.",
     )
     parser.add_argument(

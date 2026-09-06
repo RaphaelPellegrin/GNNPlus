@@ -21,6 +21,12 @@
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_select_full64
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_full64
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_full64
+#
+# PROTEINS + REDDIT push (paper a2g4 anchor + LR/depth/d_h/batch variants):
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh generate_sigma_grids_anchor_boost
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_select_anchor_boost
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_anchor_boost
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_anchor_boost
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_eval_gin
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_eval_sage
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_eval_gcn
@@ -80,6 +86,9 @@ case "${phase}" in
     generate_sigma_grids_full64)
         bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode full64
         ;;
+    generate_sigma_grids_anchor_boost)
+        bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode anchor_boost
+        ;;
     sigma_grid_select)
         # Prefer fixed8 campaign name so W&B groups do not collide with budget_bio.
         TU_ERRICA_CAMPAIGN=sigma_grid_select_fixed8 TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:00:00 \
@@ -87,6 +96,12 @@ case "${phase}" in
         ;;
     sigma_grid_select_full64)
         TU_ERRICA_CAMPAIGN=sigma_grid_select_full64 TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:00:00 \
+            bash bash_interface/cluster/submit_tu_errica_fair.sh
+        ;;
+    sigma_grid_select_anchor_boost)
+        TU_ERRICA_CAMPAIGN=sigma_grid_select_anchor_boost \
+            TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:00:00 TU_ERRICA_NICE=0 \
+            TU_ERRICA_PARALLEL=20 TU_ERRICA_PARTITION=mweber_gpu \
             bash bash_interface/cluster/submit_tu_errica_fair.sh
         ;;
     aggregate_sigma)
@@ -99,6 +114,12 @@ case "${phase}" in
             --campaign sigma_grid_select_full64 \
             --manifest configs/tu_errica/sigma_grids_full64/manifest.json \
             --out configs/tu_errica/selections/sigma_full64_per_fold.json
+        ;;
+    aggregate_sigma_anchor_boost)
+        _run_python scripts/tu_errica/aggregate_sigma_hp_selection.py \
+            --campaign sigma_grid_select_anchor_boost \
+            --manifest configs/tu_errica/sigma_grids_anchor_boost/manifest.json \
+            --out configs/tu_errica/selections/sigma_anchor_boost_per_fold.json
         ;;
     grid_eval_gin)
         TU_ERRICA_CAMPAIGN=grid_eval TU_ERRICA_EVAL_MODEL=gin \
@@ -124,6 +145,13 @@ case "${phase}" in
     sigma_grid_eval_full64)
         TU_ERRICA_CAMPAIGN=sigma_grid_eval_full64 TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:00:00 \
             TU_ERRICA_SELECTION_FILE=configs/tu_errica/selections/sigma_full64_per_fold.json \
+            bash bash_interface/cluster/submit_tu_errica_fair.sh
+        ;;
+    sigma_grid_eval_anchor_boost)
+        TU_ERRICA_CAMPAIGN=sigma_grid_eval_anchor_boost \
+            TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:00:00 TU_ERRICA_NICE=0 \
+            TU_ERRICA_PARALLEL=20 TU_ERRICA_PARTITION=mweber_gpu \
+            TU_ERRICA_SELECTION_FILE=configs/tu_errica/selections/sigma_anchor_boost_per_fold.json \
             bash bash_interface/cluster/submit_tu_errica_fair.sh
         ;;
     *)

@@ -37,12 +37,16 @@ case "${CAMPAIGN}" in
         NUM_TASKS="${TU_ERRICA_NUM_TASKS:-$((NUM_DATASETS * GRID_SIZE * NUM_FOLDS))}"
         JOB_SUFFIX="grid_select_${HP_MODEL}"
         ;;
-    grid_eval|sigma_grid_eval|sigma_grid_eval_fixed8|sigma_grid_eval_full64)
+    grid_eval|sigma_grid_eval|sigma_grid_eval_fixed8|sigma_grid_eval_full64|sigma_grid_eval_anchor_boost)
         NUM_TASKS="${TU_ERRICA_NUM_TASKS:-$((NUM_DATASETS * NUM_FOLDS * NUM_SEEDS))}"
         if [ "${CAMPAIGN}" = "grid_eval" ]; then
             JOB_SUFFIX="grid_eval_${TU_ERRICA_EVAL_MODEL:-gin}"
         else
             JOB_SUFFIX="${CAMPAIGN}"
+        fi
+        if [ "${CAMPAIGN}" = "sigma_grid_eval_anchor_boost" ]; then
+            # PROTEINS + REDDIT only (2 × folds × seeds).
+            NUM_TASKS="${TU_ERRICA_NUM_TASKS:-$((2 * NUM_FOLDS * NUM_SEEDS))}"
         fi
         ;;
     sigma_grid_select|sigma_grid_select_fixed8)
@@ -51,6 +55,10 @@ case "${CAMPAIGN}" in
         ;;
     sigma_grid_select_full64)
         NUM_TASKS=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids_full64/manifest.json'))['num_tasks'])")
+        JOB_SUFFIX="${CAMPAIGN}"
+        ;;
+    sigma_grid_select_anchor_boost)
+        NUM_TASKS=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids_anchor_boost/manifest.json'))['num_tasks'])")
         JOB_SUFFIX="${CAMPAIGN}"
         ;;
     *)

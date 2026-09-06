@@ -123,7 +123,13 @@ def collect_local_runs(root: Path) -> list[dict[str, Any]]:
 
 def _wandb_group(ds_tag: str, model: str, campaign: str = "canonical") -> str:
     """Build W&B group matching ``run_tu_errica_fair.sh`` naming."""
-    if campaign in ("grid_eval", "sigma_grid_eval", "sigma_grid_eval_fixed8"):
+    if campaign in (
+        "grid_eval",
+        "sigma_grid_eval",
+        "sigma_grid_eval_fixed8",
+        "sigma_grid_eval_full64",
+        "sigma_grid_eval_anchor_boost",
+    ):
         hp_tag = "selected"
     elif campaign == "canonical":
         hp_tag = "canonical"
