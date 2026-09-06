@@ -21,6 +21,7 @@ from GNNPlus.layer.gated_hybrid_layer import (
     NormType,
     parse_hybrid_gnn_types,
 )
+from GNNPlus.layer.gate_override import GateOverrideMode
 
 
 class _PostHybridFFN(nn.Module):
@@ -488,8 +489,18 @@ class HybridGNN(torch.nn.Module):
             else batch.y.detach().cpu(),
         }
 
-    def forward(self, batch: Batch) -> Batch:
-        """Run encoder, hybrid blocks, optional FFN, and prediction head."""
+    def forward(
+        self,
+        batch: Batch,
+        gate_override: Optional[GateOverrideMode] = None,
+    ) -> Batch:
+        """Run encoder, hybrid blocks, optional FFN, and prediction head.
+
+        Args:
+            batch: PyG mini-batch.
+            gate_override: Optional inference clamp (``ones`` / ``mean``).
+                Leave ``None`` during training.
+        """
         (
             x,
             batch,
@@ -512,6 +523,7 @@ class HybridGNN(torch.nn.Module):
                     edge_attr_attn=edge_attr_attn,
                     edge_index_mp=edge_index_mp,
                     edge_attr_mp=edge_attr_mp,
+                    gate_override=gate_override,
                 ),
             )
             if self.ffn_blocks is not None:

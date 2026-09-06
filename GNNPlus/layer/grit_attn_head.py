@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
+from GNNPlus.layer.gate_override import GateOverrideMode, apply_gate_override
 from GNNPlus.layer.grit_hybrid_mp_head import _GritHybridBatch
 from GNNPlus.layer.grit_layer import MultiHeadAttentionLayerGritSparse
 
@@ -96,6 +97,8 @@ class _GRITAttnHead(nn.Module):
         x: Tensor,
         edge_index: Tensor,
         edge_attr: Optional[Tensor] = None,
+        batch_ids: Optional[Tensor] = None,
+        gate_override: Optional[GateOverrideMode] = None,
     ) -> Tuple[Tensor, Tensor]:
         """Run GRIT attention and apply the SiGMA gate.
 
@@ -103,6 +106,8 @@ class _GRITAttnHead(nn.Module):
             x: Node features ``[N, d_model]``.
             edge_index: Sparse (or full-graph) edges ``[2, E]``.
             edge_attr: Optional edge features ``[E, edge_dim]``.
+            batch_ids: Graph id per node (for ``gate_override='mean'``).
+            gate_override: Optional inference clamp (``ones`` / ``mean``).
 
         Returns:
             ``(gated_out, gamma)`` with shapes ``[N, d_h]`` and
@@ -125,8 +130,8 @@ class _GRITAttnHead(nn.Module):
 
         if self.gate_proj is None:
             gamma = torch.ones(raw.size(0), 1, device=raw.device, dtype=raw.dtype)
-            return raw, gamma
-
-        g = self.gate_proj(x)
-        gamma = torch.sigmoid(g)
+        else:
+            g = self.gate_proj(x)
+            gamma = torch.sigmoid(g)
+        gamma = apply_gate_override(gamma, gate_override, batch_ids)
         return raw * gamma, gamma

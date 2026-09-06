@@ -23,6 +23,8 @@ from torch_geometric.nn import (
 )
 from torch_geometric.utils import to_undirected
 
+from GNNPlus.layer.gate_override import GateOverrideMode, apply_gate_override
+
 AttnMaskType = Literal["full", "graph_restricted"]
 AttnType = Literal["vanilla", "grit", "physics"]
 # ``none`` / ``off``: no learned sigmoid gates (heads contribute at full scale).
@@ -516,8 +518,18 @@ class _ProjectedMPHead(nn.Module):
         x: Tensor,
         edge_index: Tensor,
         edge_attr: Optional[Tensor] = None,
+        batch_ids: Optional[Tensor] = None,
+        gate_override: Optional[GateOverrideMode] = None,
     ) -> Tuple[Tensor, Tensor]:
-        """Return ``(gated_mp_output, gate_value)``."""
+        """Return ``(gated_mp_output, gate_value)``.
+
+        Args:
+            x: Node features ``[N, d_model]``.
+            edge_index: Sparse edges ``[2, E]``.
+            edge_attr: Optional edge features.
+            batch_ids: Graph id per node (for ``gate_override='mean'``).
+            gate_override: Optional inference clamp (``ones`` / ``mean``).
+        """
         if self._routing_signal:
             signal = x[:, 0:1]
             if self.gate_mode == "none":
@@ -528,8 +540,9 @@ class _ProjectedMPHead(nn.Module):
             raw = self.conv(signal, edge_index)
             if g is None:
                 gamma = torch.ones(raw.size(0), 1, device=raw.device, dtype=raw.dtype)
-                return raw, gamma
-            gamma = torch.sigmoid(g)
+            else:
+                gamma = torch.sigmoid(g)
+            gamma = apply_gate_override(gamma, gate_override, batch_ids)
             return raw * gamma, gamma
 
         if self.identity_proj:
@@ -568,8 +581,9 @@ class _ProjectedMPHead(nn.Module):
 
         if g is None:
             gamma = torch.ones(raw.size(0), 1, device=raw.device, dtype=raw.dtype)
-            return raw, gamma
-        gamma = torch.sigmoid(g)
+        else:
+            gamma = torch.sigmoid(g)
+        gamma = apply_gate_override(gamma, gate_override, batch_ids)
         return raw * gamma, gamma
 
 
@@ -861,12 +875,16 @@ class GatedHybridGraphLayer(nn.Module):
         return_gate_stats: bool = False,
         return_attn_weights: bool = False,
         mp_head_mask: Optional[Sequence[bool]] = None,
+        gate_override: Optional[GateOverrideMode] = None,
     ) -> Union[Tensor, Tuple[Tensor, Dict[str, Any]]]:
         """Apply the hybrid block.
 
         When RRWP pads to a full graph, pass padded edges via
         ``edge_index_attn`` / ``edge_attr_attn`` and the original sparse
         topology via ``edge_index_mp`` / ``edge_attr_mp``.
+
+        ``gate_override`` is inference-only (``ones`` / ``mean``); leave
+        ``None`` during training.
         """
         out, aux = self._forward_core(
             x,
@@ -882,6 +900,7 @@ class GatedHybridGraphLayer(nn.Module):
             return_gate_stats=return_gate_stats,
             return_attn_weights=return_attn_weights,
             mp_head_mask=mp_head_mask,
+            gate_override=gate_override,
         )
         if not return_gate_stats and not return_attn_weights:
             return out
@@ -902,6 +921,7 @@ class GatedHybridGraphLayer(nn.Module):
         return_gate_stats: bool,
         return_attn_weights: bool,
         mp_head_mask: Optional[Sequence[bool]] = None,
+        gate_override: Optional[GateOverrideMode] = None,
     ) -> Tuple[Tensor, Dict[str, Any]]:
         n = x.size(0)
         src: Tensor = x if self.block_bn else self.norm(x)
@@ -923,7 +943,13 @@ class GatedHybridGraphLayer(nn.Module):
             for grit_head in self.grit_attn_heads:
                 out_h, gamma = cast(
                     Tuple[Tensor, Tensor],
-                    grit_head(src_attn, ei_attn, ea_attn),
+                    grit_head(
+                        src_attn,
+                        ei_attn,
+                        ea_attn,
+                        batch_ids=batch,
+                        gate_override=gate_override,
+                    ),
                 )
                 attn_outputs.append(out_h)
                 attn_gate_vals.append(gamma)
@@ -931,7 +957,11 @@ class GatedHybridGraphLayer(nn.Module):
             for phys_head in self.physics_attn_heads:
                 out_h, gamma = cast(
                     Tuple[Tensor, Tensor],
-                    phys_head(src_attn, batch),
+                    phys_head(
+                        src_attn,
+                        batch,
+                        gate_override=gate_override,
+                    ),
                 )
                 attn_outputs.append(out_h)
                 attn_gate_vals.append(gamma)
@@ -973,10 +1003,10 @@ class GatedHybridGraphLayer(nn.Module):
                 raw = weights @ v
                 if g is None:
                     gamma = torch.ones(raw.size(0), 1, device=raw.device, dtype=raw.dtype)
-                    attn_outputs.append(raw)
                 else:
                     gamma = torch.sigmoid(g)
-                    attn_outputs.append(raw * gamma)
+                gamma = apply_gate_override(gamma, gate_override, batch)
+                attn_outputs.append(raw * gamma)
                 attn_gate_vals.append(gamma)
 
         mp_outputs: List[Tensor] = []
@@ -984,7 +1014,14 @@ class GatedHybridGraphLayer(nn.Module):
 
         for head_i, mp_head in enumerate(self.mp_heads):
             out_h, gamma = cast(
-                Tuple[Tensor, Tensor], mp_head(src_mp, ei_mp, ea_mp)
+                Tuple[Tensor, Tensor],
+                mp_head(
+                    src_mp,
+                    ei_mp,
+                    ea_mp,
+                    batch_ids=batch,
+                    gate_override=gate_override,
+                ),
             )
             if mp_head_mask is not None and (
                 head_i >= len(mp_head_mask) or not mp_head_mask[head_i]

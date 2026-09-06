@@ -566,9 +566,16 @@ git pull
 bash bash_interface/cluster/submit_tu_sigma_ungated.sh
 ```
 
+```text
+╔══════════════════════════════════════════════════════════════════╗
+║  ✅  SUBMITTED  ·  SLURM 44713424  ·  2026-09-05  ·  1-120%20    ║
+║  Tab.17+18 SiGMA hetero ungated · gate=none · 120 jobs           ║
+╚══════════════════════════════════════════════════════════════════╝
+```
+
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *paste JOBID* |
+| **SLURM** | ✅ **`44713424`** |
 | **Submit** | `bash_interface/cluster/submit_tu_sigma_ungated.sh` |
 | **Tasks** | `1-120%20` · 2 tables × 6 ds × 2 LR × 5 seeds |
 | **Tab.17 (1–60)** | `d_h=16` · `sigma-hetero-a2g4-anchor.yaml` · W&B `tu_hh_<ds>_SiGMA_ungated_{lr001,lr01}` |
@@ -576,11 +583,68 @@ bash bash_interface/cluster/submit_tu_sigma_ungated.sh
 | **Override** | `gnn.hybrid.gate none` |
 | **Batches** | bio 64 · COLLAB 32 · IMDB 64 · REDDIT 16 |
 | **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_{homo_hetero,1x_gcn}/<ds>_SiGMA_ungated_<lr>_seed<s>/` |
-| **Logs** | `logs_gnnplus/tu_sigma_ung_<JOBID>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/tu_sigma_ung_44713424_<TASK>.log` |
 
 Tab-only:
 
 ```bash
 TU_UNGATED_ARRAY=1-60   bash bash_interface/cluster/submit_tu_sigma_ungated.sh   # Tab.17
 TU_UNGATED_ARRAY=61-120 bash bash_interface/cluster/submit_tu_sigma_ungated.sh   # Tab.18
+```
+
+---
+
+## Inference gate clamp (rebuttal)
+
+**Question:** does a *trained gated* SiGMA use its gates at test time?
+
+Eval-only intervention on existing **gated hetero** checkpoints (no retrain):
+
+| Mode | Meaning |
+|------|---------|
+| `learned` | normal γ |
+| `ones` | force γ=1 (full head contribution) |
+| `mean` | replace each node γ by per-graph mean γ |
+
+Drop under `ones`/`mean` vs `learned` ⇒ gates are functionally used.
+
+**Ckpts:** on cluster only (local `results/tu_sigma_homo_hetero/*/ckpt/` are empty):
+
+```text
+$GNNPLUS_OUT_DIR/tu_sigma_homo_hetero/<ds>_SiGMA_hetero_<lr>_seed<s>/ckpt/
+$GNNPLUS_OUT_DIR/tu_sigma_1x_gcn/<ds>_SiGMA_hetero_<lr>_seed<s>/ckpt/
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+# smoke one MUTAG Tab.17 seed
+TU_GATE_CLAMP_ARRAY=1 bash bash_interface/cluster/submit_tu_gate_clamp.sh
+
+# full 60 (Tab.17 reported LR × 5 seeds + Tab.18)
+bash bash_interface/cluster/submit_tu_gate_clamp.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *paste JOBID* |
+| **Submit** | `bash_interface/cluster/submit_tu_gate_clamp.sh` |
+| **Tasks** | `1-60%20` · Tab.17 = 1–30 · Tab.18 = 31–60 |
+| **Script** | `scripts/gate_viz/eval_gate_clamp.py` |
+| **Out** | `results/gate_clamp/t{17,18}_<ds>_<lr>_seed<s>.csv` |
+| **Logs** | `logs_gnnplus/tu_gate_clamp_<JOBID>_<TASK>.log` |
+
+Single-run (interactive GPU node)::
+
+```bash
+python scripts/gate_viz/eval_gate_clamp.py \
+  --run_dir $GNNPLUS_OUT_DIR/tu_sigma_homo_hetero/mutag_SiGMA_hetero_lr001_seed0 \
+  --cfg configs/tu_sigma_homo_hetero/sigma-hetero-a2g4-anchor.yaml \
+  --dataset-dir $GNNPLUS_DATASET_DIR \
+  --paired-ttest \
+  --out-csv results/gate_clamp/mutag_seed0.csv
 ```

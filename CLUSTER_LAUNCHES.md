@@ -776,8 +776,8 @@ git pull
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  PENDING  ·  TU SiGMA ungated (Tab.17 dh16 + Tab.18 dh4)              ║
-║  🎯  Hetero a2g4 · gate=none · 120 jobs · rebuttal gating column         ║
+║  ✅  SUBMITTED  ·  SLURM 44713424  ·  2026-09-05  ·  1-120%20             ║
+║  🎯  TU SiGMA ungated (Tab.17 dh16 + Tab.18 dh4) · gate=none · 120 jobs  ║
 ║  📄  Paper_tu_sigma_homo_hetero.md                                       ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
@@ -789,19 +789,51 @@ export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-bash bash_interface/cluster/submit_tu_sigma_ungated.sh
+# ✅ already submitted — do not re-run unless re-launching
+# bash bash_interface/cluster/submit_tu_sigma_ungated.sh
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *paste JOBID* |
+| **SLURM** | ✅ **`44713424`** |
 | **Submit** | `bash_interface/cluster/submit_tu_sigma_ungated.sh` |
 | **Tasks** | `1-120%20` · mem 128GB |
 | **Variant** | SiGMA hetero ungated (`gnn.hybrid.gate none`) |
 | **W&B** | `tu_hh_<ds>_SiGMA_ungated_{lr001,lr01}` · `tu_1x_<ds>_SiGMA_ungated_{lr001,lr01}` |
 | **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_{homo_hetero,1x_gcn}/` |
 | **Docs** | [`Paper_tu_sigma_homo_hetero.md`](Paper_tu_sigma_homo_hetero.md) |
+| **Logs** | `logs_gnnplus/tu_sigma_ung_44713424_<TASK>.log` |
 | **Verify gated** | `python scripts/api_wanndb_query/verify_tu_sigma_tables.py` |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑  PENDING  ·  TU gate-clamp eval (gated hetero ckpts → ones/mean)     ║
+║  🎯  Inference intervention · Tab.17+18 reported LRs · 60 jobs           ║
+║  📄  Paper_tu_sigma_homo_hetero.md                                       ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+# smoke: TU_GATE_CLAMP_ARRAY=1 bash bash_interface/cluster/submit_tu_gate_clamp.sh
+bash bash_interface/cluster/submit_tu_gate_clamp.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *paste JOBID* |
+| **Submit** | `bash_interface/cluster/submit_tu_gate_clamp.sh` |
+| **Tasks** | `1-60%20` · mem 64GB · 4h |
+| **Ckpts** | `$GNNPLUS_OUT_DIR/tu_sigma_{homo_hetero,1x_gcn}/` (gated hetero) |
+| **Out** | `results/gate_clamp/t{17,18}_*.csv` |
+| **Docs** | [`Paper_tu_sigma_homo_hetero.md`](Paper_tu_sigma_homo_hetero.md) |
 
 ---
 
@@ -959,7 +991,8 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **full64 REDDIT jump** | **44266493** | 640 (3201–3840) | ⚠️ mostly FAILED |
 | **full64 FAILED rerun** | **44509970** | 2479 | 🔄 ~464 COMP · 20 run · 12 FAIL |
 | **fixed8 COLLAB fill** | **44507757** | 1 (task 560) | ✅ COMPLETED |
-| **`sigma_grid_eval_fixed8`** | **44621846** | 210 | 🔄 mweber `%20` Nice=0 |
+| **`sigma_grid_eval_fixed8`** | **44621846** | 210 | 🔄 208 COMP · 1 FAIL → fill **44748166** |
+| **eval COLLAB f0 s0 fill** | **44748166** | 1 (task 181) | 🔄 PENDING |
 | `aggregate_sigma` → `sigma_grid_eval_fixed8` | — | 210 | ✅ selection done · eval **44621846** |
 
 ```bash

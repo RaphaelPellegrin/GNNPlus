@@ -14,6 +14,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
 
+from GNNPlus.layer.gate_override import GateOverrideMode, apply_gate_override
+
 GateMode = Literal["elementwise", "headwise", "none", "off"]
 
 
@@ -218,12 +220,14 @@ class _PhysicsAttnHead(nn.Module):
         self,
         x: Tensor,
         batch: Tensor,
+        gate_override: Optional[GateOverrideMode] = None,
     ) -> Tuple[Tensor, Tensor]:
         """Apply Physics-Attn within each graph and gate.
 
         Args:
             x: Node features ``[N, d_model]``.
             batch: Graph assignment ``[N]``.
+            gate_override: Optional inference clamp (``ones`` / ``mean``).
 
         Returns:
             ``(gated_out, gamma)`` with shapes ``[N, d_h]`` and gate tensor.
@@ -244,7 +248,8 @@ class _PhysicsAttnHead(nn.Module):
 
         if self.gate_proj is None:
             gamma = torch.ones(raw.size(0), 1, device=raw.device, dtype=raw.dtype)
-            return raw, gamma
-        g = self.gate_proj(x)
-        gamma = torch.sigmoid(g)
+        else:
+            g = self.gate_proj(x)
+            gamma = torch.sigmoid(g)
+        gamma = apply_gate_override(gamma, gate_override, batch)
         return raw * gamma, gamma
