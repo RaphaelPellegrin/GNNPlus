@@ -622,21 +622,20 @@ export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-# smoke one MUTAG Tab.17 seed
-TU_GATE_CLAMP_ARRAY=1 bash bash_interface/cluster/submit_tu_gate_clamp.sh
-
-# full 60 (Tab.17 reported LR × 5 seeds + Tab.18)
-bash bash_interface/cluster/submit_tu_gate_clamp.sh
+# ✅ already submitted — do not re-run unless re-launching
+# TU_GATE_CLAMP_ARRAY=1 bash bash_interface/cluster/submit_tu_gate_clamp.sh  # smoke 44748984
+# bash bash_interface/cluster/submit_tu_gate_clamp.sh                        # full 44748985
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *paste JOBID* |
+| **SLURM smoke** | ✅ **`44748984`** (task 1) |
+| **SLURM full** | ✅ **`44748985`** (`1-60%20`) |
 | **Submit** | `bash_interface/cluster/submit_tu_gate_clamp.sh` |
-| **Tasks** | `1-60%20` · Tab.17 = 1–30 · Tab.18 = 31–60 |
+| **Tasks** | Tab.17 = 1–30 · Tab.18 = 31–60 |
 | **Script** | `scripts/gate_viz/eval_gate_clamp.py` |
 | **Out** | `results/gate_clamp/t{17,18}_<ds>_<lr>_seed<s>.csv` |
-| **Logs** | `logs_gnnplus/tu_gate_clamp_<JOBID>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/tu_gate_clamp_44748985_<TASK>.log` |
 
 Single-run (interactive GPU node)::
 
@@ -647,4 +646,49 @@ python scripts/gate_viz/eval_gate_clamp.py \
   --dataset-dir $GNNPLUS_DATASET_DIR \
   --paired-ttest \
   --out-csv results/gate_clamp/mutag_seed0.csv
+```
+
+---
+
+## Extreme d_h Tab.18-style (App. H capacity stress)
+
+Tab.18 uses `d_h=4` (~1× GCN). Appendix H needed **`d_h=1`** for ungated to fail.
+Relaunch **hetero gated vs ungated** at **`d_h ∈ {1, 2}`** (same a2g4 / L12 / H64 / LR grid).
+
+| | Tab.17 | Tab.18 | This |
+|--|-------:|-------:|------|
+| `d_h` | 16 | 4 | **1 or 2** |
+| Hypothesis | ungated ≈ gated | maybe soft | **gated ≫ ungated** |
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+# smoke MUTAG d_h=1 gated+ungated lr001 (tasks 1,11)
+TU_DH_EXT_ARRAY=1,11 TU_DH_EXT_PARALLEL=2 \
+  bash bash_interface/cluster/submit_tu_sigma_dh_extreme.sh
+
+# full 240
+bash bash_interface/cluster/submit_tu_sigma_dh_extreme.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *paste JOBID* |
+| **Submit** | `bash_interface/cluster/submit_tu_sigma_dh_extreme.sh` |
+| **Tasks** | `1-240%20` · d_h=1 → 1–120 · d_h=2 → 121–240 |
+| **Variants** | gated hetero ×2 LR + ungated (`gate=none`) ×2 LR |
+| **Configs** | `sigma-hetero-a2g4-dh{1,2}-anchor.yaml` |
+| **W&B** | `tu_dh{1,2}_<ds>_{SiGMA_hetero,SiGMA_ungated}_{lr001,lr01}` |
+| **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_dh_extreme/` |
+| **Logs** | `logs_gnnplus/tu_dh_ext_<JOBID>_<TASK>.log` |
+
+d_h-only:
+
+```bash
+TU_DH_EXT_ARRAY=1-120   bash bash_interface/cluster/submit_tu_sigma_dh_extreme.sh  # dh1
+TU_DH_EXT_ARRAY=121-240 bash bash_interface/cluster/submit_tu_sigma_dh_extreme.sh  # dh2
 ```

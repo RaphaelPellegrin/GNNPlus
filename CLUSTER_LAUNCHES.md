@@ -841,6 +841,37 @@ git pull
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑  PENDING  ·  TU extreme d_h ∈ {1,2} gated vs ungated (Tab.18-style)  ║
+║  🎯  App. H capacity stress · 240 jobs · hetero a2g4                     ║
+║  📄  Paper_tu_sigma_homo_hetero.md                                       ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+# smoke: TU_DH_EXT_ARRAY=1,11 TU_DH_EXT_PARALLEL=2 bash .../submit_tu_sigma_dh_extreme.sh
+bash bash_interface/cluster/submit_tu_sigma_dh_extreme.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *paste JOBID* |
+| **Submit** | `bash_interface/cluster/submit_tu_sigma_dh_extreme.sh` |
+| **Tasks** | `1-240%20` · mem 128GB · 96h |
+| **Configs** | `configs/tu_sigma_homo_hetero/sigma-hetero-a2g4-dh{1,2}-anchor.yaml` |
+| **W&B** | `tu_dh{1,2}_<ds>_{SiGMA_hetero,SiGMA_ungated}_{lr001,lr01}` |
+| **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_dh_extreme/` |
+| **Docs** | [`Paper_tu_sigma_homo_hetero.md`](Paper_tu_sigma_homo_hetero.md) |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
 ║  ✅  SUBMITTED  ·  SLURM 37600400  ·  1-70%20                            ║
 ║  🎯  SiGMA baby/tiny budget fills (≤500k / 1M / 2M)                      ║
 ║  📄  Paper_sigma_budget.md                                               ║
@@ -991,7 +1022,7 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **`sigma_grid_select_full64`** | **44262912** | **4,480** | ⚠️ half FAILED (quota/`0:53`) |
 | **fixed8 REDDIT jump** | **44266489** | 80 (401–480) | ✅ done |
 | **full64 REDDIT jump** | **44266493** | 640 (3201–3840) | ⚠️ mostly FAILED |
-| **full64 REDDIT only (no cancel)** | *(pending submit)* | 640 (3201–3840) | `submit_tu_errica_full64_reddit_only.sh` |
+| **full64 REDDIT only (no cancel)** | **44750003** | 640 (3201–3840) | 🔄 H200 `%20` Nice=0 · netscratch logs |
 | **full64 FAILED rerun** | **44509970** | 2479 | 🔄 ~464 COMP · 20 run · 12 FAIL |
 | **fixed8 COLLAB fill** | **44507757** | 1 (task 560) | ✅ COMPLETED |
 | **`sigma_grid_eval_fixed8`** | **44621846** | 210 | 🔄 208 COMP · 1 FAIL → fill **44748166** |
