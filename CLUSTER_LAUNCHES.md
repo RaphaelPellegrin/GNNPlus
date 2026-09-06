@@ -874,6 +874,40 @@ git pull
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑  PENDING  ·  TU Tab.17/18 L×d_h×H gated vs ungated (4800 jobs)       ║
+║  🎯  L∈{1,2,4,8,16} · d_h∈{1,2,4,16} · H∈{64,8} · hetero a2g4           ║
+║  📄  Paper_tu_sigma_depth_dh_h.md                                        ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+# smoke MUTAG L1 dh1 H64 gated+ungated:
+TU_LDHH_ARRAY=1,11 TU_LDHH_PARALLEL=2 \
+  bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh
+# then MUTAG 1-800; later 801-1600 ENZYMES · … · 4001-4800 REDDIT
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *paste JOBID* |
+| **Submit** | `bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh` |
+| **Tasks** | **4800** · dataset blocks of 800 · mem 128GB · 96h |
+| **Grid** | L∈{1,2,4,8,16} · d_h∈{1,2,4,16} · H∈{64,8} · gated/ungated · 2 LR · 5 seeds |
+| **Note** | Paper Tab.17/18 used **L=12** (not in this grid) |
+| **W&B** | `tu_L<k>_dh<m>_H<h>_<ds>_{SiGMA_hetero,SiGMA_ungated}_{lr001,lr01}` |
+| **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_depth_dh_h/` |
+| **Docs** | [`Paper_tu_sigma_depth_dh_h.md`](Paper_tu_sigma_depth_dh_h.md) |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
 ║  🔄  RUNNING  ·  smoke 44752943 · PATTERN 44752944                       ║
 ║  🎯  Tab.3/4 progressive d_h × gated vs ungated (PATTERN first)          ║
 ║  📄  Paper_sigma_dh_matched_ungated.md                                   ║
@@ -1061,7 +1095,7 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **`sigma_grid_eval_fixed8`** | **44621846** | 210 | ✅ 209 + fill **44748166** |
 | **eval COLLAB f0 s0 fill** | **44748166** | 1 (task 181) | ✅ COMPLETED |
 | **`anchor_boost` select** | **44840486** | 480 | 🔄 mweber `%20` Nice=0 · PROTEINS+REDDIT |
-| **`fixed8_ungated` select** | *(pending)* | 560 | same grid · `gate=none` |
+| **`fixed8_ungated` select** | **44869251** | 560 | 🔄 mweber `%20` Nice=0 · `gate=none` |
 | `aggregate_sigma` → `sigma_grid_eval_fixed8` | — | 210 | ✅ selection done · eval **44621846** |
 
 ```bash

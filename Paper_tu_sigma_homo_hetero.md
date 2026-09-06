@@ -650,7 +650,16 @@ python scripts/gate_viz/eval_gate_clamp.py \
 
 ---
 
+## Depth × d_h × H gated vs ungated (Tab.17/18 protocol)
+
+Full capacity map: **L∈{1,2,4,8,16}**, **d_h∈{1,2,4,16}**, **H∈{64,8}**, gated vs
+ungated — **4800** jobs. See [`Paper_tu_sigma_depth_dh_h.md`](Paper_tu_sigma_depth_dh_h.md).
+
+---
+
 ## Extreme d_h Tab.18-style (App. H capacity stress)
+
+**Dedicated tracker:** [`Paper_tu_sigma_dh_extreme.md`](Paper_tu_sigma_dh_extreme.md)
 
 Tab.18 uses `d_h=4` (~1× GCN). Appendix H needed **`d_h=1`** for ungated to fail.
 Relaunch **hetero gated vs ungated** at **`d_h ∈ {1, 2}`** (same a2g4 / L12 / H64 / LR grid).
@@ -667,24 +676,24 @@ export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-# smoke MUTAG d_h=1 gated+ungated lr001 (tasks 1,11)
-TU_DH_EXT_ARRAY=1,11 TU_DH_EXT_PARALLEL=2 \
-  bash bash_interface/cluster/submit_tu_sigma_dh_extreme.sh
-
-# full 240
-bash bash_interface/cluster/submit_tu_sigma_dh_extreme.sh
+# ✅ already submitted — do not re-run unless re-launching
+# TU_DH_EXT_ARRAY=1,11 TU_DH_EXT_PARALLEL=2 \
+#   bash bash_interface/cluster/submit_tu_sigma_dh_extreme.sh   # smoke 44750758
+# bash bash_interface/cluster/submit_tu_sigma_dh_extreme.sh     # full 44750759
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *paste JOBID* |
+| **SLURM smoke** | ✅ **`44750758`** (tasks `1,11`) |
+| **SLURM full** | ✅ **`44750759`** (`1-240%20`) |
 | **Submit** | `bash_interface/cluster/submit_tu_sigma_dh_extreme.sh` |
 | **Tasks** | `1-240%20` · d_h=1 → 1–120 · d_h=2 → 121–240 |
 | **Variants** | gated hetero ×2 LR + ungated (`gate=none`) ×2 LR |
 | **Configs** | `sigma-hetero-a2g4-dh{1,2}-anchor.yaml` |
 | **W&B** | `tu_dh{1,2}_<ds>_{SiGMA_hetero,SiGMA_ungated}_{lr001,lr01}` |
 | **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_dh_extreme/` |
-| **Logs** | `logs_gnnplus/tu_dh_ext_<JOBID>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/tu_dh_ext_44750759_<TASK>.log` |
+| **Tracker** | [`Paper_tu_sigma_dh_extreme.md`](Paper_tu_sigma_dh_extreme.md) |
 
 d_h-only:
 
