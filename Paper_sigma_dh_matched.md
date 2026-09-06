@@ -90,34 +90,92 @@ git pull
 Shared worker: `run_sigma_dh_matched.sh` (`SIGMA_DH_MATCHED_TIER=fast|slow|coco`).  
 LRs: `{0.001, 0.01}` × 5 seeds; report better LR per family after.
 
-```bash
-bash bash_interface/cluster/submit_sigma_dh_matched_fast.sh
-bash bash_interface/cluster/submit_sigma_dh_matched_slow.sh
-bash bash_interface/cluster/submit_sigma_dh_matched_coco.sh
-```
+### Submitted (2026-08-24, holylogin05)
 
-Smoke (seed 0, both LRs, first families of each tier):
+All on **`mweber_gpu`** (skipped `gpu_h200` — Priority backlog). Lab fairshare note (Aug 23 EOD): `mweber_lab: 0.749064`.
+
+| Tier | SLURM JOBID | Array | Parallel | Time limit | Logs |
+|------|------------:|-------|---------:|------------|------|
+| **fast** | **`41709078`** | `1-100%10` | 10 | 48h | `logs_gnnplus/sigma_dh_fast_41709078_<TASK>.log` |
+| **slow** | **`41709082`** | `1-40%5` | 5 | 120h | `logs_gnnplus/sigma_dh_slow_41709082_<TASK>.log` |
+| **coco** | **`41709085`** | `1-10%2` | 2 | **14d** | `logs_gnnplus/sigma_dh_coco_41709085_<TASK>.log` |
 
 ```bash
-SIGMA_DH_MATCHED_ARRAY=1,6 SIGMA_DH_MATCHED_PARALLEL=2 \
+# Actual launch (do not re-run unless re-launching):
+SIGMA_DH_MATCHED_PARALLEL=10 SIGMA_DH_MATCHED_PARTITION=mweber_gpu \
   bash bash_interface/cluster/submit_sigma_dh_matched_fast.sh
 
-SIGMA_DH_MATCHED_ARRAY=1,6 SIGMA_DH_MATCHED_PARALLEL=2 \
+SIGMA_DH_MATCHED_PARALLEL=5 SIGMA_DH_MATCHED_PARTITION=mweber_gpu \
   bash bash_interface/cluster/submit_sigma_dh_matched_slow.sh
 
-SIGMA_DH_MATCHED_ARRAY=1,6 SIGMA_DH_MATCHED_PARALLEL=2 \
+SIGMA_DH_MATCHED_PARALLEL=2 SIGMA_DH_MATCHED_PARTITION=mweber_gpu \
+  SIGMA_DH_MATCHED_TIME=14-00:00:00 \
   bash bash_interface/cluster/submit_sigma_dh_matched_coco.sh
+```
+
+Monitor:
+
+```bash
+squeue -u $USER -n sigma_dh_fast,sigma_dh_slow,sigma_dh_coco
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *not submitted yet* |
+| **SLURM** | ✅ **`41709078`** (fast 1–50) · rerun **`42412053`** (51–100) · **`41709082`** (slow) · **`41709085`** (coco) |
 | **LRs** | `0.001` (`lr001`) and `0.01` (`lr01`) — overrides YAML `optim.base_lr` |
 | **Mem** | 128GB |
 | **Partition** | `mweber_gpu` |
 | **Configs** | `configs/gated_hybrid/dh_matched/` |
 | **Out** | `$GNNPLUS_OUT_DIR/sigma_dh_matched/<fam>_<lr>_seed<s>/` |
 | **Logs** | `logs_gnnplus/sigma_dh_{fast,slow,coco}_<JOB>_<TASK>.log` |
+| **Living log** | [`rebuttal.md`](rebuttal.md) |
+
+### Status (2026-08-28)
+
+Use `sacct -j <JOBID> -X` for array-task counts (without `-X`, batch/extern steps inflate totals).
+
+| Tier | JOBID | Array progress | Notes |
+|------|------:|----------------|-------|
+| **fast** (initial) | `41709078` | **50/50** ✅ | PATTERN, CLUSTER, MNIST |
+| **fast** (rerun) | `42412053` | **46/50** · **4 FAILED** | Pep-func/struct recovered; MalNet **91, 94, 96, 99** instant-fail (no logs) |
+| **fast** (combined) | | **96/100** | 4 MalNet seeds left |
+| **slow** | `41709082` | **5/40** · 5 running | CIFAR `dh20` lr001 done; lr01 (~1d7h) running |
+| **coco** | `41709085` | 2 running · 2 TIMEOUT · rest pending | Tasks 3–4 alive at 2d wall; **1–2** need resubmit (>48h) |
+
+**Resubmit MalNet only:**
+
+```bash
+SIGMA_DH_MATCHED_ARRAY=91,94,96,99 \
+  bash bash_interface/cluster/submit_sigma_dh_matched_fast.sh
+```
+
+**Resubmit COCO timeout seeds (after 3–4 finish or now):**
+
+```bash
+SIGMA_DH_MATCHED_ARRAY=1,2 \
+  bash bash_interface/cluster/submit_sigma_dh_matched_coco.sh
+```
+
+### Results vs paper (best LR so far — all `lr001`)
+
+Compared to [`Paper_sigma_params.md`](Paper_sigma_params.md). Dwivedi Acc = `best_test_perf` × 100.
+
+| Dataset | Budget | Small SiGMA | Paper SiGMA | Δ | Verdict |
+|---------|--------|------------:|------------:|--:|---------|
+| PATTERN | ~1M `dh16` | **87.23±0.18%** | 86.99±0.04% | +0.23 pp | ≈ same |
+| PATTERN | ~500k `dh4` | **87.03±0.07%** | 86.99±0.04% | +0.04 pp | ≈ same |
+| CLUSTER | ~500k `dh36` | 78.82±0.08% | 78.96±0.11% | −0.13 pp | ≈ same |
+| CLUSTER | ~500k `dh24` | 78.72±0.16% | 78.96±0.11% | −0.24 pp | ≈ same |
+| MNIST | ~500k `dh37` | **98.62±0.07%** | 98.63±0.11% | −0.01 pp | ≈ identical |
+| Pep-func | ~500k `dh23` | **0.7002±0.0084 AP** | 0.7080±0.0063 | −0.8 pp | ≈ same |
+| CIFAR10 | ~500k `dh20` | 75.15±0.57% | 79.53±0.18% | **−4.37 pp** | clear drop |
+
+**Takeaway:** `d_h` shrink is benign on Dwivedi fast + Pep-func at ≤500k. CIFAR10 is the
+outlier; `dh34` (~1M) and VOC/COCO/MalNet still in flight.
+
+Pep-func `dh23` lr001 (rerun `42412053`, tasks 51–55): W&B group
+[`paper_sigma_dh_matched_pepfunc_dh23_lr001`](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/groups/paper_sigma_dh_matched_pepfunc_dh23_lr001)
+— runs `jymcah8k`, `p3jl40xy`, `xoojqs74`, `tlpzwy96`, `8kqvfsme`.
 
 ### Task maps
 
@@ -178,3 +236,14 @@ Pep-func uses AP; Pep-struct / ZINC MAE; VOC / COCO F1.
 |----------|-------|----------------------|-----|
 | This (`dh_matched`) | **Kept** (a8g4 stays a8g4) | `d_h` (+ VOC `H`) | this file |
 | `Paper_sigma_budget` | Often → a1g1 | fewer heads, then H/`d_h`/L | [`Paper_sigma_budget.md`](Paper_sigma_budget.md) |
+
+---
+
+## Follow-up: progressive d_h × ungated (rebuttal)
+
+Gated-only shrink is not enough for the gating claim. Next campaign trains
+**gated + ungated** on a `d_h` ladder for PATTERN / CLUSTER / MNIST / Pep-func:
+
+→ **[`Paper_sigma_dh_matched_ungated.md`](Paper_sigma_dh_matched_ungated.md)**
+(`submit_sigma_dh_prog_ungated.sh`, 400 jobs, W&B `paper_sigma_dh_prog_*`).
+
