@@ -809,8 +809,8 @@ git pull
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  PENDING  ·  TU gate-clamp eval (gated hetero ckpts → ones/mean)     ║
-║  🎯  Inference intervention · Tab.17+18 reported LRs · 60 jobs           ║
+║  ✅  SUBMITTED  ·  SLURM 44748984 (smoke) + 44748985 (full 1-60%20)       ║
+║  🎯  TU gate-clamp eval · Tab.17+18 reported LRs · 2026-09-06            ║
 ║  📄  Paper_tu_sigma_homo_hetero.md                                       ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
@@ -822,17 +822,19 @@ export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
 cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 git pull
 
-# smoke: TU_GATE_CLAMP_ARRAY=1 bash bash_interface/cluster/submit_tu_gate_clamp.sh
-bash bash_interface/cluster/submit_tu_gate_clamp.sh
+# ✅ already submitted — do not re-run unless re-launching
+# bash bash_interface/cluster/submit_tu_gate_clamp.sh
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *paste JOBID* |
+| **SLURM smoke** | ✅ **`44748984`** (task 1) |
+| **SLURM full** | ✅ **`44748985`** (`1-60%20`) |
 | **Submit** | `bash_interface/cluster/submit_tu_gate_clamp.sh` |
 | **Tasks** | `1-60%20` · mem 64GB · 4h |
 | **Ckpts** | `$GNNPLUS_OUT_DIR/tu_sigma_{homo_hetero,1x_gcn}/` (gated hetero) |
 | **Out** | `results/gate_clamp/t{17,18}_*.csv` |
+| **Logs** | `logs_gnnplus/tu_gate_clamp_44748985_<TASK>.log` |
 | **Docs** | [`Paper_tu_sigma_homo_hetero.md`](Paper_tu_sigma_homo_hetero.md) |
 
 ---
@@ -989,6 +991,7 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **`sigma_grid_select_full64`** | **44262912** | **4,480** | ⚠️ half FAILED (quota/`0:53`) |
 | **fixed8 REDDIT jump** | **44266489** | 80 (401–480) | ✅ done |
 | **full64 REDDIT jump** | **44266493** | 640 (3201–3840) | ⚠️ mostly FAILED |
+| **full64 REDDIT only (no cancel)** | *(pending submit)* | 640 (3201–3840) | `submit_tu_errica_full64_reddit_only.sh` |
 | **full64 FAILED rerun** | **44509970** | 2479 | 🔄 ~464 COMP · 20 run · 12 FAIL |
 | **fixed8 COLLAB fill** | **44507757** | 1 (task 560) | ✅ COMPLETED |
 | **`sigma_grid_eval_fixed8`** | **44621846** | 210 | 🔄 208 COMP · 1 FAIL → fill **44748166** |
@@ -1007,6 +1010,7 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **Parallel** | 12 default · SiGMA select 128GB / 96h · `mweber_gpu` |
 | **Submit** | `bash_interface/cluster/submit_tu_errica_fair.sh` |
 | **full64 FAILED rerun** | `bash_interface/cluster/submit_tu_errica_full64_rerun_failed.sh` |
+| **full64 REDDIT only** | `bash_interface/cluster/submit_tu_errica_full64_reddit_only.sh` |
 | **Orchestrator** | `bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh` |
 | **Worker** | `bash_interface/cluster/run_tu_errica_fair.sh` |
 | **Logs** | prefer netscratch (`$GNNPLUS_OUT_DIR/logs_tu_errica_*`); holylabs `logs_gnnplus` hit quota |

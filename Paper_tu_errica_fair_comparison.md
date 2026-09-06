@@ -58,12 +58,18 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 | **2b** | `generate_sigma` **fixed8** | — | ✅ local | manifest · **560** tasks (replaces 400 budget_bio) |
 | **3a†** | `sigma_grid_select` budget_bio | **43741550** | ✅ done | **obsolete** for final SiGMA column |
 | **3a‡** | `sigma_grid_select` (failed) | **43451648** | ❌ failed | bash `mapfile` bug · fixed in `5e1688c` |
-| **3a** | `sigma_grid_select` **fixed8** | **44217420** | 🔄 **submitted** | **560** tasks · W&B `…_sigma_grid_select_fixed8_…` |
-| **3a§** | `sigma_grid_select` **full64** | — | **ready to submit** | GIN-matched **4,480** · `sigma_grids_full64/` · use `gpu_h200` + 72h |
-| **3b** | `aggregate_sigma` | — | **todo** | after fixed8 select |
+| **3a** | `sigma_grid_select` **fixed8** | **44217420** + **44266489** | ✅ **559/560** | 1 FAILED (COLLAB f9 hp7) → fill **44507757** |
+| **3a§** | `sigma_grid_select` **full64** | **44262912** | ⚠️ **1920 OK / 1920 FAIL** | cliff after NCI1 (DD→…) · rerun via `submit_tu_errica_full64_rerun_failed.sh` |
+| **3a-R** | fixed8 **REDDIT only** | **44266489** | ✅ **80/80** | tasks **401–480** |
+| **3a-R§** | full64 **REDDIT only** | **44266493** | ⚠️ **81 OK / 559 FAIL** | included in FAILED rerun list |
+| **3a-R§2** | full64 **REDDIT only** (no cancel) | *(submit)* | ⏳ | `submit_tu_errica_full64_reddit_only.sh` · 3201–3840 · leaves **44509970** alone |
+| **3a§-rerun** | full64 FAILED relaunch | **44509970** | 🔄 **464+ done** | 2479 tasks · ~20 run · 12 FAILED so far |
+| **3a-fill** | fixed8 **COLLAB f9 hp7** fill | **44507757** | ✅ **COMPLETED** | task **560** · netscratch logs |
+| **3b** | `aggregate_sigma` | — | ✅ **70/70 folds** | `sigma_fixed8_per_fold.json` |
 | **4a–d** | `grid_eval` GIN/SAGE/GCN/GAT | 44100531 / 66 / 96 / **44165919** | ✅ **done** | classical column frozen |
 | **4e†** | `sigma_grid_eval` budget_bio | **44165958** | ignore / cancel | HPs from obsolete select |
-| **4e** | `sigma_grid_eval` **fixed8** | — | **todo** | after fixed8 aggregate |
+| **4e** | `sigma_grid_eval` **fixed8** | **44621846** | 🔄 **208 done** | 1 RUNNING left · FAILED task **181** → fill **44748166** |
+| **4e-fill** | eval COLLAB f0 seed0 | **44748166** | 🔄 **PENDING** | task **181** · netscratch log |
 
 ### grid_select progress summary
 
@@ -73,7 +79,7 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 | GraphSAGE | 43116245 | 5,040 | ✅ 5040 COMPLETED |
 | GCN | 43434937 | 2,240 | ✅ 2240 COMPLETED |
 | GAT | 43434950 + **44099901** | 2,240 | 14 W&B-timeout reruns |
-| **SiGMA fixed8** | **44217420** | **560** | 🔄 submitted |
+| **SiGMA fixed8** | **44217420** + jumps | **560** | ✅ 559 + fill **44507757** |
 
 **Total grid_select jobs (all four):** 14,000
 
@@ -129,18 +135,50 @@ bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval
 Mean±std over **10 folds** after averaging 3 seeds per fold.
 LaTeX: [`results/tu_errica/analysis/tab_tu_errica_grid_eval.tex`](results/tu_errica/analysis/tab_tu_errica_grid_eval.tex).
 
-| Dataset | GCN | GIN | GraphSAGE | GAT | Errica GIN [1] |
-|---------|-----|-----|-----------|-----|----------------|
-| ENZYMES | 50.4±5.2 | 45.4±5.2 | **51.0±4.7** | 42.1±7.0 | 59.6±4.5 |
-| PROTEINS | **73.9±4.0** | 73.4±4.4 | 73.0±3.2 | 72.7±3.1 | 73.3±4.0 |
-| NCI1 | 80.7±1.5 | 80.4±1.5 | **81.6±2.3** | 75.4±2.4 | 80.0±1.4 |
-| DD | 71.9±4.2 | **73.7±5.2** | 72.8±3.0 | 72.9±9.2 | 75.3±2.9 |
-| IMDB-BINARY | 65.7±3.5 | **71.1±4.5** | 50.5±1.1 | 50.4±2.0 | 71.2±3.9 |
-| REDDIT-BINARY | **92.6±1.0** | 92.5±1.1 | 73.4±4.0 | 74.7±2.3 | 89.9±1.9 |
-| COLLAB | **77.0±2.1** | 76.5±2.5 | 52.5±3.2 | 47.6±7.9 | 75.6±2.3 |
+| Dataset | GCN | GIN | GraphSAGE | GAT | SiGMA (budget-bio, provisional) | Errica GIN [1] |
+|---------|-----|-----|-----------|-----|----------------------------------|----------------|
+| ENZYMES | 50.4±5.2 | 45.4±5.2 | 51.0±4.7 | 42.1±7.0 | **52.4±3.6** | 59.6±4.5 |
+| PROTEINS | **73.9±4.0** | 73.4±4.4 | 73.0±3.2 | 72.7±3.1 | 71.6±3.8 | 73.3±4.0 |
+| NCI1 | 80.7±1.5 | 80.4±1.5 | **81.6±2.3** | 75.4±2.4 | 80.3±2.5 | 80.0±1.4 |
+| DD | 71.9±4.2 | 73.7±5.2 | 72.8±3.0 | 72.9±9.2 | **74.7±3.4** | 75.3±2.9 |
+| IMDB-BINARY | 65.7±3.5 | 71.1±4.5 | 50.5±1.1 | 50.4±2.0 | **72.3±4.3** | 71.2±3.9 |
+| REDDIT-BINARY | **92.6±1.0** | 92.5±1.1 | 73.4±4.0 | 74.7±2.3 | 88.4±3.9 | 89.9±1.9 |
+| COLLAB | 77.0±2.1 | 76.5±2.5 | 52.5±3.2 | 47.6±7.9 | **78.3±2.4*** (5/10 folds) | 75.6±2.3 |
 
-Classical `grid_eval` columns are frozen. SiGMA is being **relaunched** under **fixed8**
-(`SIGMA_GRID`, 560 select tasks) — ignore budget-bio eval **44165958** / select **43741550**.
+\*Classical columns frozen. Final SiGMA = fixed8 (**44507757** fill → aggregate → eval) / full64 rerun **44509970**.
+
+### Priority: REDDIT-BINARY first (2026-09-03)
+
+Budget-bio SiGMA trails hardest on REDDIT (`88.4` vs GCN/GIN `~92.5`). Jump-start
+REDDIT select tasks **without waiting** for enzymes→…→imdb to finish:
+
+| Campaign | Parent JOBID | REDDIT SLURM tasks | Action |
+|----------|-------------:|-------------------:|--------|
+| fixed8 | **44217420** | **401–480** (80) | cancel that range on parent → submit Nice=0 slice |
+| full64 | **44262912** | **3201–3840** (640) | same |
+
+Same W&B groups / manifest indices as the parent, so `aggregate_sigma*` still works.
+After REDDIT select finishes → aggregate → eval tasks **151–180** only (`7×10×3` layout).
+
+```bash
+# --- fixed8 REDDIT jump-start (mweber) ---
+scancel 44217420_[401-480]   # drop from slow parent queue (pending only)
+TU_ERRICA_CAMPAIGN=sigma_grid_select_fixed8 \
+  TU_ERRICA_ARRAY=401-480 \
+  TU_ERRICA_PARALLEL=20 \
+  TU_ERRICA_MEM=128GB \
+  TU_ERRICA_TIME=96:00:00 \
+  TU_ERRICA_NICE=0 \
+  TU_ERRICA_PARTITION=mweber_gpu \
+  bash bash_interface/cluster/submit_tu_errica_fair.sh
+
+# --- full64 REDDIT only (preferred; NO scancel) ---
+bash bash_interface/cluster/submit_tu_errica_full64_reddit_only.sh
+# → tasks 3201–3840 · Nice=0 · netscratch logs · same campaign as parent
+# Overlap with 44509970 is fine; aggregate keeps best val per fold/hp.
+```
+
+Do **not** cancel **44509970** (or other full64 work) when launching REDDIT-only.
 
 ### Canonical exploratory results (W&B, do not cite as final)
 
