@@ -35,7 +35,14 @@ ERRICA_DATASETS: list[tuple[str, str]] = [
     ("collab", "COLLAB"),
 ]
 
-ERRICA_MODELS: list[str] = ["GIN", "GraphSAGE", "GCN", "GAT", "SiGMA_hetero"]
+ERRICA_MODELS: list[str] = [
+    "GIN",
+    "GraphSAGE",
+    "GCN",
+    "GAT",
+    "SiGMA_hetero",
+    "SiGMA_ungated",
+]
 
 WANDB_METRIC_KEYS: tuple[str, ...] = (
     "best_test_perf",
@@ -129,6 +136,7 @@ def _wandb_group(ds_tag: str, model: str, campaign: str = "canonical") -> str:
         "sigma_grid_eval_fixed8",
         "sigma_grid_eval_full64",
         "sigma_grid_eval_anchor_boost",
+        "sigma_grid_eval_fixed8_ungated",
     ):
         hp_tag = "selected"
     elif campaign == "canonical":

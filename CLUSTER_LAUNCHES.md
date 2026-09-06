@@ -1060,7 +1060,8 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **fixed8 COLLAB fill** | **44507757** | 1 (task 560) | ✅ COMPLETED |
 | **`sigma_grid_eval_fixed8`** | **44621846** | 210 | ✅ 209 + fill **44748166** |
 | **eval COLLAB f0 s0 fill** | **44748166** | 1 (task 181) | ✅ COMPLETED |
-| **`anchor_boost` select** | *(pending)* | 480 | PROTEINS+REDDIT paper a2g4 + variants |
+| **`anchor_boost` select** | **44840486** | 480 | 🔄 mweber `%20` Nice=0 · PROTEINS+REDDIT |
+| **`fixed8_ungated` select** | *(pending)* | 560 | same grid · `gate=none` |
 | `aggregate_sigma` → `sigma_grid_eval_fixed8` | — | 210 | ✅ selection done · eval **44621846** |
 
 ```bash

@@ -40,6 +40,7 @@ def collect_sigma_runs(
     manifest: dict[str, Any],
     states: list[str],
     campaign: str,
+    model_tag: str = "SiGMA_hetero",
 ) -> list[dict[str, Any]]:
     """Fetch sigma_grid_select runs listed in the manifest."""
     try:
@@ -56,7 +57,7 @@ def collect_sigma_runs(
         fold = int(task["fold"])
         hp_id = int(task["hp_id"])
         hp_tag = f"f{fold}_hp{hp_id}"
-        group = f"tu_errica_{ds_tag}_SiGMA_hetero_{campaign}_{hp_tag}"
+        group = f"tu_errica_{ds_tag}_{model_tag}_{campaign}_{hp_tag}"
         filters: dict[str, Any] = {"group": group, "state": {"$in": states}}
         try:
             runs = list(api.runs(path, filters=filters, per_page=10))
@@ -87,6 +88,8 @@ def collect_sigma_runs(
 
 def select_best_sigma(
     rows: list[dict[str, Any]],
+    *,
+    grids_dir: Path,
 ) -> dict[str, dict[str, dict[str, Any]]]:
     """Nested ds_tag → fold → best sigma grid entry."""
     best: dict[tuple[str, int], dict[str, Any]] = {}
@@ -95,7 +98,6 @@ def select_best_sigma(
         if key not in best or row["val_accuracy"] > best[key]["val_accuracy"]:
             best[key] = row
 
-    grids_dir = _REPO_ROOT / "configs/tu_errica/sigma_grids/grids"
     out: dict[str, dict[str, dict[str, Any]]] = {}
     for (ds_tag, fold), row in sorted(best.items()):
         grid_path = grids_dir / str(row["grid_file"])
@@ -126,6 +128,11 @@ def main() -> None:
         "(use sigma_grid_select for legacy budget_bio).",
     )
     parser.add_argument(
+        "--model-tag",
+        default="SiGMA_hetero",
+        help="W&B model tag in group names (SiGMA_hetero or SiGMA_ungated).",
+    )
+    parser.add_argument(
         "--out",
         type=Path,
         default=_REPO_ROOT / "configs/tu_errica/selections/sigma_fixed8_per_fold.json",
@@ -143,16 +150,26 @@ def main() -> None:
         manifest=manifest,
         states=states,
         campaign=args.campaign,
+        model_tag=args.model_tag,
     )
-    selection = select_best_sigma(rows)
+    grids_dir = args.manifest.resolve().parent / "grids"
+    selection = select_best_sigma(rows, grids_dir=grids_dir)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "model": "sigma_hetero",
+        "model": "sigma_hetero_ungated"
+        if args.model_tag == "SiGMA_ungated"
+        else "sigma_hetero",
+        "model_tag": args.model_tag,
         "campaign": args.campaign,
+        "manifest": str(args.manifest),
         "selection": selection,
     }
     args.out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    print(f"Wrote {args.out} ({sum(len(v) for v in selection.values())} folds)")
+    n_folds = sum(len(v) for v in selection.values())
+    print(
+        f"Wrote {args.out} ({n_folds} folds, model_tag={args.model_tag})",
+        file=sys.stderr,
+    )
 
 
 if __name__ == "__main__":

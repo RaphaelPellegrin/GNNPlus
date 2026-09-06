@@ -64,6 +64,8 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 | **3a-R§** | full64 **REDDIT only** | **44266493** | ⚠️ **81 OK / 559 FAIL** | included in FAILED rerun list |
 | **3a-R§2** | full64 **REDDIT only** (no cancel) | **44750843** | ❌ **scancel** | was mweber parallel; REDDIT continues via **44509970** |
 | **3a§-rerun** | full64 FAILED relaunch | **44509970** | 🔄 **464+ done** | 2479 tasks · ~20 run · 12 FAILED so far |
+| **3a-AB** | `sigma_grid_select` **anchor_boost** | **44840486** | 🔄 **147/480** | ~20 R · mweber |
+| **3a-U** | `sigma_grid_select` **fixed8 ungated** | *(pending)* | ⏳ | same 8-grid · `gate=none` · 560 |
 | **3a-fill** | fixed8 **COLLAB f9 hp7** fill | **44507757** | ✅ **COMPLETED** | task **560** · netscratch logs |
 | **3b** | `aggregate_sigma` | — | ✅ **70/70 folds** | `sigma_fixed8_per_fold.json` |
 | **4a–d** | `grid_eval` GIN/SAGE/GCN/GAT | 44100531 / 66 / 96 / **44165919** | ✅ **done** | classical column frozen |
@@ -177,6 +179,25 @@ bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_anc
 ```
 
 Blend into the main table: keep fixed8 for other datasets; replace PROTEINS/REDDIT with `sigma_grid_eval_anchor_boost`.
+
+### SiGMA ungated Errica (`fixed8_ungated`, 2026-09-06)
+
+Same **fixed8** 8-config grid on all 7 datasets, but `gnn.hybrid.gate=none`
+(`sigma-hetero-ungated-errica-base.yaml`). Fair gated vs ungated column.
+
+| Phase | Tasks |
+|-------|------:|
+| Select | **560** |
+| Eval | **210** |
+
+```bash
+bash bash_interface/cluster/submit_tu_errica_fixed8_ungated_select.sh
+# later:
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_fixed8_ungated
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_fixed8_ungated
+```
+
+Runs in parallel with gated fixed8 (done), anchor_boost **44840486**, full64 **44509970**.
 
 
 ### Priority: REDDIT-BINARY first (2026-09-03)

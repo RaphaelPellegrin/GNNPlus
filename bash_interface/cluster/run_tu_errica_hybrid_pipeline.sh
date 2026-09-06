@@ -27,6 +27,11 @@
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_select_anchor_boost
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_anchor_boost
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_anchor_boost
+#
+# SiGMA ungated (same fixed8 grid, gate=none):
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_select_fixed8_ungated
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_fixed8_ungated
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_fixed8_ungated
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_eval_gin
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_eval_sage
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh grid_eval_gcn
@@ -152,6 +157,23 @@ case "${phase}" in
             TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:00:00 TU_ERRICA_NICE=0 \
             TU_ERRICA_PARALLEL=20 TU_ERRICA_PARTITION=mweber_gpu \
             TU_ERRICA_SELECTION_FILE=configs/tu_errica/selections/sigma_anchor_boost_per_fold.json \
+            bash bash_interface/cluster/submit_tu_errica_fair.sh
+        ;;
+    sigma_grid_select_fixed8_ungated)
+        bash bash_interface/cluster/submit_tu_errica_fixed8_ungated_select.sh
+        ;;
+    aggregate_sigma_fixed8_ungated)
+        _run_python scripts/tu_errica/aggregate_sigma_hp_selection.py \
+            --campaign sigma_grid_select_fixed8_ungated \
+            --model-tag SiGMA_ungated \
+            --manifest configs/tu_errica/sigma_grids/manifest.json \
+            --out configs/tu_errica/selections/sigma_fixed8_ungated_per_fold.json
+        ;;
+    sigma_grid_eval_fixed8_ungated)
+        TU_ERRICA_CAMPAIGN=sigma_grid_eval_fixed8_ungated \
+            TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:00:00 TU_ERRICA_NICE=0 \
+            TU_ERRICA_PARALLEL=20 TU_ERRICA_PARTITION=mweber_gpu \
+            TU_ERRICA_SELECTION_FILE=configs/tu_errica/selections/sigma_fixed8_ungated_per_fold.json \
             bash bash_interface/cluster/submit_tu_errica_fair.sh
         ;;
     *)

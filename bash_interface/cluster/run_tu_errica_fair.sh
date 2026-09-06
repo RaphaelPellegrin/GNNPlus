@@ -57,14 +57,7 @@ case "${campaign}" in
         num_hp=$(python3 -c "import json; from pathlib import Path; p=Path('configs/tu_errica/${hp_model}_hp_grid.json'); print(len(json.load(p.open())['grid']))")
         num_tasks=$((num_datasets * num_hp * num_folds))
         ;;
-    grid_eval|sigma_grid_eval|sigma_grid_eval_fixed8|sigma_grid_eval_full64)
-        num_tasks=$((num_datasets * num_folds * num_seeds))
-        ;;
-    sigma_grid_eval_anchor_boost)
-        # PROTEINS + REDDIT-BINARY only (2 × 10 × 3).
-        num_tasks=$((2 * num_folds * num_seeds))
-        ;;
-    sigma_grid_select|sigma_grid_select_fixed8)
+    sigma_grid_select|sigma_grid_select_fixed8|sigma_grid_select_fixed8_ungated)
         num_tasks=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids/manifest.json'))['num_tasks'])")
         ;;
     sigma_grid_select_full64)
@@ -72,6 +65,13 @@ case "${campaign}" in
         ;;
     sigma_grid_select_anchor_boost)
         num_tasks=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids_anchor_boost/manifest.json'))['num_tasks'])")
+        ;;
+    grid_eval|sigma_grid_eval|sigma_grid_eval_fixed8|sigma_grid_eval_full64|sigma_grid_eval_fixed8_ungated)
+        num_tasks=$((num_datasets * num_folds * num_seeds))
+        ;;
+    sigma_grid_eval_anchor_boost)
+        # PROTEINS + REDDIT-BINARY only (2 × 10 × 3).
+        num_tasks=$((2 * num_folds * num_seeds))
         ;;
     *)
         log_message "Unknown TU_ERRICA_CAMPAIGN=${campaign}"
@@ -125,10 +125,15 @@ case "${campaign}" in
         dataset_idx=$((rest / num_folds))
         use_selection=1
         ;;
-    sigma_grid_select|sigma_grid_select_fixed8)
-        cfg="configs/tu_errica/sigma-hetero-errica-base.yaml"
+    sigma_grid_select|sigma_grid_select_fixed8|sigma_grid_select_fixed8_ungated)
+        if [[ "${campaign}" == *ungated* ]]; then
+            cfg="configs/tu_errica/sigma-hetero-ungated-errica-base.yaml"
+            model_tag="SiGMA_ungated"
+        else
+            cfg="configs/tu_errica/sigma-hetero-errica-base.yaml"
+            model_tag="SiGMA_hetero"
+        fi
         model_key="sigma_hetero"
-        model_tag="SiGMA_hetero"
         seed=$((seed_offset))
         read -r ds_tag fold_idx grid_rel hp_id < <(python3 -c "
 import json
@@ -182,12 +187,19 @@ print(t['ds_tag'], t['fold'], t['grid_file'], t['hp_id'])
         done
         emit_extra=(--sigma-grid-file "${sigma_grid_file}" --hp-id="${hp_id}")
         ;;
-    sigma_grid_eval|sigma_grid_eval_fixed8|sigma_grid_eval_full64)
-        cfg="configs/tu_errica/sigma-hetero-errica-base.yaml"
+    sigma_grid_eval|sigma_grid_eval_fixed8|sigma_grid_eval_full64|sigma_grid_eval_fixed8_ungated)
+        if [[ "${campaign}" == *ungated* ]]; then
+            cfg="configs/tu_errica/sigma-hetero-ungated-errica-base.yaml"
+            model_tag="SiGMA_ungated"
+        else
+            cfg="configs/tu_errica/sigma-hetero-errica-base.yaml"
+            model_tag="SiGMA_hetero"
+        fi
         model_key="sigma_hetero"
-        model_tag="SiGMA_hetero"
         if [ "${campaign}" = "sigma_grid_eval_full64" ]; then
             selection_file="${TU_ERRICA_SELECTION_FILE:-configs/tu_errica/selections/sigma_full64_per_fold.json}"
+        elif [ "${campaign}" = "sigma_grid_eval_fixed8_ungated" ]; then
+            selection_file="${TU_ERRICA_SELECTION_FILE:-configs/tu_errica/selections/sigma_fixed8_ungated_per_fold.json}"
         elif [ "${campaign}" = "sigma_grid_eval_fixed8" ]; then
             selection_file="${TU_ERRICA_SELECTION_FILE:-configs/tu_errica/selections/sigma_fixed8_per_fold.json}"
         else
@@ -233,6 +245,7 @@ esac
 
 if [[ "${campaign}" != sigma_grid_select \
     && "${campaign}" != sigma_grid_select_fixed8 \
+    && "${campaign}" != sigma_grid_select_fixed8_ungated \
     && "${campaign}" != sigma_grid_select_full64 \
     && "${campaign}" != sigma_grid_select_anchor_boost \
     && "${campaign}" != sigma_grid_eval_anchor_boost ]]; then
@@ -265,6 +278,7 @@ hp_tag="canonical"
 if [ "${hp_id}" -ge 0 ]; then
     if [[ "${campaign}" == sigma_grid_select \
         || "${campaign}" == sigma_grid_select_fixed8 \
+        || "${campaign}" == sigma_grid_select_fixed8_ungated \
         || "${campaign}" == sigma_grid_select_full64 \
         || "${campaign}" == sigma_grid_select_anchor_boost ]]; then
         hp_tag="f${fold_idx}_hp${hp_id}"
