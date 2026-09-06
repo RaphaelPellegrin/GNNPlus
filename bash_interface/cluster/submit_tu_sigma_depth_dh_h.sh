@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Submit TU Tab.17/18 protocol: SiGMA hetero gated vs ungated × L × d_h × H.
 #
-# 6 ds × 5 L × 4 d_h × 2 H × 2 gate × 2 LR × 5 seeds = 4800 jobs.
+# Default H ∈ {64, 8}:
+#   6 ds × 5 L × 4 d_h × 2 H × 2 gate × 2 LR × 5 seeds = 4800 jobs.
+#
+# Narrow fill H ∈ {4, 2} (same task map; does not remape H=64/8 jobs):
+#   TU_LDHH_HS="4 2" bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh
 #
 # Prerequisites:
 #   source ~/.gnnplus_env
@@ -10,12 +14,16 @@
 #   cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
 #   git pull
 #
-# Launch (phased — do NOT dump all 4800 at once unless intentional):
-#   # smoke: MUTAG L1 dh1 H64 gated+ungated lr001 seed0
+# Launch (phased):
+#   # smoke default H=64: MUTAG L1 dh1 gated+ungated lr001 seed0
 #   TU_LDHH_ARRAY=1,11 TU_LDHH_PARALLEL=2 \
+#     bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh
+#   # smoke narrow H=4:
+#   TU_LDHH_HS="4 2" TU_LDHH_ARRAY=1,11 TU_LDHH_PARALLEL=2 \
 #     bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh
 #   # MUTAG only (800 tasks)
 #   TU_LDHH_ARRAY=1-800 bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh
+#   TU_LDHH_HS="4 2" TU_LDHH_ARRAY=1-800 bash ...
 #
 # Paste JOBID into Paper_tu_sigma_depth_dh_h.md + CLUSTER_LAUNCHES.md
 
@@ -29,10 +37,17 @@ mkdir -p logs_gnnplus
 NUM_SEEDS="${TU_LDHH_NUM_SEEDS:-5}"
 NUM_LRS="${TU_LDHH_NUM_LRS:-2}"
 NUM_GATES="${TU_LDHH_NUM_GATES:-2}"
-NUM_H="${TU_LDHH_NUM_H:-2}"
 NUM_DH="${TU_LDHH_NUM_DH:-4}"
 NUM_L="${TU_LDHH_NUM_L:-5}"
 NUM_DATASETS="${TU_LDHH_NUM_DATASETS:-6}"
+TU_LDHH_HS="${TU_LDHH_HS:-64 8}"
+# shellcheck disable=SC2206
+HS_ARR=(${TU_LDHH_HS})
+NUM_H="${TU_LDHH_NUM_H:-${#HS_ARR[@]}}"
+if [ "${NUM_H}" -ne "${#HS_ARR[@]}" ]; then
+    echo "TU_LDHH_NUM_H=${NUM_H} != |Hs|=${#HS_ARR[@]} (Hs=${TU_LDHH_HS})"
+    exit 1
+fi
 NUM_TASKS="${TU_LDHH_NUM_TASKS:-$((NUM_DATASETS * NUM_L * NUM_DH * NUM_H * NUM_GATES * NUM_LRS * NUM_SEEDS))}"
 ARRAY_SPEC="${TU_LDHH_ARRAY:-1-${NUM_TASKS}}"
 PARALLEL="${TU_LDHH_PARALLEL:-20}"
@@ -40,6 +55,8 @@ PARTITION="${TU_LDHH_PARTITION:-mweber_gpu}"
 NICE="${TU_LDHH_NICE:-10000}"
 MEM="${TU_LDHH_MEM:-128GB}"
 TIME="${TU_LDHH_TIME:-96:00:00}"
+PER_DS=$((NUM_L * NUM_DH * NUM_H * NUM_GATES * NUM_LRS * NUM_SEEDS))
+H0="${HS_ARR[0]}"
 
 if [ -z "${GNNPLUS_OUT_DIR:-}" ]; then
     export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
@@ -63,7 +80,7 @@ sbatch_args=(
     --time="${TIME}"
     --gpus=1
     --output="logs_gnnplus/tu_LdhH_%A_%a.log"
-    --export=ALL,ENV_NAME=gnnplus,TU_LDHH_NUM_SEEDS="${NUM_SEEDS}",TU_LDHH_NUM_LRS="${NUM_LRS}",TU_LDHH_NUM_GATES="${NUM_GATES}",TU_LDHH_NUM_H="${NUM_H}",TU_LDHH_NUM_DH="${NUM_DH}",TU_LDHH_NUM_L="${NUM_L}",TU_LDHH_NUM_DATASETS="${NUM_DATASETS}",TU_LDHH_NUM_TASKS="${NUM_TASKS}",GNNPLUS_DATASET_DIR="${GNNPLUS_DATASET_DIR:-}",GNNPLUS_OUT_DIR="${GNNPLUS_OUT_DIR}"
+    --export=ALL,ENV_NAME=gnnplus,TU_LDHH_HS="${TU_LDHH_HS}",TU_LDHH_NUM_SEEDS="${NUM_SEEDS}",TU_LDHH_NUM_LRS="${NUM_LRS}",TU_LDHH_NUM_GATES="${NUM_GATES}",TU_LDHH_NUM_H="${NUM_H}",TU_LDHH_NUM_DH="${NUM_DH}",TU_LDHH_NUM_L="${NUM_L}",TU_LDHH_NUM_DATASETS="${NUM_DATASETS}",TU_LDHH_NUM_TASKS="${NUM_TASKS}",GNNPLUS_DATASET_DIR="${GNNPLUS_DATASET_DIR:-}",GNNPLUS_OUT_DIR="${GNNPLUS_OUT_DIR}"
 )
 
 if [ "${NICE}" != "0" ]; then
@@ -89,14 +106,14 @@ cat <<EOF
   Out:           \$GNNPLUS_OUT_DIR/tu_sigma_depth_dh_h/
 
   Grid:
-    L   ∈ {1, 2, 4, 8, 16}     (paper Tab.17/18 used L=12 — not in this grid)
-    d_h ∈ {1, 2, 4, 16}        (covers Tab.18 dh4 + Tab.17 dh16 + extremes)
-    H   ∈ {64, 8}
+    L   ∈ {1, 2, 4, 8, 16}
+    d_h ∈ {1, 2, 4, 16}
+    H   ∈ {${TU_LDHH_HS}}
     gate: headwise vs none (ungated)
 
-  Dataset blocks (800 tasks each):
-    MUTAG 1–800 · ENZYMES 801–1600 · PROTEINS 1601–2400
-    COLLAB 2401–3200 · IMDB 3201–4000 · REDDIT 4001–4800
+  Dataset blocks (${PER_DS} tasks each):
+    MUTAG 1–${PER_DS} · ENZYMES $((PER_DS+1))–$((2*PER_DS)) · …
+    (full 1–${NUM_TASKS})
 
   Per (ds,L,dh,H) block of 20:
     +0–4   gated   lr=0.001
@@ -104,7 +121,7 @@ cat <<EOF
     +10–14 ungated lr=0.001
     +15–19 ungated lr=0.01
 
-  Smoke: tasks 1,11 = MUTAG L1 dh1 H64 gated/ungated lr001 seed0
+  Smoke: tasks 1,11 = MUTAG L1 dh1 H${H0} gated/ungated lr001 seed0
 
   W&B: tu_L<k>_dh<m>_H<h>_<ds>_{SiGMA_hetero,SiGMA_ungated}_{lr001,lr01}
   Docs: Paper_tu_sigma_depth_dh_h.md

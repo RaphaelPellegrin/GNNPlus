@@ -15,17 +15,20 @@ Entity/project: [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/webe
 
 | | |
 |--|--|
-| **Status** | 🛑 **TO SUBMIT** after `git push` (GIN-free routing follow-up) |
-| **Submit** | `XU_GCS_PARTITION=gpu_h200 XU_GCS_PARALLEL=10 XU_GCS_NICE=0 bash bash_interface/cluster/submit_heterogeneity_xu_sigma_gcn_sage.sh` |
+| **Status** | ✅ **DONE** 40/40 gate dumps (2026-09-06) |
+| **SLURM** | **`44886381`** `1-40%10` all COMPLETED |
 | **When** | 2026-09-06 |
 | **Tasks** | 40 = 4 variants × 2 ds × 5 seeds |
 | **Variants** | `a0g2_gated` · `a0g2_ungated` · `a1g2_gated` · `a1g2_ungated` (`gnn_types=GCN,SAGE`) |
 | **Docs** | [`Paper_tu_gate_hetero_bridge.md`](Paper_tu_gate_hetero_bridge.md) |
-| **Logs** | `logs_gnnplus/xu_sigma_gcs_<JOBID>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/xu_sigma_gcs_44886381_<TASK>.log` |
 | **Outs** | `$GNNPLUS_OUT_DIR/heterogeneity/powerful_gnns/tu_xu_sigma_gcn_sage/<ds>_SiGMA_hetero_<variant>_seed<s>/` |
 | **Configs** | `configs/heterogeneity/powerful_gnns/sigma-gcn-sage-{a0g2,a1g2}-{gated,ungated}-ckpt.yaml` |
 
-Paste JOBID here after submit. Join with `--operators GCN,SAGE --lr-tag <variant>`.
+```bash
+ls $GNNPLUS_OUT_DIR/heterogeneity/powerful_gnns/tu_xu_sigma_gcn_sage/*/gate_values_per_graph.pt | wc -l
+# = 40
+```
 
 ### 🧪 GIN depth-routing synthetic (2-layer SiGMA, 20 jobs)
 
@@ -890,29 +893,27 @@ git pull
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🔄  RUNNING  ·  smoke 44876758 · MUTAG 44876760 (1-800)                 ║
+║  🔄  ENZYMES 44897907 (801-1600) · ✅ MUTAG 44876760 done                ║
 ║  🎯  TU Tab.17/18 L×d_h×H gated vs ungated                               ║
 ║  📄  Paper_tu_sigma_depth_dh_h.md                                        ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
 ```bash
-# already submitted:
-# smoke  44876758  ·  1,11%2
-# MUTAG  44876760  ·  1-800%20
-# next:
-TU_LDHH_ARRAY=801-1600  bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh  # ENZYMES
+# MUTAG done: 44876760 · 800/800
+# ENZYMES:    44897907 · 801-1600
 TU_LDHH_ARRAY=1601-2400 bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh  # PROTEINS
-TU_LDHH_ARRAY=2401-3200 bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh  # COLLAB
-TU_LDHH_ARRAY=3201-4000 bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh  # IMDB
-TU_LDHH_ARRAY=4001-4800 bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh  # REDDIT
+# TU_LDHH_ARRAY=2401-3200 bash ...  # COLLAB
+# TU_LDHH_ARRAY=3201-4000 bash ...  # IMDB
+# TU_LDHH_ARRAY=4001-4800 bash ...  # REDDIT
 ```
 
 | Field | Value |
 |-------|-------|
 | **Smoke** | ✅ **`44876758`** · `1,11` · `%2` |
-| **MUTAG** | ✅ **`44876760`** · `1-800` · `%20` |
-| **Rest** | 🛑 ENZYMES…REDDIT not yet |
+| **MUTAG** | ✅ **`44876760`** · `1-800` · **800/800 COMPLETED** |
+| **ENZYMES** | ✅ **`44897907`** · `801-1600` · running |
+| **Rest** | 🛑 PROTEINS…REDDIT not yet |
 | **Submit** | `bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh` |
 | **Tasks** | **4800** · dataset blocks of 800 · mem 128GB · 96h |
 | **Grid** | L∈{1,2,4,8,16} · d_h∈{1,2,4,16} · H∈{64,8} · gated/ungated · 2 LR · 5 seeds |
@@ -920,6 +921,33 @@ TU_LDHH_ARRAY=4001-4800 bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.s
 | **W&B** | `tu_L<k>_dh<m>_H<h>_<ds>_{SiGMA_hetero,SiGMA_ungated}_{lr001,lr01}` |
 | **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_depth_dh_h/` |
 | **Docs** | [`Paper_tu_sigma_depth_dh_h.md`](Paper_tu_sigma_depth_dh_h.md) |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
+║  🛑  PENDING  ·  H∈{4,2} fill of L×d_h×H gated vs ungated (+2400)        ║
+║  🎯  same map as above; TU_LDHH_HS="4 2" (does not remape H=64/8)         ║
+║  📄  Paper_tu_sigma_depth_dh_h.md                                        ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+# smoke MUTAG L1 dh1 H4 gated+ungated:
+TU_LDHH_HS="4 2" TU_LDHH_ARRAY=1,11 TU_LDHH_PARALLEL=2 \
+  bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh
+# then MUTAG 1-800; later 801-1600 …
+TU_LDHH_HS="4 2" TU_LDHH_ARRAY=1-800 \
+  bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *paste JOBID* |
+| **H** | `{4, 2}` via `TU_LDHH_HS="4 2"` |
+| **Tasks** | +2400 · same 800/ds blocks |
+| **W&B** | `tu_L*_dh*_H{4,2}_*` |
+| **Plots** | `fig_mutag_delta_heatmap_H{4,2}.png` after MUTAG |
 
 ---
 

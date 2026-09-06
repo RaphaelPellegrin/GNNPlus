@@ -7,7 +7,7 @@ capacity knobs that those tables held fixed.
 |------|-------------:|-------------:|---------------|
 | `L` (`layers_mp`) | 12 | 12 | **{1, 2, 4, 8, 16}** (L=12 omitted) |
 | `d_h` | 16 | 4 | **{1, 2, 4, 16}** |
-| `H` (`dim_inner`) | 64 | 64 | **{64, 8}** |
+| `H` (`dim_inner`) | 64 | 64 | **{64, 8}** (+ fill **{4, 2}**) |
 | Heads | a2g4 hetero | a2g4 hetero | same |
 | Gate | headwise only | headwise only | **headwise vs none** |
 
@@ -47,7 +47,10 @@ TU_LDHH_ARRAY=1-800 bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *paste JOBID* |
+| **Smoke** | ✅ **`44876758`** · tasks `1,11` · `%2` |
+| **MUTAG** | ✅ **`44876760`** · tasks `1-800` · `%20` · **800/800 COMPLETED** |
+| **ENZYMES** | ✅ **`44897907`** · tasks `801-1600` · `%20` |
+| **Other datasets** | 🛑 PROTEINS…REDDIT not yet (`1601-4800`) |
 | **Submit** | `bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh` |
 | **Worker** | `bash_interface/cluster/run_tu_sigma_depth_dh_h.sh` |
 | **Base cfg** | `configs/tu_sigma_homo_hetero/sigma-hetero-a2g4-anchor.yaml` |
@@ -70,6 +73,34 @@ Within each dataset, nest order: `L → d_h → H → gate → lr → seed`.
 Per `(L,d_h,H)` block of 20: gated lr001 · gated lr01 · ungated lr001 · ungated lr01.
 
 Smoke: **1** = MUTAG L1 dh1 H64 gated lr001 seed0 · **11** = ungated.
+
+---
+
+## H ∈ {4, 2} fill (narrow trunk)
+
+Same L / d_h / gate / LR / seed map as above; only `TU_LDHH_HS="4 2"` changes
+which `H` values occupy the H slots (task IDs 1–4800 again, but **different**
+W&B groups / out dirs — safe alongside the H=64/8 campaign).
+
+```bash
+# smoke: MUTAG L1 dh1 H4 gated+ungated
+TU_LDHH_HS="4 2" TU_LDHH_ARRAY=1,11 TU_LDHH_PARALLEL=2 \
+  bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh
+
+# MUTAG H=4/2 (800), then ENZYMES…
+TU_LDHH_HS="4 2" TU_LDHH_ARRAY=1-800 bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh
+# TU_LDHH_HS="4 2" TU_LDHH_ARRAY=801-1600 bash ...
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🛑 *paste JOBID* |
+| **H list** | `4 2` via `TU_LDHH_HS` |
+| **Tasks** | same blocks as H=64/8 (800/ds) |
+| **W&B** | `tu_L*_dh*_H{4,2}_*` |
+
+Plots (after MUTAG): `fig_mutag_delta_heatmap_H4.png`, `…_H2.png` via
+`python scripts/api_wanndb_query/aggregate_tu_depth_dh_h_mutag.py --H 4 2`.
 
 ---
 

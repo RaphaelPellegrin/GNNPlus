@@ -6,17 +6,20 @@
 # Sweep (overrides on sigma-hetero-a2g4-anchor.yaml):
 #   L   ∈ {1, 2, 4, 8, 16}     (gnn.layers_mp)   — note: paper used L=12
 #   d_h ∈ {1, 2, 4, 16}        (gnn.hybrid.d_h)
-#   H   ∈ {64, 8}              (gnn.dim_inner)
+#   H   ∈ {64, 8} by default; override via TU_LDHH_HS (e.g. "4 2")
 #   gate ∈ {headwise, none}
 #   lr  ∈ {0.001, 0.01} × 5 seeds
 #
 # Datasets: MUTAG, ENZYMES, PROTEINS, COLLAB, IMDB-BINARY, REDDIT-BINARY
 #
-# Layout (4800 tasks), dataset-first for phased launch:
+# Layout (4800 tasks for |H|=2), dataset-first for phased launch:
 #   task_id = ((((((ds * n_L + L) * n_dh + dh) * n_H + H)
 #               * n_gates + gate) * n_lrs + lr) * n_seeds + seed) + 1
-#   Per dataset = 5×4×2×2×2×5 = 800 tasks
+#   Per dataset = 5×4×|H|×2×2×5  (=800 when |H|=2)
 #     MUTAG 1–800 · ENZYMES 801–1600 · … · REDDIT 4001–4800
+#
+# Narrow H fill (same task map, different H list — does not remape H=64/8 jobs):
+#   TU_LDHH_HS="4 2" bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh
 #
 # W&B: tu_L{k}_dh{m}_H{h}_<ds>_{SiGMA_hetero,SiGMA_ungated}_{lr001,lr01}
 # Out: $GNNPLUS_OUT_DIR/tu_sigma_depth_dh_h/...
@@ -46,15 +49,20 @@ task_id=${SLURM_ARRAY_TASK_ID:-1}
 num_seeds="${TU_LDHH_NUM_SEEDS:-5}"
 num_lrs="${TU_LDHH_NUM_LRS:-2}"
 num_gates="${TU_LDHH_NUM_GATES:-2}"
-num_H="${TU_LDHH_NUM_H:-2}"
 num_dh="${TU_LDHH_NUM_DH:-4}"
 num_L="${TU_LDHH_NUM_L:-5}"
 num_datasets="${TU_LDHH_NUM_DATASETS:-6}"
-num_tasks="${TU_LDHH_NUM_TASKS:-$((num_datasets * num_L * num_dh * num_H * num_gates * num_lrs * num_seeds))}"
 
 layers=(1 2 4 8 16)
 dhs=(1 2 4 16)
-Hs=(64 8)
+# shellcheck disable=SC2206
+Hs=(${TU_LDHH_HS:-64 8})
+num_H="${TU_LDHH_NUM_H:-${#Hs[@]}}"
+if [ "${num_H}" -ne "${#Hs[@]}" ]; then
+  log_message "TU_LDHH_NUM_H=${num_H} != |Hs|=${#Hs[@]} (Hs=${Hs[*]})"
+  exit 1
+fi
+num_tasks="${TU_LDHH_NUM_TASKS:-$((num_datasets * num_L * num_dh * num_H * num_gates * num_lrs * num_seeds))}"
 datasets=(mutag enzymes proteins collab imdb_binary reddit_binary)
 dataset_names=(MUTAG ENZYMES PROTEINS COLLAB IMDB-BINARY REDDIT-BINARY)
 declare -A batch_for=(
