@@ -545,7 +545,7 @@ GCN_GIN_ROUTING_PARALLEL=3 \
 | **Main train toy** | ✅ **42432154** · Track A · **d_h=1** |
 | **Main train sigma** | ✅ **42432155** · Track B · **d_h=4** |
 | **dh_fill** | ✅ **DONE** Track A `d_h∈{2,3,4}` **45066651–53** · Track B `d_h∈{1,2,3}` **45066654–56** · 240/240 |
-| **routing_2 analysis** | `submit_gcn_gin_routing_2_pipeline.sh` → `results/gcn_gin_routing_2/analysis/` |
+| **routing_2 analysis** | 🔄 **45106382** analyze · **45106394** mask · **45106399** pairwise · **45106400** opp · **45106402** dump (1–80) → `results/gcn_gin_routing_2/analysis/` |
 | **Models** | SiGMA gated · SiGMA ungated · GCN-only · GIN-only |
 | **Dataset** | existing `$GNNPLUS_DATASET_DIR/GcnGinRouting` |
 | **Out** | `$GNNPLUS_OUT_DIR/gcn_gin_routing/{toy_dh2,toy_dh3,toy_dh4,sigma_dh1,sigma_dh2,sigma_dh3}/` |
@@ -864,6 +864,54 @@ git pull
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
+║  🔄  READY  ·  Tab.17/18 depth ablation L∈{4,2,1} gated+ungated · 720    ║
+║  🎯  SiGMA hetero vs ungated · H=64 · dh16+dh4 · paste JOBID after submit ║
+║  📄  Paper_tu_sigma_homo_hetero.md                                       ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+# --- local ---
+cd /Users/pellegrinraphael/Desktop/Academic_Research/Repos_GNN/GNNPlus
+git add bash_interface/cluster/run_tu_sigma_tab_depth.sh \
+        bash_interface/cluster/submit_tu_sigma_tab_depth.sh \
+        Paper_tu_sigma_homo_hetero.md \
+        CLUSTER_LAUNCHES.md
+git commit -m "$(cat <<'EOF'
+Add TU Tab.17/18 SiGMA gated vs ungated depth ablation at L∈{4,2,1}.
+
+EOF
+)"
+git push origin HEAD
+
+# --- cluster ---
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+# smoke then full
+TU_TAB_L_ARRAY=1,11 TU_TAB_L_PARALLEL=2 TU_TAB_L_NICE=0 \
+  bash bash_interface/cluster/submit_tu_sigma_tab_depth.sh
+TU_TAB_L_NICE=0 bash bash_interface/cluster/submit_tu_sigma_tab_depth.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🔄 paste after submit |
+| **Submit** | `bash_interface/cluster/submit_tu_sigma_tab_depth.sh` |
+| **Tasks** | `1-720%20` · L=4 `1–240` · L=2 `241–480` · L=1 `481–720` |
+| **Variants** | gated hetero ×2 LR + ungated ×2 LR |
+| **W&B** | `tu_L<k>_hh_*` (Tab.17) · `tu_L<k>_1x_*` (Tab.18) |
+| **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_tab_depth/` |
+| **Docs** | [`Paper_tu_sigma_homo_hetero.md`](Paper_tu_sigma_homo_hetero.md) |
+| **Logs** | `logs_gnnplus/tu_tab_L_<JOBID>_<TASK>.log` |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
 ║  ✅  SUBMITTED  ·  SLURM 44748984 (smoke) + 44748985 (full 1-60%20)       ║
 ║  🎯  TU gate-clamp eval · Tab.17+18 reported LRs · 2026-09-06            ║
 ║  📄  Paper_tu_sigma_homo_hetero.md                                       ║
@@ -1004,7 +1052,7 @@ squeue -u $USER -j 44930340,44930486,44930487,44930489,44930491 \
 | Field | Value |
 |-------|-------|
 | **ENZYMES** | ✅ **`44930486`** · `1201-2400` · `gpu_h200` |
-| **PROTEINS** | ✅ **`44930340`** · `2401-3600` · `gpu_h200` |
+| **PROTEINS** | ✅ **`44930340`** · `2401-3600` · `gpu_h200` (Priority) · slim **`45128155`** `1601-1920` `%5` mweber H∈{8,2} L∈{1,2} |
 | **COLLAB** | ✅ **`44930491`** · `3601-4800` · `gpu_h200` |
 | **IMDB** | ✅ **`44930487`** · `4801-6000` · `gpu_h200` |
 | **REDDIT** | ✅ **`44930489`** · `6001-7200` · `gpu_h200` |
@@ -1235,6 +1283,7 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **`a1g2_micro` eval PROTEINS** | **45067214** | 30 (1–30) | ✅ **72.2±2.9** |
 | **`a1g2_nci1_micro` select** | **45054174** | 40 | ✅ · agg → `sigma_a1g2_nci1_micro_per_fold.json` (10 folds) |
 | **`a1g2_nci1_micro` eval** | **45074636** | 30 (1–30) | ✅ **80.4±2.0** |
+| **`full64` eval P/NCI1/REDDIT** | **45131301** | 90 (31–90,151–180) | 🔄 submitted 2026-09-07 · skip COLLAB/ENZYMES/DD/IMDB |
 | **`fixed8_ungated` select** | **44869251** | 560 | ⏸️ **HELD** · `scontrol release 44869251` when ready |
 | `aggregate_sigma` → `sigma_grid_eval_fixed8` | — | 210 | ✅ selection done · eval **44621846** |
 

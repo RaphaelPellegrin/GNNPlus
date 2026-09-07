@@ -650,6 +650,70 @@ python scripts/gate_viz/eval_gate_clamp.py \
 
 ---
 
+## Tab.17/18 depth ablation — L ∈ {4, 2, 1} gated vs ungated
+
+**Goal:** same Tab.17 (`d_h=16`) / Tab.18 (`d_h=4`) hetero recipe (H=64, a2g4,
+2 LRs, 5 seeds, 6 datasets), but **`layers_mp ∈ {4, 2, 1}`** instead of L=12.
+Run **SiGMA hetero (gated)** and **SiGMA ungated** (`gate=none`) so depth
+columns can sit next to the L=12 Tab.17/18 numbers.
+
+Does **not** re-run GCN / GIN / SAGE / GAT / SiGMA homo. Distinct from the full
+L×d_h×H map ([`Paper_tu_sigma_depth_dh_h.md`](Paper_tu_sigma_depth_dh_h.md)).
+
+```bash
+# --- local (git first) ---
+cd /Users/pellegrinraphael/Desktop/Academic_Research/Repos_GNN/GNNPlus
+git add bash_interface/cluster/run_tu_sigma_tab_depth.sh \
+        bash_interface/cluster/submit_tu_sigma_tab_depth.sh \
+        Paper_tu_sigma_homo_hetero.md \
+        CLUSTER_LAUNCHES.md
+git commit -m "$(cat <<'EOF'
+Add TU Tab.17/18 SiGMA gated vs ungated depth ablation at L∈{4,2,1}.
+
+EOF
+)"
+git push origin HEAD
+
+# --- cluster ---
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+# smoke
+TU_TAB_L_ARRAY=1,11 TU_TAB_L_PARALLEL=2 TU_TAB_L_NICE=0 \
+  bash bash_interface/cluster/submit_tu_sigma_tab_depth.sh
+
+# full 720 (or per-depth: 1-240 / 241-480 / 481-720)
+TU_TAB_L_NICE=0 bash bash_interface/cluster/submit_tu_sigma_tab_depth.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **SLURM** | 🔄 paste JOBID after submit |
+| **Submit** | `bash_interface/cluster/submit_tu_sigma_tab_depth.sh` |
+| **Tasks** | `1-720%20` · 3 L × 2 tables × 6 ds × 4 var × 5 seeds |
+| **Depth blocks** | L=4 → `1–240` · L=2 → `241–480` · L=1 → `481–720` |
+| **Tab.17** | `d_h=16` · W&B `tu_L<k>_hh_<ds>_{SiGMA_hetero,SiGMA_ungated}_{lr001,lr01}` |
+| **Tab.18** | `d_h=4` · W&B `tu_L<k>_1x_<ds>_{SiGMA_hetero,SiGMA_ungated}_{lr001,lr01}` |
+| **Override** | `gnn.layers_mp` ∈ {4,2,1}; ungated → `gnn.hybrid.gate none` |
+| **Batches** | bio 64 · COLLAB 32 · IMDB 64 · REDDIT 16 |
+| **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_tab_depth/` |
+| **Logs** | `logs_gnnplus/tu_tab_L_<JOBID>_<TASK>.log` |
+
+Smoke: tasks **1,11** = MUTAG L4 Tab.17 gated / ungated lr001 seed0.
+
+Per-depth only:
+
+```bash
+TU_TAB_L_ARRAY=1-240   bash bash_interface/cluster/submit_tu_sigma_tab_depth.sh  # L=4
+TU_TAB_L_ARRAY=241-480 bash bash_interface/cluster/submit_tu_sigma_tab_depth.sh  # L=2
+TU_TAB_L_ARRAY=481-720 bash bash_interface/cluster/submit_tu_sigma_tab_depth.sh  # L=1
+```
+
+---
+
 ## Depth × d_h × H gated vs ungated (Tab.17/18 protocol)
 
 Full capacity map: **L∈{1,2,4,8,16}**, **d_h∈{1,2,4,16}**, **H∈{64,8}**, gated vs
