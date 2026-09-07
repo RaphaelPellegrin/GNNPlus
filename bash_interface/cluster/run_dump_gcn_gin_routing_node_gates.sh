@@ -2,7 +2,8 @@
 # =============================================================================
 # Dump per-node MP gate γ for GCN/GIN routing gated runs (best checkpoint).
 #
-# One array task per gated run: 2 tracks × 2 LRs × 5 seeds = 20 tasks.
+# One array task per gated run:
+#   num_tracks × 2 LRs × 5 seeds  (default 8×2×5 = 80 with paper + d_h fill)
 #
 # Writes per run_dir:
 #   gate_values_per_node.pt
@@ -32,10 +33,17 @@ source "${SCRIPT_DIR}/common_env.sh"
 task_id=${SLURM_ARRAY_TASK_ID:-1}
 num_seeds="${GCN_GIN_GATE_DUMP_NUM_SEEDS:-5}"
 num_lrs="${GCN_GIN_GATE_DUMP_NUM_LRS:-2}"
-num_tracks="${GCN_GIN_GATE_DUMP_NUM_TRACKS:-2}"
+
+# SLURM --export splits on commas; submit passes semicolon-separated tracks.
+tracks_raw="${GCN_GIN_GATE_DUMP_TRACKS:-toy;sigma;toy_dh2;toy_dh3;toy_dh4;sigma_dh1;sigma_dh2;sigma_dh3}"
+tracks_csv="${tracks_raw//;/,}"
+IFS=',' read -r -a tracks <<< "${tracks_csv}"
+num_tracks="${#tracks[@]}"
+if [ -n "${GCN_GIN_GATE_DUMP_NUM_TRACKS:-}" ]; then
+  num_tracks="${GCN_GIN_GATE_DUMP_NUM_TRACKS}"
+fi
 num_tasks=$((num_tracks * num_lrs * num_seeds))
 
-tracks=(toy sigma)
 lrs=(lr001 lr01)
 
 if [ "$task_id" -lt 1 ] || [ "$task_id" -gt "$num_tasks" ]; then
@@ -48,6 +56,11 @@ seed=$((idx % num_seeds))
 rest=$((idx / num_seeds))
 lr_idx=$((rest % num_lrs))
 track_idx=$((rest / num_lrs))
+
+if [ "${track_idx}" -ge "${#tracks[@]}" ]; then
+  log_message "track_idx=${track_idx} out of range for tracks=(${tracks[*]})"
+  exit 1
+fi
 
 track="${tracks[$track_idx]}"
 lr_tag="${lrs[$lr_idx]}"

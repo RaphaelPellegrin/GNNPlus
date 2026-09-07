@@ -81,16 +81,18 @@ MASK_LABELS: dict[MaskMode, str] = {
 # Zoom y-axis so masked-head drops (e.g. τ=1 mask GIN → ~0.44) are visible.
 MASK_ABLATION_YMIN: float = 0.3
 MASK_ABLATION_YMAX: float = 1.02
-TRACK_ORDER: tuple[str, ...] = ("toy", "sigma")
-TRACK_LABELS: dict[str, str] = {
-    "toy": r"Track A (Toy, $d_h{=}1$)",
-    "sigma": r"Track B (SiGMA, PyG GIN/GCN, $d_h{=}4$)",
-}
 METRIC_PALETTE: dict[str, str] = {
     "acc_all": "#E45756",
     "acc_tau0": "#4C72B0",
     "acc_tau1": "#DD8452",
 }
+
+from scripts.synthetic.gcn_gin_routing_tracks import (  # noqa: E402
+    DEFAULT_TRACKS_CSV,
+    ordered_tracks,
+    subplot_grid,
+    track_label,
+)
 
 
 @dataclass(frozen=True)
@@ -136,7 +138,7 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument(
         "--tracks",
         type=str,
-        default="toy,sigma",
+        default=DEFAULT_TRACKS_CSV,
         help="Comma-separated tracks.",
     )
     parser.add_argument(
@@ -513,8 +515,7 @@ def _plot_mask_ablation(
         upper_lookup = std_lookup
 
     summary_tracks = {str(r["track"]) for r in summary}
-    tracks = [t for t in TRACK_ORDER if t in summary_tracks]
-    tracks.extend(sorted(summary_tracks - set(tracks)))
+    tracks = ordered_tracks(summary_tracks)
 
     metric_specs = (
         ("acc_all", "All graphs"),
@@ -524,11 +525,11 @@ def _plot_mask_ablation(
     bar_w = 0.24
     offsets = (-bar_w, 0.0, bar_w)
 
-    fig, axes = plt.subplots(1, len(tracks), figsize=(6.8 * len(tracks), 5.0), squeeze=False)
+    fig, axes, _, _ = subplot_grid(len(tracks), ncols=4, col_w=5.5, row_h=4.8)
     legend_handles: list = []
     legend_labels: list[str] = []
 
-    for ax_idx, (ax, track) in enumerate(zip(axes[0], tracks, strict=True)):
+    for ax_idx, (ax, track) in enumerate(zip(axes, tracks, strict=True)):
         x = np.arange(len(MASK_MODES))
         for offset, (metric, label) in zip(offsets, metric_specs, strict=True):
             vals = [
@@ -563,7 +564,7 @@ def _plot_mask_ablation(
         ax.set_xticklabels([MASK_LABELS[m] for m in MASK_MODES], rotation=12, ha="right")
         ax.set_ylim(ymin, ymax)
         ax.set_ylabel("Test accuracy")
-        ax.set_title(TRACK_LABELS.get(track, track))
+        ax.set_title(track_label(track))
         ax.grid(axis="y", alpha=0.22)
 
     fig.legend(
@@ -577,7 +578,7 @@ def _plot_mask_ablation(
     )
     fig.suptitle(
         f"MP head masking at eval (5-seed mean, min–max whiskers, {_format_lr_tag(lr_tag)})",
-        y=1.02,
+        y=1.01,
         fontsize=12,
     )
     fig.tight_layout(rect=(0.0, 0.06, 1.0, 0.98))
@@ -638,7 +639,7 @@ def plot_mask_ablation_from_summary_csv(
     ymin: float = MASK_ABLATION_YMIN,
     model: str = "a0g2_gated",
     lr_tag: str = "lr001",
-    tracks: Sequence[str] = ("toy", "sigma"),
+    tracks: Sequence[str] = (),
 ) -> None:
     """Regenerate mask ablation bar chart + table from an existing summary CSV."""
     summary = _load_mask_summary_csv(summary_path)
@@ -646,6 +647,12 @@ def plot_mask_ablation_from_summary_csv(
     per_run = _load_mask_per_run_csv(per_run_path) if per_run_path.is_file() else None
     fig_path = out_dir / "fig_mask_ablation.png"
     paper_fig_path = out_dir / "paper_figures" / "fig06_mask_ablation.png"
+
+    track_list = (
+        [t.strip() for t in tracks if t.strip()]
+        if tracks
+        else ordered_tracks({str(r["track"]) for r in summary})
+    )
 
     _plot_mask_ablation(summary, fig_path, per_run=per_run, dpi=dpi, ymin=ymin, lr_tag=lr_tag)
     _plot_mask_ablation(summary, paper_fig_path, per_run=per_run, dpi=dpi, ymin=ymin, lr_tag=lr_tag)
@@ -656,7 +663,6 @@ def plot_mask_ablation_from_summary_csv(
     )
 
     table_path = out_dir / "paper_figures" / "fig06_mask_ablation_table.png"
-    track_list = [t.strip() for t in tracks if t.strip()]
     for track in track_list:
         track_table = table_path if len(track_list) == 1 else table_path.with_name(
             f"fig06_mask_ablation_table_{track}.png",

@@ -50,6 +50,13 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
+from scripts.synthetic.gcn_gin_routing_tracks import (  # noqa: E402
+    DEFAULT_TRACKS_CSV,
+    TRACK_LABELS,
+    TRACK_ORDER,
+    ordered_tracks,
+)
+
 PairOutcome = Literal["both_correct", "only_tau0", "only_tau1", "both_wrong"]
 ModelKind = Literal[
     "oracle_gcn_rule",
@@ -175,7 +182,7 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument(
         "--tracks",
         type=str,
-        default="toy,sigma",
+        default=DEFAULT_TRACKS_CSV,
         help="Comma-separated tracks.",
     )
     parser.add_argument(
@@ -610,11 +617,13 @@ _MODEL_ORDER: tuple[ModelKind, ...] = (
     "ungated",
 )
 
-TRACK_ORDER: tuple[str, ...] = ("toy", "sigma")
-TRACK_LABELS: dict[str, str] = {
-    "toy": r"Track A (Toy, $d_h{=}1$)",
-    "sigma": r"Track B (SiGMA, PyG GIN/GCN, $d_h{=}4$)",
-}
+# Bar chart only: oracles are degenerate (100% τ0-only or τ1-only) and omitted.
+_MODEL_ORDER_PLOT: tuple[ModelKind, ...] = (
+    "gcn_only",
+    "gin_only",
+    "gated",
+    "ungated",
+)
 
 _OUTCOME_COLORS = {
     "both_correct": "#55A868",
@@ -641,13 +650,18 @@ def _plot_pair_outcomes(
     """Stacked bar chart of pair-level outcomes by track and model."""
     means = _mean_summary_fractions(summary)
     summary_tracks = {s.track for s in summary}
-    tracks = [t for t in TRACK_ORDER if t in summary_tracks]
-    tracks.extend(sorted(summary_tracks - set(tracks)))
-    models = [m for m in _MODEL_ORDER if any((t, m) in means for t in tracks)]
+    tracks = ordered_tracks(summary_tracks)
+    models = [m for m in _MODEL_ORDER_PLOT if any((t, m) in means for t in tracks)]
     if not models:
         raise ValueError("No summary rows to plot.")
 
-    fig_w = max(9.0, 1.35 * len(models))
+    n_pairs_vals = sorted({s.n_pairs for s in summary})
+    if len(n_pairs_vals) == 1:
+        n_pairs_label = str(n_pairs_vals[0])
+    else:
+        n_pairs_label = "/".join(str(n) for n in n_pairs_vals)
+
+    fig_w = max(8.0, 1.5 * len(models))
     fig, axes = plt.subplots(len(tracks), 1, figsize=(fig_w, 5.0 * len(tracks)), squeeze=False)
     x = np.arange(len(models))
     bar_w = 0.62
@@ -699,7 +713,8 @@ def _plot_pair_outcomes(
         framealpha=0.95,
     )
     fig.suptitle(
-        f"Opposite-sign τ pairs: per-pair outcomes (5-seed mean, {lr_tag}, n≈228 pairs/test)",
+        f"Opposite-sign τ pairs: pair-level outcomes "
+        f"(5-seed mean, {lr_tag}, n={n_pairs_label} pairs/track, test)",
         y=1.01,
         fontsize=12,
     )
@@ -717,7 +732,7 @@ def _print_report(
     """Print human-readable verification summary."""
     means = _mean_summary_fractions(summary)
     print(f"\n=== Opposite-sign pairs (n={len(pairs)} per track, test split) ===\n")
-    for track in [t for t in TRACK_ORDER if t in {s.track for s in summary}]:
+    for track in ordered_tracks({s.track for s in summary}):
         print(f"Track: {track}")
         for model in _MODEL_ORDER:
             m = means.get((track, model))

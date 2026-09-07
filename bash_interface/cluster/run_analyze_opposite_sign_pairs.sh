@@ -30,12 +30,15 @@ out_dir="${GCN_GIN_OPPOSITE_OUT_DIR:-${REPO_ROOT}/results/gcn_gin_routing/analys
 lr_tag="${GCN_GIN_OPPOSITE_LR_TAG:-lr001}"
 from_csv="${GCN_GIN_OPPOSITE_FROM_CSV:-${out_dir}/pairwise_baseline_per_graph.csv}"
 include_gated="${GCN_GIN_OPPOSITE_INCLUDE_GATED:-0}"
+tracks="${GCN_GIN_OPPOSITE_TRACKS:-toy,sigma,toy_dh2,toy_dh3,toy_dh4,sigma_dh1,sigma_dh2,sigma_dh3}"
+tracks="${tracks//;/,}"
 
 cmd=(
   python scripts/synthetic/analyze_opposite_sign_pairs.py
   --dataset-dir "${GNNPLUS_DATASET_DIR}"
   --out-dir "${out_dir}"
   --lr-tag "${lr_tag}"
+  --tracks "${tracks}"
   --device auto
 )
 

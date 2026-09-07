@@ -23,6 +23,8 @@ fi
 results_root="${GCN_GIN_PAIRWISE_RESULTS_ROOT:-${GNNPLUS_OUT_DIR}/gcn_gin_routing}"
 out_dir="${GCN_GIN_PAIRWISE_OUT_DIR:-${REPO_ROOT}/results/gcn_gin_routing/analysis}"
 lr_tag="${GCN_GIN_PAIRWISE_LR_TAG:-lr001}"
+tracks_display="${GCN_GIN_PAIRWISE_TRACKS:-toy,sigma,toy_dh2,toy_dh3,toy_dh4,sigma_dh1,sigma_dh2,sigma_dh3}"
+tracks_export="${tracks_display//,/\;}"
 
 chmod +x bash_interface/cluster/run_compare_gcn_gin_baselines_per_graph.sh
 
@@ -32,13 +34,14 @@ export_list+=",GNNPLUS_DATASET_DIR=${GNNPLUS_DATASET_DIR}"
 export_list+=",GCN_GIN_PAIRWISE_RESULTS_ROOT=${results_root}"
 export_list+=",GCN_GIN_PAIRWISE_OUT_DIR=${out_dir}"
 export_list+=",GCN_GIN_PAIRWISE_LR_TAG=${lr_tag}"
+export_list+=",GCN_GIN_PAIRWISE_TRACKS=${tracks_export}"
 
 job_id="$(
   sbatch --parsable \
     --job-name=gcn_gin_pairwise \
     --partition="${GCN_GIN_PAIRWISE_PARTITION:-mweber_gpu}" \
     --mem="${GCN_GIN_PAIRWISE_MEM:-16GB}" \
-    --time="${GCN_GIN_PAIRWISE_TIME:-01:00:00}" \
+    --time="${GCN_GIN_PAIRWISE_TIME:-04:00:00}" \
     --gpus=1 \
     --output="logs_gnnplus/gcn_gin_pairwise_%j.log" \
     --export="${export_list}" \
@@ -50,6 +53,7 @@ cat <<EOF
 === GCN/GIN pairwise per-graph comparison submitted ===
   JOBID:     ${job_id}
   Results:   ${results_root}
+  Tracks:    ${tracks_display}
   Output:    ${out_dir}/pairwise_baseline_*.csv
   Figure:    ${out_dir}/paper_figures/fig05_pairwise_baseline_comparison.png
   Logs:      logs_gnnplus/gcn_gin_pairwise_${job_id}.log

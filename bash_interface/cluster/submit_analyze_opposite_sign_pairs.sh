@@ -28,6 +28,8 @@ out_dir="${GCN_GIN_OPPOSITE_OUT_DIR:-${REPO_ROOT}/results/gcn_gin_routing/analys
 lr_tag="${GCN_GIN_OPPOSITE_LR_TAG:-lr001}"
 from_csv="${GCN_GIN_OPPOSITE_FROM_CSV:-${out_dir}/pairwise_baseline_per_graph.csv}"
 include_gated="${GCN_GIN_OPPOSITE_INCLUDE_GATED:-0}"
+tracks_display="${GCN_GIN_OPPOSITE_TRACKS:-toy,sigma,toy_dh2,toy_dh3,toy_dh4,sigma_dh1,sigma_dh2,sigma_dh3}"
+tracks_export="${tracks_display//,/\;}"
 
 chmod +x bash_interface/cluster/run_analyze_opposite_sign_pairs.sh
 
@@ -39,16 +41,17 @@ export_list+=",GCN_GIN_OPPOSITE_OUT_DIR=${out_dir}"
 export_list+=",GCN_GIN_OPPOSITE_LR_TAG=${lr_tag}"
 export_list+=",GCN_GIN_OPPOSITE_FROM_CSV=${from_csv}"
 export_list+=",GCN_GIN_OPPOSITE_INCLUDE_GATED=${include_gated}"
+export_list+=",GCN_GIN_OPPOSITE_TRACKS=${tracks_export}"
 
 # Login-node fast path: no GPU if CSV exists and gated eval is off.
 partition="${GCN_GIN_OPPOSITE_PARTITION:-mweber_gpu}"
 mem="${GCN_GIN_OPPOSITE_MEM:-16GB}"
-time_limit="${GCN_GIN_OPPOSITE_TIME:-01:00:00}"
+time_limit="${GCN_GIN_OPPOSITE_TIME:-02:00:00}"
 sbatch_extra=()
 if [[ -f "${from_csv}" && "${include_gated}" != "1" ]]; then
   partition="${GCN_GIN_OPPOSITE_PARTITION:-serial_requeue}"
   mem="${GCN_GIN_OPPOSITE_MEM:-8GB}"
-  time_limit="${GCN_GIN_OPPOSITE_TIME:-00:15:00}"
+  time_limit="${GCN_GIN_OPPOSITE_TIME:-00:30:00}"
 else
   sbatch_extra+=(--gpus=1)
 fi
@@ -71,6 +74,7 @@ cat <<EOF
 === Opposite-sign τ pair analysis submitted ===
   JOBID:     ${job_id}
   CSV:       ${from_csv}
+  Tracks:    ${tracks_display}
   Gated:     ${include_gated} (1 = SiGMA gated + ungated)
   Output:    ${out_dir}/opposite_sign_pair_summary.csv
   Figure:    ${out_dir}/paper_figures/fig07_opposite_sign_pair_outcomes.png

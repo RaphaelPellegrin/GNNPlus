@@ -58,6 +58,14 @@ from GNNPlus.gcn_gin_routing_gate_tracking import (
     hybrid_head_indices,
 )
 from GNNPlus.hybrid_gate_tracking import _unwrap_model
+from scripts.synthetic.gcn_gin_routing_tracks import (
+    DEFAULT_TRACKS_CSV,
+    TRACK_LABELS as GATE_BY_TYPE_TRACK_LABELS,
+    TRACK_ORDER,
+    ordered_tracks,
+    subplot_grid,
+    track_label,
+)
 
 RUN_NAME_RE = re.compile(
     r"^(?P<model>.+)_lr(?P<lr_tag>\d+)_seed(?P<seed>\d+)$",
@@ -140,8 +148,8 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument(
         "--tracks",
         type=str,
-        default="toy,sigma",
-        help="Comma-separated tracks to analyze (toy,sigma).",
+        default=DEFAULT_TRACKS_CSV,
+        help="Comma-separated tracks (paper + d_h fill stems).",
     )
     parser.add_argument(
         "--lr-tag",
@@ -509,13 +517,13 @@ def _plot_baseline_per_type(
     summary: Sequence[dict[str, Any]],
     out_path: Path,
 ) -> None:
-    """Grouped bar chart: per-type test accuracy by model (toy vs sigma panels)."""
-    tracks = sorted({str(row["track"]) for row in summary})
-    fig, axes = plt.subplots(1, len(tracks), figsize=(5.5 * len(tracks), 4.5), squeeze=False)
+    """Grouped bar chart: per-type test accuracy by model (one panel per track)."""
+    tracks = ordered_tracks({str(row["track"]) for row in summary})
+    fig, axes, _, _ = subplot_grid(len(tracks), ncols=4, col_w=5.5, row_h=4.5)
     bar_w = 0.36
     tau_colors = {"tau0": "#4C72B0", "tau1": "#DD8452"}
 
-    for ax, track in zip(axes[0], tracks, strict=True):
+    for ax_idx, (ax, track) in enumerate(zip(axes, tracks, strict=True)):
         subset = [r for r in summary if r["track"] == track]
         by_model = {str(r["model"]): r for r in subset}
         models = [m for m in MODEL_ORDER if m in by_model]
@@ -547,12 +555,13 @@ def _plot_baseline_per_type(
         ax.set_xticklabels([MODEL_LABELS.get(m, m) for m in models], rotation=15, ha="right")
         ax.set_ylim(0.0, 1.05)
         ax.set_ylabel("Test accuracy")
-        ax.set_title(f"Track {track}")
+        ax.set_title(track_label(track))
         ax.axhline(0.5, color="gray", linestyle=":", linewidth=0.8)
         ax.grid(axis="y", alpha=0.25)
+        if ax_idx == 0:
+            ax.legend(loc="lower right", fontsize=9)
 
-    axes[0, 0].legend(loc="lower right", fontsize=9)
-    fig.suptitle("Per-type test accuracy (mean over seeds)", y=1.02, fontsize=12)
+    fig.suptitle("Per-type test accuracy (mean over seeds)", y=1.01, fontsize=12)
     fig.tight_layout()
     out_path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(out_path, dpi=160, bbox_inches="tight")
@@ -560,11 +569,6 @@ def _plot_baseline_per_type(
     plt.close(fig)
 
 
-TRACK_ORDER: tuple[str, ...] = ("toy", "sigma")
-GATE_BY_TYPE_TRACK_LABELS: dict[str, str] = {
-    "toy": r"Track A (Toy, $d_h{=}1$)",
-    "sigma": r"Track B (SiGMA, PyG GIN/GCN, $d_h{=}4$)",
-}
 # GIN / GCN head colors (τ=0 full, τ=1 lighter) — unchanged from original figure.
 GATE_BAR_COLORS: tuple[str, ...] = ("#55A868", "#55A868", "#4C72B0", "#4C72B0")
 GATE_BAR_ALPHAS: tuple[float, ...] = (1.0, 0.55, 1.0, 0.55)
@@ -595,11 +599,8 @@ def _plot_gates_by_type(
         logging.warning("No gated runs with gate stats — skipping gate figure.")
         return
 
-    available = {r.track for r in gated}
-    tracks = [t for t in TRACK_ORDER if t in available]
-    tracks.extend(sorted(available - set(tracks)))
-
-    fig, axes = plt.subplots(1, len(tracks), figsize=(6.8 * len(tracks), 5.0), squeeze=False)
+    tracks = ordered_tracks({r.track for r in gated})
+    fig, axes, _, _ = subplot_grid(len(tracks), ncols=4, col_w=5.5, row_h=4.8)
     labels = [
         r"$\tau{=}0$ GIN $\gamma$",
         r"$\tau{=}1$ GIN $\gamma$",
@@ -612,7 +613,7 @@ def _plot_gates_by_type(
         for c, a in zip(GATE_BAR_COLORS, GATE_BAR_ALPHAS, strict=True)
     ]
 
-    for ax, track in zip(axes[0], tracks, strict=True):
+    for ax, track in zip(axes, tracks, strict=True):
         subset = [r for r in gated if r.track == track]
         series = {
             (0, "GIN"): [r.gin_gate_tau0 for r in subset],
@@ -639,12 +640,12 @@ def _plot_gates_by_type(
         ax.set_xticklabels(labels, rotation=20, ha="right", fontsize=9)
         ax.set_ylim(0.0, 1.05)
         ax.set_ylabel(r"Root gate $\gamma$ (layer 0)")
-        ax.set_title(GATE_BY_TYPE_TRACK_LABELS.get(track, track))
+        ax.set_title(track_label(track))
         ax.grid(axis="y", alpha=0.22)
 
     fig.suptitle(
         f"Mean root MP gate by graph type (5-seed mean ± std, {_format_lr_tag(lr_tag)})",
-        y=1.02,
+        y=1.01,
         fontsize=12,
     )
     fig.tight_layout(rect=(0.0, 0.0, 1.0, 0.98))

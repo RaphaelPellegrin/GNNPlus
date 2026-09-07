@@ -64,10 +64,10 @@ chmod +x bash_interface/cluster/run_analyze_gcn_gin_routing_results.sh
 
 PARTITION="${GCN_GIN_ANALYZE_PARTITION:-mweber_gpu}"
 MEM="${GCN_GIN_ANALYZE_MEM:-32GB}"
-TIME="${GCN_GIN_ANALYZE_TIME:-02:00:00}"
+TIME="${GCN_GIN_ANALYZE_TIME:-08:00:00}"
 
 # SLURM --export splits on commas; encode multi-track lists with semicolons.
-_analyze_tracks_display="${GCN_GIN_ANALYZE_TRACKS:-toy,sigma}"
+_analyze_tracks_display="${GCN_GIN_ANALYZE_TRACKS:-toy,sigma,toy_dh2,toy_dh3,toy_dh4,sigma_dh1,sigma_dh2,sigma_dh3}"
 _analyze_tracks_export="${_analyze_tracks_display//,/\;}"
 
 export_list="ALL,ENV_NAME=gnnplus"

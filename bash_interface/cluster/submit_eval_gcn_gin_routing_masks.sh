@@ -22,7 +22,7 @@ fi
 
 results_root="${GCN_GIN_MASK_RESULTS_ROOT:-${GNNPLUS_OUT_DIR}/gcn_gin_routing}"
 out_dir="${GCN_GIN_MASK_OUT_DIR:-${REPO_ROOT}/results/gcn_gin_routing/analysis}"
-tracks_display="${GCN_GIN_MASK_TRACKS:-toy,sigma}"
+tracks_display="${GCN_GIN_MASK_TRACKS:-toy,sigma,toy_dh2,toy_dh3,toy_dh4,sigma_dh1,sigma_dh2,sigma_dh3}"
 # sbatch --export splits on commas; use semicolons in the exported value.
 tracks_export="${tracks_display//,/\;}"
 lr_tag="${GCN_GIN_MASK_LR_TAG:-lr001}"
@@ -51,10 +51,11 @@ job_id="$(
     --job-name=gcn_gin_mask \
     --partition="${GCN_GIN_MASK_PARTITION:-mweber_gpu}" \
     --mem="${GCN_GIN_MASK_MEM:-16GB}" \
-    --time="${GCN_GIN_MASK_TIME:-01:00:00}" \
+    --time="${GCN_GIN_MASK_TIME:-04:00:00}" \
     --gpus=1 \
     --output="logs_gnnplus/gcn_gin_mask_%j.log" \
     --export="${export_list}" \
+    ${GCN_GIN_MASK_DEPENDENCY:+--dependency="${GCN_GIN_MASK_DEPENDENCY}"} \
     bash_interface/cluster/run_eval_gcn_gin_routing_masks.sh
 )"
 

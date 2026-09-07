@@ -25,12 +25,68 @@ Same protocol (4 models × 2 LR × 5 seeds = **40 jobs/track**):
 |------|-------|----:|----------:|--------|
 | `toy` | ROUTING_* | 1 | 2 | ✅ paper A |
 | `sigma` | PyG GIN/GCN | 4 | 4 | ✅ paper B |
-| `toy_dh2` | ROUTING_* | 2 | 4 | 🛑 submit |
-| `toy_dh3` | ROUTING_* | 3 | 6 | 🛑 submit |
-| `toy_dh4` | ROUTING_* | 4 | 8 | 🛑 submit |
-| `sigma_dh1` | PyG GIN/GCN | 1 | 1 | 🛑 submit |
-| `sigma_dh2` | PyG GIN/GCN | 2 | 2 | 🛑 submit |
-| `sigma_dh3` | PyG GIN/GCN | 3 | 3 | 🛑 submit |
+| `toy_dh2` | ROUTING_* | 2 | 4 | ✅ **45066651** · 40/40 |
+| `toy_dh3` | ROUTING_* | 3 | 6 | ✅ **45066652** · 40/40 |
+| `toy_dh4` | ROUTING_* | 4 | 8 | ✅ **45066653** · 40/40 |
+| `sigma_dh1` | PyG GIN/GCN | 1 | 1 | ✅ **45066654** · 40/40 |
+| `sigma_dh2` | PyG GIN/GCN | 2 | 2 | ✅ **45066655** · 40/40 |
+| `sigma_dh3` | PyG GIN/GCN | 3 | 3 | ✅ **45066656** · 40/40 |
+
+### Analysis package → `results/gcn_gin_routing_2/`
+
+Same Appendix H post-processing as paper (`results/gcn_gin_routing/`), but for
+**all 8 stems** and written under `gcn_gin_routing_2` (does not overwrite paper figs).
+
+| Step | Script | Outputs |
+|------|--------|---------|
+| Analyze | `submit_analyze_gcn_gin_routing_results.sh` | `per_run_metrics.csv`, `fig_baseline_per_type`, `fig_gate_by_type` |
+| Mask | `submit_eval_gcn_gin_routing_masks.sh` | `mask_ablation_*.csv`, `fig_mask_ablation` |
+| Pairwise | `submit_compare_gcn_gin_baselines_per_graph.sh` | `pairwise_baseline_*.csv`, fig05 |
+| Opposite pairs | `submit_analyze_opposite_sign_pairs.sh` | `opposite_sign_pair_*.csv`, fig07 |
+| Node gates | `submit_dump_gcn_gin_routing_node_gates.sh` | `gate_values_per_node.pt` per gated run |
+| Pack | `pack_gcn_gin_routing_2_for_pull.sh` | one tarball for Mac |
+
+**One-shot (cluster):**
+
+```bash
+# local first — push the analysis scripts
+cd /Users/pellegrinraphael/Desktop/Academic_Research/Repos_GNN/GNNPlus
+git add scripts/synthetic/gcn_gin_routing_tracks.py \
+  scripts/synthetic/analyze_gcn_gin_routing_results.py \
+  scripts/synthetic/eval_gcn_gin_routing_masks.py \
+  scripts/synthetic/compare_gcn_gin_baselines_per_graph.py \
+  scripts/synthetic/analyze_opposite_sign_pairs.py \
+  scripts/synthetic/plot_gcn_gin_routing_paper_figures.py \
+  bash_interface/cluster/submit_gcn_gin_routing_2_pipeline.sh \
+  bash_interface/cluster/pack_gcn_gin_routing_2_for_pull.sh \
+  bash_interface/cluster/submit_dump_gcn_gin_routing_node_gates.sh \
+  bash_interface/cluster/run_dump_gcn_gin_routing_node_gates.sh \
+  bash_interface/cluster/submit_analyze_gcn_gin_routing_results.sh \
+  bash_interface/cluster/submit_eval_gcn_gin_routing_masks.sh \
+  bash_interface/cluster/submit_compare_gcn_gin_baselines_per_graph.sh \
+  bash_interface/cluster/run_compare_gcn_gin_baselines_per_graph.sh \
+  bash_interface/cluster/submit_analyze_opposite_sign_pairs.sh \
+  bash_interface/cluster/run_analyze_opposite_sign_pairs.sh \
+  results/gcn_gin_routing_2/README.md \
+  Paper_gcn_gin_routing_synthetic.md \
+  CLUSTER_LAUNCHES.md
+git commit -m "$(cat <<'EOF'
+Add Appendix H analysis pipeline for d_h-fill tracks into gcn_gin_routing_2.
+EOF
+)"
+git push origin HEAD
+```
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+bash bash_interface/cluster/submit_gcn_gin_routing_2_pipeline.sh
+```
+
+Details: [`results/gcn_gin_routing_2/README.md`](results/gcn_gin_routing_2/README.md)
 
 ```bash
 # local first
@@ -57,8 +113,8 @@ GCN_GIN_ROUTING_PARALLEL=3 \
 
 | Field | Value |
 |-------|-------|
-| **JOBIDs** | 🛑 pending submit (6 arrays) |
-| **Tasks** | 40 × 6 = **240** · `%3` |
+| **JOBIDs** | ✅ all **40/40**: `45066651`–`45066656` (toy_dh{2,3,4} + sigma_dh{1,2,3}) |
+| **Tasks** | 40 × 6 = **240** · `%3` · `mweber_gpu` |
 | **Out** | `$GNNPLUS_OUT_DIR/gcn_gin_routing/<stem>/` |
 
 ---

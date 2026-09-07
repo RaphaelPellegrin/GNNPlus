@@ -23,14 +23,17 @@ source "${SCRIPT_DIR}/common_env.sh"
 results_root="${GCN_GIN_PAIRWISE_RESULTS_ROOT:-${GNNPLUS_OUT_DIR}/gcn_gin_routing}"
 out_dir="${GCN_GIN_PAIRWISE_OUT_DIR:-${REPO_ROOT}/results/gcn_gin_routing/analysis}"
 lr_tag="${GCN_GIN_PAIRWISE_LR_TAG:-lr001}"
+tracks="${GCN_GIN_PAIRWISE_TRACKS:-toy,sigma,toy_dh2,toy_dh3,toy_dh4,sigma_dh1,sigma_dh2,sigma_dh3}"
+tracks="${tracks//;/,}"
 
-log_message "pairwise baseline compare results_root=${results_root} lr=${lr_tag}"
+log_message "pairwise baseline compare results_root=${results_root} lr=${lr_tag} tracks=${tracks}"
 
 python scripts/synthetic/compare_gcn_gin_baselines_per_graph.py \
   --results-root "${results_root}" \
   --dataset-dir "${GNNPLUS_DATASET_DIR}" \
   --out-dir "${out_dir}" \
   --lr-tag "${lr_tag}" \
+  --tracks "${tracks}" \
   --device auto
 
 log_message "Done."

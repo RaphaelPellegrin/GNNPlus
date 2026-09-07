@@ -544,7 +544,8 @@ GCN_GIN_ROUTING_PARALLEL=3 \
 |-------|-------|
 | **Main train toy** | ✅ **42432154** · Track A · **d_h=1** |
 | **Main train sigma** | ✅ **42432155** · Track B · **d_h=4** |
-| **dh_fill** | 🛑 Track A `d_h∈{2,3,4}` + Track B `d_h∈{1,2,3}` · 6×40 tasks · `%3` |
+| **dh_fill** | ✅ **DONE** Track A `d_h∈{2,3,4}` **45066651–53** · Track B `d_h∈{1,2,3}` **45066654–56** · 240/240 |
+| **routing_2 analysis** | `submit_gcn_gin_routing_2_pipeline.sh` → `results/gcn_gin_routing_2/analysis/` |
 | **Models** | SiGMA gated · SiGMA ungated · GCN-only · GIN-only |
 | **Dataset** | existing `$GNNPLUS_DATASET_DIR/GcnGinRouting` |
 | **Out** | `$GNNPLUS_OUT_DIR/gcn_gin_routing/{toy_dh2,toy_dh3,toy_dh4,sigma_dh1,sigma_dh2,sigma_dh3}/` |
@@ -1230,8 +1231,10 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **eval COLLAB f0 s0 fill** | **44748166** | 1 (task 181) | ✅ COMPLETED |
 | **`anchor_boost` select** | **44840486** | 480 | 🔄 REDDIT left · PROTEINS ✅ |
 | **`anchor_boost` eval PROTEINS** | **44938699** | 30 (1–30) | ✅ **73.68±3.08** |
-| **`a1g2_micro` select** | **45054117** | 80 | 🔄 keep · **scancel 45054171** (dup) |
-| **`a1g2_nci1_micro` select** | **45054174** | 40 | 🔄 NCI1 · GIN+SAGE |
+| **`a1g2_micro` select** | **45054117** | 80 | 🔄 REDDIT 2 R left (`_42`,`_50`) · PROTEINS ✅ |
+| **`a1g2_micro` eval PROTEINS** | **45067214** | 30 (1–30) | ✅ **72.2±2.9** |
+| **`a1g2_nci1_micro` select** | **45054174** | 40 | ✅ · agg → `sigma_a1g2_nci1_micro_per_fold.json` (10 folds) |
+| **`a1g2_nci1_micro` eval** | **45074636** | 30 (1–30) | ✅ **80.4±2.0** |
 | **`fixed8_ungated` select** | **44869251** | 560 | ⏸️ **HELD** · `scontrol release 44869251` when ready |
 | `aggregate_sigma` → `sigma_grid_eval_fixed8` | — | 210 | ✅ selection done · eval **44621846** |
 

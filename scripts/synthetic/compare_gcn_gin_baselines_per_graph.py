@@ -60,13 +60,23 @@ from scripts.synthetic.analyze_gcn_gin_routing_results import (  # noqa: E402
 )
 
 OutcomeKind = Literal["both_correct", "gcn_only", "gin_only", "both_wrong"]
+
+# Match fig07 opposite-sign pair outcome palette.
+PAIRWISE_OUTCOME_COLORS: dict[OutcomeKind, str] = {
+    "both_correct": "#55A868",
+    "gcn_only": "#4C72B0",
+    "gin_only": "#8172B2",
+    "both_wrong": "#C44E52",
+}
 SignStratum = Literal["all", "agree", "disagree"]
 
-TRACK_ORDER: tuple[str, ...] = ("toy", "sigma")
-TRACK_LABELS: dict[str, str] = {
-    "toy": r"Track A (Toy, $d_h{=}1$)",
-    "sigma": r"Track B (SiGMA, PyG GIN/GCN, $d_h{=}4$)",
-}
+from scripts.synthetic.gcn_gin_routing_tracks import (
+    DEFAULT_TRACKS_CSV,
+    TRACK_LABELS,
+    TRACK_ORDER,
+    ordered_tracks,
+)
+
 STRATUM_ORDER: tuple[SignStratum, ...] = ("all", "agree", "disagree")
 BAR_SPECS: tuple[tuple[int, SignStratum], ...] = (
     (0, "all"),
@@ -237,7 +247,7 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     parser.add_argument(
         "--tracks",
         type=str,
-        default="toy,sigma",
+        default=DEFAULT_TRACKS_CSV,
         help="Comma-separated tracks.",
     )
     parser.add_argument(
@@ -591,15 +601,9 @@ def _plot_pairwise_comparison_legacy(
     """Legacy 2-bar plot from aggregated summary rows (pairs-only fallback)."""
     means = _mean_summary_across_seeds(summary)
     summary_tracks = {s.track for s in summary}
-    tracks = [t for t in TRACK_ORDER if t in summary_tracks]
-    tracks.extend(sorted(summary_tracks - set(tracks)))
+    tracks = ordered_tracks(summary_tracks)
     tau_labels = {0: r"$\tau{=}0$ (GCN-type)", 1: r"$\tau{=}1$ (GIN-type)"}
-    colors = {
-        "both_correct": "#B8B8B8",
-        "gcn_only": "#4C72B0",
-        "gin_only": "#55A868",
-        "both_wrong": "#C44E52",
-    }
+    colors = PAIRWISE_OUTCOME_COLORS
     labels = {
         "both_correct": "Both correct",
         "gcn_only": "Only GCN correct",
@@ -637,7 +641,7 @@ def _plot_pairwise_comparison_legacy(
                         ha="center",
                         va="center",
                         fontsize=8,
-                        color="white" if kind != "both_correct" else "black",
+                        color="white",
                         fontweight="bold",
                     )
             bottom += vals
@@ -696,14 +700,8 @@ def _plot_pairwise_comparison(
     per_graph = data  # type: ignore[assignment]
     means = _mean_stratified_across_seeds(per_graph, lr_tag=lr_tag)
     summary_tracks = {r.track for r in per_graph}
-    tracks = [t for t in TRACK_ORDER if t in summary_tracks]
-    tracks.extend(sorted(summary_tracks - set(tracks)))
-    colors = {
-        "both_correct": "#B8B8B8",
-        "gcn_only": "#4C72B0",
-        "gin_only": "#55A868",
-        "both_wrong": "#C44E52",
-    }
+    tracks = ordered_tracks(summary_tracks)
+    colors = PAIRWISE_OUTCOME_COLORS
     labels = {
         "both_correct": "Both correct",
         "gcn_only": "Only GCN correct",
@@ -752,7 +750,7 @@ def _plot_pairwise_comparison(
                         ha="center",
                         va="center",
                         fontsize=7,
-                        color="white" if kind != "both_correct" else "black",
+                        color="white",
                         fontweight="bold",
                     )
             bottom += vals

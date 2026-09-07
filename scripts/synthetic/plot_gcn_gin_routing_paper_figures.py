@@ -43,15 +43,22 @@ MODEL_LABELS: dict[str, str] = {
     "a0g1_gcn": "GCN-only",
     "a0g1_gin": "GIN-only",
 }
+from scripts.synthetic.gcn_gin_routing_tracks import (
+    TRACK_LABELS,
+    ordered_tracks,
+    subplot_grid,
+)
+
 TRACK_SHORT_LABELS: dict[str, str] = {
     "toy": "Toy (routing convs)",
     "sigma": "Sigma (PyG GIN/GCN)",
+    "toy_dh2": "Toy d_h=2",
+    "toy_dh3": "Toy d_h=3",
+    "toy_dh4": "Toy d_h=4",
+    "sigma_dh1": "SiGMA d_h=1",
+    "sigma_dh2": "SiGMA d_h=2",
+    "sigma_dh3": "SiGMA d_h=3",
 }
-TRACK_LABELS: dict[str, str] = {
-    "toy": r"Track A (Toy, $d_h{=}1$)",
-    "sigma": r"Track B (SiGMA, PyG GIN/GCN, $d_h{=}4$)",
-}
-TRACK_ORDER: tuple[str, ...] = ("toy", "sigma")
 PALETTE = {
     "all": "#E45756",
     "tau0": "#4C72B0",
@@ -135,6 +142,12 @@ def _parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         type=str,
         default="lr001",
         help="Learning-rate tag for per-seed gate plots (default: lr001).",
+    )
+    parser.add_argument(
+        "--dataset-dir",
+        type=str,
+        default="results/gcn_gin_routing/data",
+        help="Dataset root for stratified fig05 and opposite-sign tables.",
     )
     parser.add_argument(
         "--dpi",
@@ -290,10 +303,9 @@ def plot_baseline_per_type(
     ymin: float = 0.65,
     title_suffix: str = "",
 ) -> None:
-    """Grouped bar chart: all + per-type test accuracy (Track A left, Track B right)."""
-    tracks = [t for t in TRACK_ORDER if any(r.track == t for r in summary)]
-    tracks.extend(sorted({r.track for r in summary} - set(tracks)))
-    fig, axes = plt.subplots(1, len(tracks), figsize=(6.8 * len(tracks), 5.0), squeeze=False)
+    """Grouped bar chart: all + per-type test accuracy (one panel per track)."""
+    tracks = ordered_tracks({r.track for r in summary})
+    fig, axes, _, _ = subplot_grid(len(tracks), ncols=4, col_w=5.5, row_h=4.8)
     bar_w = 0.24
     offsets = (-bar_w, 0.0, bar_w)
     series_specs = (
@@ -305,7 +317,7 @@ def plot_baseline_per_type(
     legend_handles: list = []
     legend_labels: list[str] = []
 
-    for ax_idx, (ax, track) in enumerate(zip(axes[0], tracks, strict=True)):
+    for ax_idx, (ax, track) in enumerate(zip(axes, tracks, strict=True)):
         subset = [r for r in summary if r.track == track and r.lr_tag == lr_tag]
         by_model = {r.model: r for r in subset}
         models = [m for m in MODEL_ORDER if m in by_model]
@@ -369,72 +381,127 @@ def plot_baseline_per_type(
     _save_fig(fig, out_path, dpi)
 
 
-def plot_gate_routing_delta(
+def _gated_runs_by_track(
     per_run: Sequence[PerRunRow],
-    out_path: Path,
-    dpi: int,
-    lr_tag: str = "lr001",
-    *,
-    title_suffix: str = "",
-) -> None:
-    """Mean root routing contrast (gated model) with min–max whiskers over seeds."""
+    lr_tag: str,
+) -> tuple[list[str], dict[str, list[PerRunRow]]]:
+    """Return track order and gated per-run rows keyed by track."""
     gated = [
         r
         for r in per_run
         if r.model == "a0g2_gated" and r.has_gates and r.lr_tag == lr_tag
     ]
-    if not gated:
-        return
+    track_order = ordered_tracks({r.track for r in gated})
+    track_order.extend(sorted({r.track for r in gated} - set(track_order)))
+    by_track = {track: [r for r in gated if r.track == track] for track in track_order}
+    return track_order, by_track
 
-    track_order = [t for t in TRACK_ORDER if any(r.track == t for r in gated)]
-    track_order.extend(
-        sorted({r.track for r in gated} - set(track_order)),
+
+def _routing_metric_series(
+    runs: Sequence[PerRunRow],
+    metric: str,
+) -> list[float]:
+    """Per-seed scalar routing metric for one track."""
+    if metric == "delta_gin":
+        return [r.gin_gate_tau1 - r.gin_gate_tau0 for r in runs]
+    if metric == "delta_gcn":
+        return [r.gcn_gate_tau0 - r.gcn_gate_tau1 for r in runs]
+    if metric == "margin_tau0":
+        return [r.gcn_gate_tau0 - r.gin_gate_tau0 for r in runs]
+    if metric == "margin_tau1":
+        return [r.gin_gate_tau1 - r.gcn_gate_tau1 for r in runs]
+    raise ValueError(f"Unknown routing metric: {metric}")
+
+
+def _format_minmax_band(values: Sequence[float]) -> str:
+    """Format mean with [min, max] over seeds."""
+    m, lo_err, hi_err = _mean_minmax_yerr(values)
+    lo = m - lo_err
+    hi = m + hi_err
+    return f"{m:.2f} [{lo:.2f}, {hi:.2f}]"
+
+
+def gate_routing_metrics_table_rows(
+    per_run: Sequence[PerRunRow],
+    *,
+    lr_tag: str = "lr001",
+) -> list[list[str]]:
+    """Build table rows for cross-type and within-type root gate metrics."""
+    track_order, by_track = _gated_runs_by_track(per_run, lr_tag)
+    if not track_order:
+        return []
+
+    metric_specs: tuple[tuple[str, str], ...] = (
+        ("delta_gin", r"$\Delta\gamma_{\mathrm{GIN}}$"),
+        ("delta_gcn", r"$\Delta\gamma_{\mathrm{GCN}}$"),
+        ("margin_tau0", r"$M_{\tau=0}$"),
+        ("margin_tau1", r"$M_{\tau=1}$"),
     )
-
-    gin_means: list[float] = []
-    gin_lo: list[float] = []
-    gin_hi: list[float] = []
-    gcn_means: list[float] = []
-    gcn_lo: list[float] = []
-    gcn_hi: list[float] = []
+    rows: list[list[str]] = []
     for track in track_order:
-        subset = [r for r in gated if r.track == track]
-        delta_gin = [r.gin_gate_tau1 - r.gin_gate_tau0 for r in subset]
-        delta_gcn = [r.gcn_gate_tau0 - r.gcn_gate_tau1 for r in subset]
-        m_gin, lo_gin, hi_gin = _mean_minmax_yerr(delta_gin)
-        m_gcn, lo_gcn, hi_gcn = _mean_minmax_yerr(delta_gcn)
-        gin_means.append(m_gin)
-        gin_lo.append(lo_gin)
-        gin_hi.append(hi_gin)
-        gcn_means.append(m_gcn)
-        gcn_lo.append(lo_gcn)
-        gcn_hi.append(hi_gcn)
+        track_label = TRACK_LABELS.get(track, track)
+        for metric_key, metric_label in metric_specs:
+            values = _routing_metric_series(by_track[track], metric_key)
+            rows.append([track_label, metric_label, _format_minmax_band(values)])
+    return rows
 
-    fig, ax = plt.subplots(figsize=(6.8, 5.0))
+
+def _plot_routing_contrast_panel(
+    ax: plt.Axes,
+    track_order: Sequence[str],
+    by_track: dict[str, list[PerRunRow]],
+    *,
+    left_metric: str,
+    right_metric: str,
+    left_label: str,
+    right_label: str,
+    left_color: str,
+    right_color: str,
+    panel_title: str,
+    show_legend: bool,
+) -> None:
+    """Draw one routing-contrast bar panel (two bars per track)."""
+    left_means: list[float] = []
+    left_lo: list[float] = []
+    left_hi: list[float] = []
+    right_means: list[float] = []
+    right_lo: list[float] = []
+    right_hi: list[float] = []
+    for track in track_order:
+        subset = by_track[track]
+        m_l, lo_l, hi_l = _mean_minmax_yerr(_routing_metric_series(subset, left_metric))
+        m_r, lo_r, hi_r = _mean_minmax_yerr(_routing_metric_series(subset, right_metric))
+        left_means.append(m_l)
+        left_lo.append(lo_l)
+        left_hi.append(hi_l)
+        right_means.append(m_r)
+        right_lo.append(lo_r)
+        right_hi.append(hi_r)
+
     x = np.arange(len(track_order))
     bar_w = 0.34
     err_kw = {"elinewidth": 1.0, "capthick": 1.0, "ecolor": "#333333"}
 
     ax.bar(
         x - bar_w / 2,
-        gin_means,
+        left_means,
         width=bar_w,
-        yerr=[gin_lo, gin_hi],
+        yerr=[left_lo, left_hi],
         capsize=3,
-        label=r"$\Delta\gamma_{\mathrm{GIN}} = \bar{\gamma}_{\tau{=}1} - \bar{\gamma}_{\tau{=}0}$",
-        color=PALETTE["gin"],
+        label=left_label,
+        color=left_color,
         edgecolor="black",
         linewidth=0.4,
         error_kw=err_kw,
     )
     ax.bar(
         x + bar_w / 2,
-        gcn_means,
+        right_means,
         width=bar_w,
-        yerr=[gcn_lo, gcn_hi],
+        yerr=[right_lo, right_hi],
         capsize=3,
-        label=r"$\Delta\gamma_{\mathrm{GCN}} = \bar{\gamma}_{\tau{=}0} - \bar{\gamma}_{\tau{=}1}$",
-        color=PALETTE["gcn"],
+        label=right_label,
+        color=right_color,
         edgecolor="black",
         linewidth=0.4,
         alpha=0.85,
@@ -448,17 +515,47 @@ def plot_gate_routing_delta(
         fontsize=9,
     )
     ax.set_ylim(0.0, 1.05)
-    ax.set_ylabel(r"Root gate contrast")
+    ax.set_ylabel("Root gate contrast")
+    ax.set_title(panel_title, fontsize=10, fontweight="bold", pad=8)
     ax.axhline(1.0, color="gray", linestyle="--", linewidth=0.8, alpha=0.6)
     ax.grid(axis="y", alpha=0.22)
+    if show_legend:
+        ax.legend(
+            loc="upper center",
+            bbox_to_anchor=(0.5, -0.22),
+            ncol=1,
+            fontsize=8.0,
+            frameon=True,
+            framealpha=0.95,
+        )
 
-    ax.legend(
-        loc="upper center",
-        bbox_to_anchor=(0.5, -0.18),
-        ncol=1,
-        fontsize=8.5,
-        frameon=True,
-        framealpha=0.95,
+
+def plot_gate_routing_delta(
+    per_run: Sequence[PerRunRow],
+    out_path: Path,
+    dpi: int,
+    lr_tag: str = "lr001",
+    *,
+    title_suffix: str = "",
+) -> None:
+    """Mean cross-type root routing contrast with min–max whiskers over seeds."""
+    track_order, by_track = _gated_runs_by_track(per_run, lr_tag)
+    if not track_order:
+        return
+
+    fig, ax = plt.subplots(figsize=(6.8, 5.0))
+    _plot_routing_contrast_panel(
+        ax,
+        track_order,
+        by_track,
+        left_metric="delta_gin",
+        right_metric="delta_gcn",
+        left_label=r"$\Delta\gamma_{\mathrm{GIN}} = \bar{\gamma}_{\tau{=}1} - \bar{\gamma}_{\tau{=}0}$",
+        right_label=r"$\Delta\gamma_{\mathrm{GCN}} = \bar{\gamma}_{\tau{=}0} - \bar{\gamma}_{\tau{=}1}$",
+        left_color=PALETTE["gin"],
+        right_color=PALETTE["gcn"],
+        panel_title="Cross-type head contrast",
+        show_legend=True,
     )
     fig.suptitle(
         f"Root routing contrast (5-seed mean, min–max whiskers, "
@@ -467,6 +564,111 @@ def plot_gate_routing_delta(
         fontsize=12,
     )
     fig.tight_layout(rect=(0.0, 0.14, 1.0, 0.98))
+    _save_fig(fig, out_path, dpi)
+
+
+def plot_gate_within_type_margins(
+    per_run: Sequence[PerRunRow],
+    out_path: Path,
+    dpi: int,
+    lr_tag: str = "lr001",
+    *,
+    title_suffix: str = "",
+) -> None:
+    """Within-type routing margins at the root (gated model, test split)."""
+    track_order, by_track = _gated_runs_by_track(per_run, lr_tag)
+    if not track_order:
+        return
+
+    fig, ax = plt.subplots(figsize=(6.8, 5.0))
+    _plot_routing_contrast_panel(
+        ax,
+        track_order,
+        by_track,
+        left_metric="margin_tau0",
+        right_metric="margin_tau1",
+        left_label=(
+            r"$M_{\tau=0} = \bar{\gamma}_{\mathrm{GCN}}(\tau{=}0)"
+            r"- \bar{\gamma}_{\mathrm{GIN}}(\tau{=}0)$"
+        ),
+        right_label=(
+            r"$M_{\tau=1} = \bar{\gamma}_{\mathrm{GIN}}(\tau{=}1)"
+            r"- \bar{\gamma}_{\mathrm{GCN}}(\tau{=}1)$"
+        ),
+        left_color=PALETTE["tau0"],
+        right_color=PALETTE["tau1"],
+        panel_title="Within-type head preference",
+        show_legend=True,
+    )
+    fig.suptitle(
+        f"Root within-type margins (5-seed mean, min–max whiskers, "
+        f"{_format_lr_tag(lr_tag)}, test){title_suffix}",
+        y=1.02,
+        fontsize=12,
+    )
+    fig.tight_layout(rect=(0.0, 0.18, 1.0, 0.98))
+    _save_fig(fig, out_path, dpi)
+
+
+def plot_gate_routing_contrasts_combined(
+    per_run: Sequence[PerRunRow],
+    out_path: Path,
+    dpi: int,
+    lr_tag: str = "lr001",
+    *,
+    title_suffix: str = "",
+) -> None:
+    """Two-panel figure: cross-type contrasts (top) and within-type margins (bottom)."""
+    track_order, by_track = _gated_runs_by_track(per_run, lr_tag)
+    if not track_order:
+        return
+
+    fig, axes = plt.subplots(2, 1, figsize=(6.8, 9.2), sharex=True)
+    _plot_routing_contrast_panel(
+        axes[0],
+        track_order,
+        by_track,
+        left_metric="delta_gin",
+        right_metric="delta_gcn",
+        left_label=r"$\Delta\gamma_{\mathrm{GIN}}$",
+        right_label=r"$\Delta\gamma_{\mathrm{GCN}}$",
+        left_color=PALETTE["gin"],
+        right_color=PALETTE["gcn"],
+        panel_title="Cross-type head contrast (per head)",
+        show_legend=False,
+    )
+    _plot_routing_contrast_panel(
+        axes[1],
+        track_order,
+        by_track,
+        left_metric="margin_tau0",
+        right_metric="margin_tau1",
+        left_label=r"$M_{\tau=0}$",
+        right_label=r"$M_{\tau=1}$",
+        left_color=PALETTE["tau0"],
+        right_color=PALETTE["tau1"],
+        panel_title="Within-type head preference",
+        show_legend=False,
+    )
+    handles, labels = axes[0].get_legend_handles_labels()
+    handles_b, labels_b = axes[1].get_legend_handles_labels()
+    fig.legend(
+        handles + handles_b,
+        labels + labels_b,
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.01),
+        ncol=2,
+        fontsize=8.5,
+        frameon=True,
+        framealpha=0.95,
+    )
+    fig.suptitle(
+        f"Root gate routing metrics (5-seed mean, min–max whiskers, "
+        f"{_format_lr_tag(lr_tag)}, test){title_suffix}",
+        y=1.01,
+        fontsize=12,
+    )
+    fig.tight_layout(rect=(0.0, 0.06, 1.0, 0.98))
     _save_fig(fig, out_path, dpi)
 
 
@@ -544,6 +746,103 @@ def plot_root_vs_neighbor_gates(
     _save_fig(fig, out_path, dpi)
 
 
+def _maybe_write_opposite_sign_pairwise_artifacts(
+    analysis_dir: Path,
+    paper_dir: Path,
+    *,
+    dataset_dir: str,
+    lr_tag: str,
+    dpi: int,
+) -> None:
+    """Write opposite-sign per-graph specialist CSV/table (fig05 companion to fig07)."""
+    per_graph_path = analysis_dir / "pairwise_baseline_per_graph.csv"
+    if not per_graph_path.is_file():
+        return
+
+    from scripts.synthetic.gcn_gin_routing_pairwise_utils import (  # noqa: WPS433
+        load_opposite_sign_graph_indices,
+        load_per_graph_specialist_rows,
+    )
+    from scripts.synthetic.plot_gcn_gin_routing_pairs_from_csv import (  # noqa: WPS433
+        GraphRow,
+        summarize_pairwise,
+    )
+
+    try:
+        pair_indices = load_opposite_sign_graph_indices(dataset_dir)
+    except (OSError, RuntimeError, ImportError) as exc:
+        print(f"Skipping opposite-sign fig05 table: {exc}")
+        return
+
+    rows = load_per_graph_specialist_rows(
+        per_graph_path,
+        lr_tag=lr_tag,
+        graph_indices=pair_indices,
+    )
+    if not rows:
+        return
+
+    graph_rows = [
+        GraphRow(
+            track=r.track,
+            lr_tag=r.lr_tag,
+            seed=r.seed,
+            graph_idx=r.graph_idx,
+            tau=r.tau,
+            label=0,
+            correct_gcn=r.correct_gcn,
+            correct_gin=r.correct_gin,
+        )
+        for r in rows
+    ]
+    summary = summarize_pairwise(graph_rows)
+    out_csv = analysis_dir / "pairwise_baseline_summary_opposite_sign.csv"
+    fieldnames = [
+        "track",
+        "lr_tag",
+        "seed",
+        "tau",
+        "n_graphs",
+        "both_correct",
+        "gcn_only",
+        "gin_only",
+        "both_wrong",
+    ]
+    with out_csv.open("w", encoding="utf-8", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in summary:
+            writer.writerow(
+                {
+                    "track": row.track,
+                    "lr_tag": row.lr_tag,
+                    "seed": row.seed,
+                    "tau": row.tau,
+                    "n_graphs": row.n_graphs,
+                    "both_correct": row.both_correct,
+                    "gcn_only": row.gcn_only,
+                    "gin_only": row.gin_only,
+                    "both_wrong": row.both_wrong,
+                },
+            )
+
+    from scripts.synthetic.gcn_gin_routing_table_figures import (  # noqa: WPS433
+        plot_pairwise_baseline_table,
+    )
+
+    plot_pairwise_baseline_table(
+        out_csv,
+        paper_dir / "fig05_pairwise_baseline_table_opposite_sign.png",
+        lr_tag=lr_tag,
+        dpi=dpi,
+        title="GCN vs GIN specialists on opposite-sign twin graphs",
+        subtitle=(
+            f"Per-graph outcomes on twin members only (228 graphs per τ; {lr_tag}). "
+            "Pair-level specialist routing is in fig07."
+        ),
+    )
+
+
 def plot_gated_accuracy_scatter(
     per_run: Sequence[PerRunRow],
     out_path: Path,
@@ -559,17 +858,24 @@ def plot_gated_accuracy_scatter(
     if not gated:
         return
 
-    fig, axes = plt.subplots(1, 2, figsize=(9.0, 4.2), squeeze=False)
-    markers = {"toy": "o", "sigma": "s"}
+    tracks = ordered_tracks({r.track for r in gated})
+    fig, axes, _, _ = subplot_grid(len(tracks), ncols=4, col_w=4.5, row_h=4.2)
+    marker_cycle = ("o", "s", "^", "D", "v", "P", "X", "*")
 
-    for track in ("toy", "sigma"):
-        ax = axes[0, 0 if track == "toy" else 1]
+    for ax, track in zip(axes, tracks, strict=True):
         subset = [r for r in gated if r.track == track]
         xs = [r.acc_tau0 for r in subset]
         ys = [r.acc_tau1 for r in subset]
-        ax.scatter(xs, ys, s=70, marker=markers[track], label=track, edgecolors="black", linewidths=0.5)
+        marker = marker_cycle[tracks.index(track) % len(marker_cycle)]
+        ax.scatter(xs, ys, s=70, marker=marker, label=track, edgecolors="black", linewidths=0.5)
         for r in subset:
-            ax.annotate(str(r.seed), (r.acc_tau0, r.acc_tau1), textcoords="offset points", xytext=(4, 4), fontsize=8)
+            ax.annotate(
+                str(r.seed),
+                (r.acc_tau0, r.acc_tau1),
+                textcoords="offset points",
+                xytext=(4, 4),
+                fontsize=8,
+            )
         ax.plot([0.9, 1.0], [0.9, 1.0], "k--", alpha=0.35, linewidth=0.8)
         ax.set_xlim(0.96, 1.005)
         ax.set_ylim(0.96, 1.005)
@@ -600,9 +906,9 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     _apply_style()
     summary = _load_summary(analysis_dir)
     per_run = _load_per_run(analysis_dir)
-    gate_toy = _load_gate_node_csv(analysis_dir / "gate_node_summary_toy_test.csv")
-    gate_sigma = _load_gate_node_csv(analysis_dir / "gate_node_summary_sigma_test.csv")
-    gate_rows = gate_toy + gate_sigma
+    gate_rows: list[GateNodeRow] = []
+    for csv_path in sorted(analysis_dir.glob("gate_node_summary_*_test.csv")):
+        gate_rows.extend(_load_gate_node_csv(csv_path))
 
     plot_baseline_per_type(
         summary,
@@ -614,6 +920,18 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     plot_gate_routing_delta(
         per_run,
         out_dir / "fig02_gate_routing_delta_per_seed.png",
+        dpi=args.dpi,
+        lr_tag=args.lr_tag,
+    )
+    plot_gate_within_type_margins(
+        per_run,
+        out_dir / "fig02b_gate_within_type_margins_per_seed.png",
+        dpi=args.dpi,
+        lr_tag=args.lr_tag,
+    )
+    plot_gate_routing_contrasts_combined(
+        per_run,
+        out_dir / "fig02_gate_routing_contrasts_combined.png",
         dpi=args.dpi,
         lr_tag=args.lr_tag,
     )
@@ -632,16 +950,44 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
 
     pairwise_summary = analysis_dir / "pairwise_baseline_summary.csv"
     if pairwise_summary.is_file():
-        from scripts.synthetic.compare_gcn_gin_baselines_per_graph import (  # noqa: WPS433
-            plot_from_summary_csv,
-        )
+        try:
+            from scripts.synthetic.compare_gcn_gin_baselines_per_graph import (  # noqa: WPS433
+                plot_from_summary_csv,
+            )
+        except (ImportError, AttributeError):
+            plot_from_summary_csv = None  # type: ignore[misc, assignment]
+        if plot_from_summary_csv is not None:
+            plot_from_summary_csv(
+                pairwise_summary,
+                out_dir / "fig05_pairwise_baseline_comparison.png",
+                lr_tag=args.lr_tag,
+                dpi=args.dpi,
+                dataset_dir=args.dataset_dir,
+            )
+        else:
+            print(
+                "Skipping stratified fig05 (GNNPlus import unavailable); "
+                "use cluster or pairs_only/fig05_pairwise_baseline_comparison_pairs.png.",
+            )
 
-        plot_from_summary_csv(
-            pairwise_summary,
-            out_dir / "fig05_pairwise_baseline_comparison.png",
-            lr_tag=args.lr_tag,
-            dpi=args.dpi,
-        )
+    _maybe_write_opposite_sign_pairwise_artifacts(
+        analysis_dir,
+        out_dir,
+        dataset_dir=args.dataset_dir,
+        lr_tag=args.lr_tag,
+        dpi=args.dpi,
+    )
+
+    from scripts.synthetic.gcn_gin_routing_pairwise_utils import (  # noqa: WPS433
+        verify_fig05_fig07_specialist_consistency,
+    )
+
+    for warning in verify_fig05_fig07_specialist_consistency(
+        analysis_dir,
+        args.dataset_dir,
+        lr_tag=args.lr_tag,
+    ):
+        print(f"WARNING: {warning}")
 
     from scripts.synthetic.gcn_gin_routing_table_figures import (  # noqa: WPS433
         plot_all_table_figures,
@@ -653,10 +999,14 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     for name in (
         "fig01_baseline_per_type",
         "fig02_gate_routing_delta_per_seed",
+        "fig02b_gate_within_type_margins_per_seed",
+        "fig02_gate_routing_contrasts_combined",
         "fig03_root_vs_neighbor_gates",
         "fig04_gated_accuracy_per_seed",
         "fig05_pairwise_baseline_comparison",
         "fig05_pairwise_baseline_table",
+        "fig05_pairwise_baseline_table_opposite_sign",
+        "fig02_gate_routing_margins_table",
         "fig06_mask_ablation_table",
     ):
         png = out_dir / f"{name}.png"
