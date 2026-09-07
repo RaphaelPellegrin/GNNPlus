@@ -146,6 +146,30 @@ Interesting slices:
 2. Compare `H=64` vs `H=8` vs `H=4` vs `H=2` side-by-side.
 3. Cross-dataset: which `(L,d_h,H)` cells are consistently red / significant.
 
+### Gate dump (MUTAG L=1 H=8 best gated LRs) → preference join
+
+Do **not** dump on the login node (wrong Python / hung torch). Use GPU array:
+
+```bash
+# smoke
+TU_LDHH_GDUMP_ARRAY=1 TU_LDHH_GDUMP_PARALLEL=1 \
+  bash bash_interface/cluster/submit_dump_tu_depth_dh_h_gates.sh
+
+# full: 4 cells × 5 seeds = 20
+bash bash_interface/cluster/submit_dump_tu_depth_dh_h_gates.sh
+```
+
+| Field | Value |
+|-------|-------|
+| **JOBID** | 🛑 pending |
+| **Submit** | `bash_interface/cluster/submit_dump_tu_depth_dh_h_gates.sh` |
+| **Worker** | `bash_interface/cluster/run_dump_tu_depth_dh_h_gates.sh` |
+| **Cells** | dh1/lr01 · dh2/lr01 · dh4/lr001 · dh16/lr01 |
+| **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_depth_dh_h/mutag_L1_dh*_H8_gated_*/gate_values_per_graph.pt` |
+| **Logs** | `logs_gnnplus/tu_LdhH_gdmp_<JOBID>_<TASK>.log` |
+
+Then join locally with `scripts/heterogeneity/join_tu_gate_operator_preference.py`.
+
 ---
 
 ## Notes
