@@ -11,23 +11,26 @@ Entity/project: [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/webe
 
 ## ✅ SUBMITTED (do not re-submit)
 
-### 🧪 TU preferred-head MASK eval (ready — not yet submitted)
+### 🧪 TU preferred-head MASK eval (GCN+SAGE gated)
 
 | | |
 |--|--|
-| **Status** | 🛑 **TO RUN** (eval-only; needs ckpts on netscratch) |
+| **Status** | 🔄 **RESUBMIT after fix** — `44903886` FAILED (config_used.yaml always MUTAG; ENZYMES ckpt shape mismatch). Fix: force `dataset.name` from run slug. |
+| **When** | 2026-09-06 (first submit); fix pending resubmit |
 | **Submit** | `bash bash_interface/cluster/submit_eval_tu_preferred_head_masks.sh` |
 | **Worker** | `bash_interface/cluster/run_eval_tu_preferred_head_masks.sh` |
 | **Script** | `scripts/heterogeneity/eval_tu_preferred_head_masks.py` |
-| **Default** | `TU_PREF_MASK_FAMILY=gcs` → `a0g2_gated` + `a1g2_gated` (GCN,SAGE) |
-| **Also** | `TU_PREF_MASK_FAMILY=a2g4` or `both` |
+| **Family** | `TU_PREF_MASK_FAMILY=gcs` · ops `GCN,SAGE` · seeds 0–4 · mutag+enzymes |
+| **Partition** | `gpu_h200` · nice=0 |
+| **Also later** | `TU_PREF_MASK_FAMILY=a2g4` or `both` |
 | **Docs** | [`Paper_tu_gate_hetero_bridge.md`](Paper_tu_gate_hetero_bridge.md) |
-| **Outs** | `results/heterogeneity/tu_pref_mask_{gcs,a2g4}_*/` |
+| **Log** | `logs_gnnplus/tu_pref_mask_44903886.log` |
+| **Outs** | `results/heterogeneity/tu_pref_mask_gcs_{a0g2_gated,a1g2_gated}/` |
 
 ```bash
-# after git pull
-TU_PREF_MASK_FAMILY=gcs TU_PREF_MASK_PARTITION=gpu_h200 TU_PREF_MASK_NICE=0 \
-  bash bash_interface/cluster/submit_eval_tu_preferred_head_masks.sh
+squeue -u $USER -j 44903886
+tail -f logs_gnnplus/tu_pref_mask_44903886.log
+# after DONE, rsync results/heterogeneity/tu_pref_mask_gcs_* back to Mac
 ```
 
 ### 🧪 Xu SiGMA GCN+SAGE only (a0g2/a1g2 × gated/ungated × 5 seeds)
@@ -968,6 +971,33 @@ TU_LDHH_HS="4 2" TU_LDHH_ARRAY=801-1600 \
 | **Tasks** | +2400 · same 800/ds blocks |
 | **W&B** | `tu_L*_dh*_H{4,2}_*` |
 | **Plots** | `fig_mutag_delta_heatmap_H{4,2}.png` after MUTAG |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
+║  🔄  gate dump · smoke 44904350 · full 44904351 (1-20)                   ║
+║  🎯  MUTAG L=1 H=8 best-LR gated → gate_values_per_graph.pt              ║
+║  📄  Paper_tu_sigma_depth_dh_h.md                                        ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+# already submitted (full before smoke OK — task 1 may duplicate):
+# smoke  44904350  ·  1%1
+# full   44904351  ·  1-20%10
+squeue -u $USER -j 44904350,44904351
+# after DONE:
+# ls $GNNPLUS_OUT_DIR/tu_sigma_depth_dh_h/mutag_L1_dh*_H8_gated_*/gate_values_per_graph.pt | wc -l
+```
+
+| Field | Value |
+|-------|-------|
+| **Smoke** | ✅ **`44904350`** · task `1` |
+| **Full** | ✅ **`44904351`** · `1-20` · `%10` |
+| **Submit** | `bash_interface/cluster/submit_dump_tu_depth_dh_h_gates.sh` |
+| **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_depth_dh_h/mutag_L1_*_H8_gated_*/gate_values_per_graph.pt` |
+| **Logs** | `logs_gnnplus/tu_LdhH_gdmp_<JOBID>_<TASK>.log` |
 
 ---
 

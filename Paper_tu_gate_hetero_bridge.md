@@ -5,7 +5,7 @@
 ║  Xu SiGMA GCN+SAGE a0g2/a1g2 × g/u  ✅ 44886381  40/40 dumps     ║
 ║  GCN↔SAGE join: ✅ NO routing (|\Deltaγ|≲0.01; ungated flat γ=1)    ║
 ║  Xu a2g4 join: NO routing — GIN γ dominates all pref bins       ║
-║  Preferred-head MASK eval: machinery ready (cluster, needs ckpt)║
+║  Preferred-head MASK: 44903886 FAILED → fixed dataset.name override ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
 

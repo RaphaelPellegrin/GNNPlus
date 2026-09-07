@@ -297,22 +297,45 @@ def _build_pref_map(
     return pref_map
 
 
+def _dataset_name_from_run_dir(run_dir: Path) -> Optional[str]:
+    """Parse TU name from ``<slug>_SiGMA_hetero_...`` run dir, if present."""
+    stem = run_dir.name
+    for slug, name in TU_NAME.items():
+        if stem.startswith(f"{slug}_"):
+            return name
+    return None
+
+
 def _load_cfg_for_run(
     run_dir: Path,
     *,
     dataset_dir: str,
+    dataset_name: str,
     seed: int,
     batch_size: Optional[int] = None,
 ) -> None:
-    """Load GraphGym cfg from the run's saved config yaml."""
+    """Load GraphGym cfg from the run's saved config yaml.
+
+    Always override ``dataset.name``: Xu cluster runners ``cp`` the base yaml
+    into ``config_used.yaml`` *before* applying ``dataset.name`` CLI overrides,
+    so ENZYMES run dirs still say ``MUTAG`` on disk.
+    """
     cfg_path_obj = _resolve_run_config(run_dir)
     if cfg_path_obj is None:
         raise FileNotFoundError(f"No config yaml in {run_dir}")
+    inferred = _dataset_name_from_run_dir(run_dir)
+    if inferred is not None and inferred != dataset_name:
+        raise ValueError(
+            f"dataset_name={dataset_name!r} disagrees with run dir {run_dir.name} "
+            f"(inferred {inferred!r})"
+        )
     overrides = [
         "--cfg",
         str(cfg_path_obj),
         "dataset.dir",
         dataset_dir,
+        "dataset.name",
+        dataset_name,
         "seed",
         str(seed),
         "wandb.use",
@@ -328,8 +351,15 @@ def _load_cfg_for_run(
         load_cfg(cfg, args)
     finally:
         sys.argv = old_argv
+    # Reinstate after load_cfg in case yaml/share left a stale name.
+    cfg.dataset.name = dataset_name
     cfg.run_dir = str(run_dir)
     cfg.out_dir = str(run_dir.parent)
+    logging.info(
+        "Loaded cfg for %s (dataset.name=%s; yaml may still say MUTAG)",
+        run_dir.name,
+        cfg.dataset.name,
+    )
 
 
 def _global_mask(
@@ -450,9 +480,11 @@ def evaluate_run_masks(
 ) -> List[MaskEvalRow]:
     """Evaluate one checkpoint under all requested mask modes."""
     batch_size = 1 if adaptive else None
+    ds_name = TU_NAME.get(dataset.lower(), dataset.upper())
     _load_cfg_for_run(
         run_dir,
         dataset_dir=dataset_dir,
+        dataset_name=ds_name,
         seed=seed,
         batch_size=batch_size,
     )
