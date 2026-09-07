@@ -2,11 +2,52 @@
 
 ```text
 ╔══════════════════════════════════════════════════════════════════╗
-║  NEXT: Xu SiGMA GCN+SAGE a0g2/a1g2 × gated/ungated (40 jobs)    ║
+║  Xu SiGMA GCN+SAGE a0g2/a1g2 × g/u  ✅ 44886381  40/40 dumps     ║
+║  GCN↔SAGE join: ✅ NO routing (|\Deltaγ|≲0.01; ungated flat γ=1)    ║
 ║  Xu a2g4 join: NO routing — GIN γ dominates all pref bins       ║
-║  GAT specialist prefs (≥100)  ✅ mutag + enzymes on disk        ║
+║  Preferred-head MASK eval: machinery ready (cluster, needs ckpt)║
 ╚══════════════════════════════════════════════════════════════════╝
 ```
+
+## Preferred-head masking (causal; next)
+
+Correlational preference→γ is null. Next test: **does masking the
+specialist-preferred MP head hurt accuracy more than masking the
+anti-preferred head?** (real-data analogue of synthetic
+`eval_gcn_gin_routing_masks.py`).
+
+| Field | Value |
+|-------|-------|
+| **Script** | `scripts/heterogeneity/eval_tu_preferred_head_masks.py` |
+| **Submit** | `bash bash_interface/cluster/submit_eval_tu_preferred_head_masks.sh` |
+| **Worker** | `bash_interface/cluster/run_eval_tu_preferred_head_masks.sh` |
+| **Needs** | `ckpt/` under `$GNNPLUS_OUT_DIR/.../tu_xu_sigma_{gcn_sage,a2g4}/` (gate-only Mac rsync is not enough) |
+| **Design A** | global `mask_<OP>` × accuracy in preference bins |
+| **Design B** | per-graph `mask_preferred` / `mask_anti` / `mask_random` (`--adaptive`) |
+| **Default family** | GCN+SAGE gated tags `a0g2_gated` `a1g2_gated` |
+| **Outs** | `results/heterogeneity/tu_pref_mask_gcs_<tag>/` |
+
+```bash
+# after git pull on cluster
+TU_PREF_MASK_FAMILY=gcs TU_PREF_MASK_PARTITION=gpu_h200 TU_PREF_MASK_NICE=0 \
+  bash bash_interface/cluster/submit_eval_tu_preferred_head_masks.sh
+# optional: TU_PREF_MASK_FAMILY=a2g4 or both
+```
+
+## GCN+SAGE join result (2026-09-06)
+
+Outs: `results/heterogeneity/tu_gate_bridge_analysis_gcs_{a0g2,a1g2}_{gated,ungated}/`  
+Preference recomputed as argmax among **GCN vs SAGE only**.
+
+**Verdict: still no preference→gate routing** (removing GIN did not create a GCN↔SAGE map).
+
+| Variant | What happened |
+|---------|----------------|
+| `*_ungated` | γ≡1 for both heads; Δγ≡0 (sanity check ✅) |
+| `a0g2_gated` | |\Deltaγ| ≲ 0.005; error bars through 0; pref-GCN and pref-SAGE bins look identical |
+| `a1g2_gated` | same; ENZYMES even slightly **anti** for GCN (γ_GCN lower on GCN-preferred) |
+
+Preference itself is real (ENZYMES ~57% GCN / 34% SAGE; MUTAG ~46% ties). Gates just don’t track it.
 
 ## Xu SiGMA GCN+SAGE only (no GIN) — follow-up
 
@@ -26,12 +67,7 @@ GIN mass dominated a2g4 gates, so re-run protocol-matched Xu L=4 SiGMA with
 | **Submit** | `bash bash_interface/cluster/submit_heterogeneity_xu_sigma_gcn_sage.sh` |
 | **Outs** | `$GNNPLUS_OUT_DIR/heterogeneity/powerful_gnns/tu_xu_sigma_gcn_sage/<ds>_SiGMA_hetero_<variant>_seed<s>/` |
 | **Configs** | `configs/heterogeneity/powerful_gnns/sigma-gcn-sage-{a0g2,a1g2}-{gated,ungated}-ckpt.yaml` |
-| **SLURM** | 🛑 TO SUBMIT |
-
-```bash
-XU_GCS_PARTITION=gpu_h200 XU_GCS_PARALLEL=10 XU_GCS_NICE=0 \
-  bash bash_interface/cluster/submit_heterogeneity_xu_sigma_gcn_sage.sh
-```
+| **SLURM** | ✅ **`44886381`** 40/40 COMPLETED (2026-09-06) |
 
 After dumps land, join each gated variant against existing GCN/SAGE pickles:
 
@@ -364,6 +400,9 @@ vs not (printed by join script; extend for paper LaTeX).
 
 | Date | Event |
 |------|-------|
+| 2026-09-06 | GCN+SAGE join: **no routing** (gated |\Deltaγ|≲0.01; ungated γ=1) |
+| 2026-09-06 | ✅ Xu GCN+SAGE **`44886381`** 40/40 dumps; ready to pull + join |
+| 2026-09-06 | Submitted Xu GCN+SAGE a0g2/a1g2 × g/u **`44886381`** `gpu_h200` `1-40%10` nice=0 |
 | 2026-09-06 | Added Xu SiGMA **GCN+SAGE only** a0g2/a1g2 × gated/ungated (40-job submit) |
 | 2026-09-05 | Xu join done: **no routing** (GIN γ dominates; |\Deltaγ| ≲ 0.01 all layers) |
 | 2026-09-05 | ✅ Xu 10/10 gates + GAT mutag/enzymes pickles; ready to pull + re-join |

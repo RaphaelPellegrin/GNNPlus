@@ -11,6 +11,25 @@ Entity/project: [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/webe
 
 ## ✅ SUBMITTED (do not re-submit)
 
+### 🧪 TU preferred-head MASK eval (ready — not yet submitted)
+
+| | |
+|--|--|
+| **Status** | 🛑 **TO RUN** (eval-only; needs ckpts on netscratch) |
+| **Submit** | `bash bash_interface/cluster/submit_eval_tu_preferred_head_masks.sh` |
+| **Worker** | `bash_interface/cluster/run_eval_tu_preferred_head_masks.sh` |
+| **Script** | `scripts/heterogeneity/eval_tu_preferred_head_masks.py` |
+| **Default** | `TU_PREF_MASK_FAMILY=gcs` → `a0g2_gated` + `a1g2_gated` (GCN,SAGE) |
+| **Also** | `TU_PREF_MASK_FAMILY=a2g4` or `both` |
+| **Docs** | [`Paper_tu_gate_hetero_bridge.md`](Paper_tu_gate_hetero_bridge.md) |
+| **Outs** | `results/heterogeneity/tu_pref_mask_{gcs,a2g4}_*/` |
+
+```bash
+# after git pull
+TU_PREF_MASK_FAMILY=gcs TU_PREF_MASK_PARTITION=gpu_h200 TU_PREF_MASK_NICE=0 \
+  bash bash_interface/cluster/submit_eval_tu_preferred_head_masks.sh
+```
+
 ### 🧪 Xu SiGMA GCN+SAGE only (a0g2/a1g2 × gated/ungated × 5 seeds)
 
 | | |
@@ -926,24 +945,25 @@ TU_LDHH_ARRAY=1601-2400 bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.s
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🛑  PENDING  ·  H∈{4,2} fill of L×d_h×H gated vs ungated (+2400)        ║
-║  🎯  same map as above; TU_LDHH_HS="4 2" (does not remape H=64/8)         ║
+║  🔄  H∈{4,2}  ·  smoke 44899287 · MUTAG 44899291 (1-800)                 ║
+║  🎯  narrow-trunk fill of L×d_h×H gated vs ungated                       ║
 ║  📄  Paper_tu_sigma_depth_dh_h.md                                        ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
 ```bash
-# smoke MUTAG L1 dh1 H4 gated+ungated:
-TU_LDHH_HS="4 2" TU_LDHH_ARRAY=1,11 TU_LDHH_PARALLEL=2 \
-  bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh
-# then MUTAG 1-800; later 801-1600 …
-TU_LDHH_HS="4 2" TU_LDHH_ARRAY=1-800 \
-  bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh
+# already submitted:
+# smoke  44899287  ·  1,11%2   (H=4)
+# MUTAG  44899291  ·  1-800%20 (H∈{4,2})
+# next after MUTAG:
+TU_LDHH_HS="4 2" TU_LDHH_ARRAY=801-1600 \
+  bash bash_interface/cluster/submit_tu_sigma_depth_dh_h.sh  # ENZYMES
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *paste JOBID* |
+| **Smoke** | ✅ **`44899287`** · `1,11` · `%2` |
+| **MUTAG** | ✅ **`44899291`** · `1-800` · `%20` |
 | **H** | `{4, 2}` via `TU_LDHH_HS="4 2"` |
 | **Tasks** | +2400 · same 800/ds blocks |
 | **W&B** | `tu_L*_dh*_H{4,2}_*` |

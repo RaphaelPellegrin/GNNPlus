@@ -94,7 +94,8 @@ TU_LDHH_HS="4 2" TU_LDHH_ARRAY=1-800 bash bash_interface/cluster/submit_tu_sigma
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🛑 *paste JOBID* |
+| **Smoke H4** | ✅ **`44899287`** · tasks `1,11` · `%2` |
+| **MUTAG H∈{4,2}** | ✅ **`44899291`** · tasks `1-800` · `%20` |
 | **H list** | `4 2` via `TU_LDHH_HS` |
 | **Tasks** | same blocks as H=64/8 (800/ds) |
 | **W&B** | `tu_L*_dh*_H{4,2}_*` |
@@ -104,19 +105,46 @@ Plots (after MUTAG): `fig_mutag_delta_heatmap_H4.png`, `…_H2.png` via
 
 ---
 
-## Analysis (after runs)
+## Analysis (as datasets finish)
 
 Protocol: better LR mean±std; Δ = gated − ungated; paired *t* by seed.
+One heatmap per `(dataset, H)` → `results/tu_sigma_depth_dh_h/analysis/`.
+
+```bash
+# after each dataset block completes:
+python scripts/api_wanndb_query/aggregate_tu_depth_dh_h.py \
+  --datasets mutag --H 64 8          # already done
+python scripts/api_wanndb_query/aggregate_tu_depth_dh_h.py \
+  --datasets mutag --H 4 2           # after 44899291
+python scripts/api_wanndb_query/aggregate_tu_depth_dh_h.py \
+  --datasets enzymes --H 64 8        # after 44897907
+python scripts/api_wanndb_query/aggregate_tu_depth_dh_h.py \
+  --datasets proteins collab imdb_binary reddit_binary --H 64 8
+```
+
+Outputs: `fig_<ds>_delta_heatmap_H{H}.png` + `<ds>_best_lr.csv`
+(see [`results/tu_sigma_depth_dh_h/analysis/README.md`](results/tu_sigma_depth_dh_h/analysis/README.md)).
+
+### MUTAG H∈{64,8} snapshot (2026-09-06)
+
+Paired gated−ungated on best-LR-per-family seeds:
+
+| Cell | Δ (pp) | p |
+|------|-------:|--:|
+| **L=1, d_h=1, H=8** | **+4.26** | **0.003** |
+| L=1, d_h=16, H=8 | +4.26 | 0.047 |
+| L=1, d_h=2, H=8 | +4.68 | 0.051 |
+| almost all H=64 cells | ≤0 / n.s. | — |
+
+Mean Δ by trunk: **H=8 ≈ +0.8 pp**, **H=64 ≈ −1.0 pp**. So the
+“gating helps” signal is mainly **shallow + narrow `H`**, not low `d_h`
+alone — useful for App. H capacity narrative; still not preference→γ routing.
 
 Interesting slices:
 
-1. Fix `H=64`, plot Δ vs `d_h` for each `L` (recover Tab.17/18-style + extremes).
-2. Fix `d_h∈{4,16}`, compare `H=64` vs `H=8`.
-3. Heatmap: rows=`L`, cols=`d_h`, color=Δ (one panel per dataset / H).
-
-```python
-# sketch: query W&B groups tu_L*_dh*_H*_<ds>_SiGMA_{hetero,ungated}_*
-```
+1. Fix `H`, heatmap Δ vs `(L, d_h)` (main figure).
+2. Compare `H=64` vs `H=8` vs `H=4` vs `H=2` side-by-side.
+3. Cross-dataset: which `(L,d_h,H)` cells are consistently red / significant.
 
 ---
 
