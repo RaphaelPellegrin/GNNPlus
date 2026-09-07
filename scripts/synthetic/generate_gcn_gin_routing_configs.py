@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""Generate GCN/GIN routing synthetic training YAML configs (8 models × 2 tracks)."""
+"""Generate GCN/GIN routing synthetic training YAML configs.
+
+Paper Appendix H defaults:
+  Track A (toy):   d_h=1, dim_inner=2
+  Track B (sigma): d_h=4, dim_inner=4
+
+Width fill (same 4 models × toy/sigma stacks):
+  Track A: toy_dh{2,3,4}
+  Track B: sigma_dh{1,2,3}
+"""
 
 from __future__ import annotations
 
@@ -50,18 +59,95 @@ MODELS: tuple[dict[str, Any], ...] = (
     },
 )
 
+# (track_stem, stack, d_h, dim_inner, filename prefix for paper defaults)
+# Paper filenames stay ``gcn_gin_routing_{toy,sigma}_*.yaml``.
+# Width fills use ``gcn_gin_routing_{toy|sigma}_dh{k}_*.yaml``.
+#
+# dim_inner: toy uses 2×d_h (paper A: d_h=1 → 2); sigma uses d_h (paper B: d_h=4 → 4).
+TRACK_SPECS: tuple[dict[str, Any], ...] = (
+    {
+        "stem": "toy",
+        "stack": "toy",
+        "d_h": 1,
+        "dim_inner": 2,
+        "file_prefix": "gcn_gin_routing_toy",
+    },
+    {
+        "stem": "sigma",
+        "stack": "sigma",
+        "d_h": 4,
+        "dim_inner": 4,
+        "file_prefix": "gcn_gin_routing_sigma",
+    },
+    # Track A (toy) width fill — d_h ∈ {2,3,4}
+    {
+        "stem": "toy_dh2",
+        "stack": "toy",
+        "d_h": 2,
+        "dim_inner": 4,
+        "file_prefix": "gcn_gin_routing_toy_dh2",
+    },
+    {
+        "stem": "toy_dh3",
+        "stack": "toy",
+        "d_h": 3,
+        "dim_inner": 6,
+        "file_prefix": "gcn_gin_routing_toy_dh3",
+    },
+    {
+        "stem": "toy_dh4",
+        "stack": "toy",
+        "d_h": 4,
+        "dim_inner": 8,
+        "file_prefix": "gcn_gin_routing_toy_dh4",
+    },
+    # Track B (sigma) width fill — d_h ∈ {1,2,3}
+    {
+        "stem": "sigma_dh1",
+        "stack": "sigma",
+        "d_h": 1,
+        "dim_inner": 1,
+        "file_prefix": "gcn_gin_routing_sigma_dh1",
+    },
+    {
+        "stem": "sigma_dh2",
+        "stack": "sigma",
+        "d_h": 2,
+        "dim_inner": 2,
+        "file_prefix": "gcn_gin_routing_sigma_dh2",
+    },
+    {
+        "stem": "sigma_dh3",
+        "stack": "sigma",
+        "d_h": 3,
+        "dim_inner": 3,
+        "file_prefix": "gcn_gin_routing_sigma_dh3",
+    },
+)
+
 
 def _build_cfg(
-    track: str,
-    model: dict[str, Any],
     *,
+    stem: str,
+    stack: str,
+    d_h: int,
+    dim_inner: int,
+    model: dict[str, Any],
     node_encoder: bool = True,
     slug_suffix: str = "",
 ) -> dict[str, Any]:
-    """Return one GraphGym config dict."""
-    is_toy = track == "toy"
-    d_h = 1 if is_toy else 4
-    dim_inner = 2 if is_toy else 4
+    """Return one GraphGym config dict for a (stem, model) pair.
+
+    Args:
+        stem: Output / W&B track id (e.g. ``toy``, ``sigma_dh2``).
+        stack: ``toy`` (ROUTING_*) or ``sigma`` (PyG GIN/GCN).
+        d_h: Per-head width.
+        dim_inner: Residual / model width.
+        model: Entry from ``MODELS``.
+        node_encoder: Whether to use a linear node encoder.
+        slug_suffix: Optional config slug suffix (e.g. ``_noxenc``).
+    """
+    is_toy = stack == "toy"
     gnn_types = model["gnn_types_toy"] if is_toy else model["gnn_types_sigma"]
     slug = f"{model['slug']}{slug_suffix}"
     hybrid: dict[str, Any] = {
@@ -92,8 +178,8 @@ def _build_cfg(
                 "gnnplus",
                 "hybrid_gnn",
                 "gcn_gin_routing_synthetic",
-                f"gcn_gin_routing_{track}",
-                f"gcn_gin_routing_{track}_{slug}",
+                f"gcn_gin_routing_{stem}",
+                f"gcn_gin_routing_{stem}_{slug}",
             ],
         },
         "dataset": {
@@ -149,20 +235,35 @@ def main() -> None:
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     write_noxenc = "--noxenc" in sys.argv
-    for track in ("toy", "sigma"):
+    for spec in TRACK_SPECS:
         for model in MODELS:
             slug = model["slug"]
-            path = OUT_DIR / f"gcn_gin_routing_{track}_{slug}.yaml"
-            cfg = _build_cfg(track, model)
+            path = OUT_DIR / f"{spec['file_prefix']}_{slug}.yaml"
+            cfg = _build_cfg(
+                stem=str(spec["stem"]),
+                stack=str(spec["stack"]),
+                d_h=int(spec["d_h"]),
+                dim_inner=int(spec["dim_inner"]),
+                model=model,
+            )
             with path.open("w", encoding="utf-8") as fh:
                 yaml.safe_dump(cfg, fh, sort_keys=False)
             print(f"Wrote {path}")
 
     if write_noxenc:
+        toy_spec = TRACK_SPECS[0]
         for model in MODELS:
             slug = model["slug"]
             path = OUT_DIR / f"gcn_gin_routing_toy_{slug}_noxenc.yaml"
-            cfg = _build_cfg("toy", model, node_encoder=False, slug_suffix="_noxenc")
+            cfg = _build_cfg(
+                stem="toy",
+                stack="toy",
+                d_h=int(toy_spec["d_h"]),
+                dim_inner=int(toy_spec["dim_inner"]),
+                model=model,
+                node_encoder=False,
+                slug_suffix="_noxenc",
+            )
             with path.open("w", encoding="utf-8") as fh:
                 yaml.safe_dump(cfg, fh, sort_keys=False)
             print(f"Wrote {path}")

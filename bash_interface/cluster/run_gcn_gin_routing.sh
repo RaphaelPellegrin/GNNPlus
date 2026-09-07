@@ -2,13 +2,11 @@
 # =============================================================================
 # GCN/GIN routing synthetic benchmark — SLURM worker
 #
-# Set GCN_GIN_ROUTING_TRACK=toy|sigma (default: toy).
-# 8 models × 2 LRs × 5 seeds = 80 tasks per track.
+# GCN_GIN_ROUTING_TRACK = toy | sigma | toy_dh2 | toy_dh4 | sigma_dh2 | sigma_dh4
+# 4 models × 2 LRs × 5 seeds = 40 tasks per track.
 #
 # Submit:
-#   bash bash_interface/cluster/submit_gcn_gin_routing.sh toy
-#   bash bash_interface/cluster/submit_gcn_gin_routing.sh sigma
-#   bash bash_interface/cluster/submit_gcn_gin_routing.sh both
+#   GCN_GIN_ROUTING_PARALLEL=3 bash bash_interface/cluster/submit_gcn_gin_routing.sh dh_fill
 # =============================================================================
 
 #SBATCH --job-name=gcn_gin_route
@@ -33,11 +31,24 @@ task_id=${SLURM_ARRAY_TASK_ID:-1}
 num_seeds="${GCN_GIN_ROUTING_NUM_SEEDS:-5}"
 num_lrs="${GCN_GIN_ROUTING_NUM_LRS:-2}"
 
+# Config filename prefix (paper defaults keep short names).
+case "${track}" in
+  toy) cfg_prefix="gcn_gin_routing_toy" ;;
+  sigma) cfg_prefix="gcn_gin_routing_sigma" ;;
+  toy_dh2|toy_dh3|toy_dh4|sigma_dh1|sigma_dh2|sigma_dh3)
+    cfg_prefix="gcn_gin_routing_${track}"
+    ;;
+  *)
+    log_message "Unknown GCN_GIN_ROUTING_TRACK=${track}"
+    exit 1
+    ;;
+esac
+
 models=(
-  "a0g2_gated|configs/synthetic/gcn_gin_routing_${track}_a0g2_gated.yaml|paper_gcn_gin_routing_${track}_a0g2_gated"
-  "a0g2_ungated|configs/synthetic/gcn_gin_routing_${track}_a0g2_ungated.yaml|paper_gcn_gin_routing_${track}_a0g2_ungated"
-  "a0g1_gcn|configs/synthetic/gcn_gin_routing_${track}_a0g1_gcn.yaml|paper_gcn_gin_routing_${track}_a0g1_gcn"
-  "a0g1_gin|configs/synthetic/gcn_gin_routing_${track}_a0g1_gin.yaml|paper_gcn_gin_routing_${track}_a0g1_gin"
+  "a0g2_gated|configs/synthetic/${cfg_prefix}_a0g2_gated.yaml|paper_gcn_gin_routing_${track}_a0g2_gated"
+  "a0g2_ungated|configs/synthetic/${cfg_prefix}_a0g2_ungated.yaml|paper_gcn_gin_routing_${track}_a0g2_ungated"
+  "a0g1_gcn|configs/synthetic/${cfg_prefix}_a0g1_gcn.yaml|paper_gcn_gin_routing_${track}_a0g1_gcn"
+  "a0g1_gin|configs/synthetic/${cfg_prefix}_a0g1_gin.yaml|paper_gcn_gin_routing_${track}_a0g1_gin"
 )
 
 num_models=${#models[@]}

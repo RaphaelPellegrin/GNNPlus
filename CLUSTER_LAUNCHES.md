@@ -15,7 +15,7 @@ Entity/project: [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/webe
 
 | | |
 |--|--|
-| **Status** | ✅ **RESUBMITTED** `44924809` (gcs: a0g2_gated + a1g2_gated; dataset.name fix) |
+| **Status** | ✅ **COMPLETED** `44924809` (exit 0, ~2.5 min; gcs a0g2+a1g2 gated) |
 | **When** | 2026-09-06 · prior `44903886` FAILED (MUTAG yaml / ENZYMES ckpt) |
 | **Submit** | `bash bash_interface/cluster/submit_eval_tu_preferred_head_masks.sh` |
 | **Worker** | `bash_interface/cluster/run_eval_tu_preferred_head_masks.sh` |
@@ -529,15 +529,28 @@ sbatch --job-name=cluster_push80_cluster --array=1-16%4 --mem=128GB --time=120:0
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
 ║  ✅  DONE  ·  GCN/GIN routing synthetic · toy + sigma training         ║
-║  🔄  RUNNING  ·  forward traces + no-encoder ablation (2026-08-29)      ║
+║  🛑  TO RUN  ·  d_h fill toy_dh2/toy_dh4/sigma_dh2  (%3)                ║
 ║  📄  Paper_gcn_gin_routing_synthetic.md                                  ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
+```bash
+# after git pull — Appendix H width fill (same 4 models × 2 LR × 5 seeds)
+GCN_GIN_ROUTING_PARALLEL=3 \
+  bash bash_interface/cluster/submit_gcn_gin_routing.sh dh_fill
+```
+
 | Field | Value |
 |-------|-------|
-| **Main train toy** | ✅ **42432154** (`1-40%10`) |
-| **Main train sigma** | ✅ **42432155** (`1-40%10`) |
+| **Main train toy** | ✅ **42432154** · Track A · **d_h=1** |
+| **Main train sigma** | ✅ **42432155** · Track B · **d_h=4** |
+| **dh_fill** | 🛑 Track A `d_h∈{2,3,4}` + Track B `d_h∈{1,2,3}` · 6×40 tasks · `%3` |
+| **Models** | SiGMA gated · SiGMA ungated · GCN-only · GIN-only |
+| **Dataset** | existing `$GNNPLUS_DATASET_DIR/GcnGinRouting` |
+| **Out** | `$GNNPLUS_OUT_DIR/gcn_gin_routing/{toy_dh2,toy_dh3,toy_dh4,sigma_dh1,sigma_dh2,sigma_dh3}/` |
+
+| Field | Value |
+|-------|-------|
 | **Forward gated** | ✅ **42759900** — 3/4 PNGs in `forward_traces/` |
 | **Forward GCN-only** | 🔄 **42816151** → `forward_traces/gcn_only/` |
 | **Forward GIN-only** | 🔄 **42816156** → `forward_traces/gin_only/` |
@@ -1217,8 +1230,8 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **eval COLLAB f0 s0 fill** | **44748166** | 1 (task 181) | ✅ COMPLETED |
 | **`anchor_boost` select** | **44840486** | 480 | 🔄 REDDIT left · PROTEINS ✅ |
 | **`anchor_boost` eval PROTEINS** | **44938699** | 30 (1–30) | ✅ **73.68±3.08** |
-| **`a1g2_micro` select** | — | 80 | ⏳ PROTEINS+REDDIT · GCN+GIN |
-| **`a1g2_nci1_micro` select** | — | 40 | ⏳ NCI1 · GIN+SAGE |
+| **`a1g2_micro` select** | **45054117** | 80 | 🔄 keep · **scancel 45054171** (dup) |
+| **`a1g2_nci1_micro` select** | **45054174** | 40 | 🔄 NCI1 · GIN+SAGE |
 | **`fixed8_ungated` select** | **44869251** | 560 | ⏸️ **HELD** · `scontrol release 44869251` when ready |
 | `aggregate_sigma` → `sigma_grid_eval_fixed8` | — | 210 | ✅ selection done · eval **44621846** |
 

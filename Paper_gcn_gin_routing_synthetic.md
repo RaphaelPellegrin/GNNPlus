@@ -10,7 +10,56 @@ profiles) · [`rebuttal.md`](rebuttal.md) (reviewer log)
 
 **W&B project:** [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/weber-geoml-harvard-university/GNNPlus)  
 **Planned tag:** `gcn_gin_routing_synthetic`  
-**Planned groups:** `paper_gcn_gin_routing_{toy,sigma}_*`
+**Planned groups:** `paper_gcn_gin_routing_{toy,sigma}_*`  
+**Width fill groups:** `paper_gcn_gin_routing_{toy_dh2,toy_dh3,toy_dh4,sigma_dh1,sigma_dh2,sigma_dh3}_*`
+
+---
+
+## d_h width fill (beyond paper A/B)
+
+Paper: **Track A** = toy stack · `d_h=1` · **Track B** = PyG GIN/GCN · `d_h=4`.
+
+Same protocol (4 models × 2 LR × 5 seeds = **40 jobs/track**):
+
+| Stem | Stack | d_h | dim_inner | Status |
+|------|-------|----:|----------:|--------|
+| `toy` | ROUTING_* | 1 | 2 | ✅ paper A |
+| `sigma` | PyG GIN/GCN | 4 | 4 | ✅ paper B |
+| `toy_dh2` | ROUTING_* | 2 | 4 | 🛑 submit |
+| `toy_dh3` | ROUTING_* | 3 | 6 | 🛑 submit |
+| `toy_dh4` | ROUTING_* | 4 | 8 | 🛑 submit |
+| `sigma_dh1` | PyG GIN/GCN | 1 | 1 | 🛑 submit |
+| `sigma_dh2` | PyG GIN/GCN | 2 | 2 | 🛑 submit |
+| `sigma_dh3` | PyG GIN/GCN | 3 | 3 | 🛑 submit |
+
+```bash
+# local first
+cd /Users/pellegrinraphael/Desktop/Academic_Research/Repos_GNN/GNNPlus
+git add scripts/synthetic/generate_gcn_gin_routing_configs.py \
+  bash_interface/cluster/run_gcn_gin_routing.sh \
+  bash_interface/cluster/submit_gcn_gin_routing.sh \
+  configs/synthetic/gcn_gin_routing_toy_dh{2,3,4}_*.yaml \
+  configs/synthetic/gcn_gin_routing_sigma_dh{1,2,3}_*.yaml \
+  Paper_gcn_gin_routing_synthetic.md \
+  CLUSTER_LAUNCHES.md
+# commit + push (user)
+
+# cluster — max 3 GPUs, reuse existing GcnGinRouting dataset
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+git pull
+
+GCN_GIN_ROUTING_PARALLEL=3 \
+  bash bash_interface/cluster/submit_gcn_gin_routing.sh dh_fill
+```
+
+| Field | Value |
+|-------|-------|
+| **JOBIDs** | 🛑 pending submit (6 arrays) |
+| **Tasks** | 40 × 6 = **240** · `%3` |
+| **Out** | `$GNNPLUS_OUT_DIR/gcn_gin_routing/<stem>/` |
 
 ---
 
