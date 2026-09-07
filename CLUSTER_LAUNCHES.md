@@ -878,9 +878,10 @@ git pull
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🔄 **`45134881`** · `1-720%3` · `mweber_gpu` · Nice=0 |
+| **SLURM** | 🔄 **`45134881`** · `1-720%7` · `mweber_gpu` · Nice=0 |
 | **Submit** | `bash_interface/cluster/submit_tu_sigma_tab_depth.sh` |
-| **Tasks** | `1-720%3` · L=4 `1–240` · L=2 `241–480` · L=1 `481–720` |
+| **Tasks** | `1-720%7` · L=4 `1–240` · L=2 `241–480` · L=1 `481–720` |
+| **Skip COLLAB** | L∈{1,2}: `scancel 45134881_[301-320,421-440,541-560,661-680]` |
 | **Variants** | gated hetero ×2 LR + ungated ×2 LR |
 | **W&B** | `tu_L<k>_hh_*` (Tab.17) · `tu_L<k>_1x_*` (Tab.18) |
 | **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_tab_depth/` |
@@ -1264,7 +1265,7 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **`a1g2_nci1_micro` eval** | **45074636** | 30 (1–30) | ✅ **80.4±2.0** |
 | **`full64` eval P/NCI1/REDDIT** | **45131301** | 90 (31–90,151–180) | 🔄 · PROTEINS ✅ **71.6±3.7** |
 | **`anchor_refine` select** | **45146136** | 40 | 🔄 4-HP version (submitted before shrink) |
-| **`nci1_refine` select** | — | **20** | ⏳ ready · drop0.5×{add,mean} · `%40` |
+| **`nci1_refine` select** | **45149015** | 20 (1–20%5) | 🔄 drop0.5×{add,mean} · `%5` |
 | **`fixed8_ungated` select** | **44869251** | 560 | ⏸️ **HELD** · `scontrol release 44869251` when ready |
 | `aggregate_sigma` → `sigma_grid_eval_fixed8` | — | 210 | ✅ selection done · eval **44621846** |
 

@@ -29,6 +29,9 @@
 #   L=4 → 1–240 · L=2 → 241–480 · L=1 → 481–720
 # Within each L: Tab.17 (1–120 of block) then Tab.18 (121–240 of block).
 #
+# COLLAB skip (default L∈{1,2}): set TU_TAB_L_SKIP_COLLAB_LS="" to keep all.
+# COLLAB task IDs: L4 → 61–80,181–200 · L2 → 301–320,421–440 · L1 → 541–560,661–680
+#
 # W&B:
 #   Tab.17 → tu_L{k}_hh_<ds>_{SiGMA_hetero,SiGMA_ungated}_{lr001,lr01}
 #   Tab.18 → tu_L{k}_1x_<ds>_{SiGMA_hetero,SiGMA_ungated}_{lr001,lr01}
@@ -106,6 +109,18 @@ L="${layers_list[$L_idx]}"
 ds_tag="${datasets[$dataset_idx]}"
 ds_name="${dataset_names[$dataset_idx]}"
 batch_size="${batch_for[$ds_tag]}"
+
+# Skip COLLAB at shallow L (default {1,2}) — social is slow; keep L=4 optional.
+# shellcheck disable=SC2206
+skip_collab_ls=(${TU_TAB_L_SKIP_COLLAB_LS-1 2})
+if [ "${ds_tag}" = "collab" ]; then
+    for skip_L in "${skip_collab_ls[@]}"; do
+        if [ "${L}" = "${skip_L}" ]; then
+            log_message "SKIP COLLAB at L=${L} (TU_TAB_L_SKIP_COLLAB_LS='${skip_collab_ls[*]}'); task ${task_id}"
+            exit 0
+        fi
+    done
+fi
 
 cfg_dir="configs/tu_sigma_homo_hetero"
 case "${table_idx}" in

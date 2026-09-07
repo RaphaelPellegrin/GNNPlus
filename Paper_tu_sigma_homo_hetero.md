@@ -685,22 +685,24 @@ git pull
 TU_TAB_L_ARRAY=1,11 TU_TAB_L_PARALLEL=2 TU_TAB_L_NICE=0 \
   bash bash_interface/cluster/submit_tu_sigma_tab_depth.sh
 
-# full 720 (or per-depth: 1-240 / 241-480 / 481-720)
-TU_TAB_L_NICE=0 bash bash_interface/cluster/submit_tu_sigma_tab_depth.sh
+# ✅ full submitted — 45134881 · 1-720%3
+# TU_TAB_L_PARALLEL=3 TU_TAB_L_NICE=0 \
+#   bash bash_interface/cluster/submit_tu_sigma_tab_depth.sh
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🔄 paste JOBID after submit |
+| **SLURM** | 🔄 **`45134881`** · `1-720%7` · `mweber_gpu` · Nice=0 |
 | **Submit** | `bash_interface/cluster/submit_tu_sigma_tab_depth.sh` |
-| **Tasks** | `1-720%20` · 3 L × 2 tables × 6 ds × 4 var × 5 seeds |
+| **Tasks** | `1-720%7` · 3 L × 2 tables × 6 ds × 4 var × 5 seeds |
 | **Depth blocks** | L=4 → `1–240` · L=2 → `241–480` · L=1 → `481–720` |
+| **Skip COLLAB** | **L∈{1,2}** (Tab.17+18): cancel `301-320,421-440,541-560,661-680`; runtime skip via `TU_TAB_L_SKIP_COLLAB_LS` |
 | **Tab.17** | `d_h=16` · W&B `tu_L<k>_hh_<ds>_{SiGMA_hetero,SiGMA_ungated}_{lr001,lr01}` |
 | **Tab.18** | `d_h=4` · W&B `tu_L<k>_1x_<ds>_{SiGMA_hetero,SiGMA_ungated}_{lr001,lr01}` |
 | **Override** | `gnn.layers_mp` ∈ {4,2,1}; ungated → `gnn.hybrid.gate none` |
 | **Batches** | bio 64 · COLLAB 32 · IMDB 64 · REDDIT 16 |
 | **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_tab_depth/` |
-| **Logs** | `logs_gnnplus/tu_tab_L_<JOBID>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/tu_tab_L_45134881_<TASK>.log` |
 
 Smoke: tasks **1,11** = MUTAG L4 Tab.17 gated / ungated lr001 seed0.
 
