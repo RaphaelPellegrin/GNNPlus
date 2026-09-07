@@ -8,6 +8,7 @@
 #   bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode a1g2_micro
 #   bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode a1g2_nci1_micro
 #   bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode anchor_refine
+#   bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode nci1_refine
 #   bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode budget_bio
 #
 # Legacy budget_bio still needs gin_per_fold.json:
@@ -50,7 +51,9 @@ elif [ "${MODE}" = "a1g2_micro" ]; then
 elif [ "${MODE}" = "a1g2_nci1_micro" ]; then
     log_message "Generating SiGMA grids (a1g2_nci1_micro: NCI1, 4 configs, GIN+SAGE)"
 elif [ "${MODE}" = "anchor_refine" ]; then
-    log_message "Generating SiGMA grids (anchor_refine: PROTEINS, 4 configs, dropout×pool)"
+    log_message "Generating SiGMA grids (anchor_refine: PROTEINS, dropout×pool)"
+elif [ "${MODE}" = "nci1_refine" ]; then
+    log_message "Generating SiGMA grids (nci1_refine: NCI1, 2 configs, drop0.5×pool)"
 else
     log_message "Generating SiGMA grids (fixed8 SIGMA_GRID, no param ceiling)"
 fi
@@ -72,6 +75,9 @@ elif [ "${MODE}" = "a1g2_nci1_micro" ]; then
 elif [ "${MODE}" = "anchor_refine" ]; then
     manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids_anchor_refine/manifest.json"
     next_phase="sigma_grid_select_anchor_refine"
+elif [ "${MODE}" = "nci1_refine" ]; then
+    manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids_nci1_refine/manifest.json"
+    next_phase="sigma_grid_select_nci1_refine"
 else
     manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids/manifest.json"
     next_phase="sigma_grid_select"

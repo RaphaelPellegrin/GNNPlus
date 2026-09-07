@@ -168,17 +168,32 @@ SIGMA_A1G2_NCI1_MICRO_GRID: dict[str, list[Any]] = {
     "early_stop_use_loss": [False],
 }
 
-# Tiny refine around the modal PROTEINS ``anchor_boost`` winner:
-#   bs=16, lr=1e-3, L=12, d_h=8 (8/10 folds preferred bs=16 + lr=1e-3).
-# New axes never searched by anchor_boost: dropout × graph_pooling
-# (classical GCN/GIN winners use these). Count: 2×2 = 4 → 40 select.
+# Ultra-tiny PROTEINS refine around modal ``anchor_boost`` center
+# (bs=16, lr=1e-3, L=12, d_h=8). Only the GCN-like regularization corner:
+# dropout=0.5 × pool∈{add,mean}. Skips drop=0 (near yaml default 0.1 /
+# prior boost runs). Count: 2 → 20 select / 30 eval.
 SIGMA_ANCHOR_REFINE_GRID: dict[str, list[Any]] = {
     "batch_size": [16],
     "base_lr": [0.001],
     "layers_mp": [12],
     "dim_inner": [64],
     "d_h": [8],
-    "dropout": [0.0, 0.5],
+    "dropout": [0.5],
+    "graph_pooling": ["add", "mean"],
+    "early_stop_use_loss": [False],
+}
+
+# Ultra-tiny NCI1 refine around best SiGMA family so far (fixed8 / a2g4 deep):
+# bs=32, lr=1e-3, L=12, d_h=16 (fixed8 SIGMA_GRID deep end; a1g2 used same
+# L/d_h). Only GCN-like corner: dropout=0.5 × pool∈{add,mean}.
+# Count: 2 → 20 select / 30 eval. Goal: beat GraphSAGE 81.6.
+SIGMA_NCI1_REFINE_GRID: dict[str, list[Any]] = {
+    "batch_size": [32],
+    "base_lr": [0.001],
+    "layers_mp": [12],
+    "dim_inner": [64],
+    "d_h": [16],
+    "dropout": [0.5],
     "graph_pooling": ["add", "mean"],
     "early_stop_use_loss": [False],
 }
@@ -193,6 +208,8 @@ A1G2_MICRO_DS_TAGS: frozenset[str] = frozenset({"proteins", "reddit-b"})
 A1G2_NCI1_MICRO_DS_TAGS: frozenset[str] = frozenset({"nci1"})
 # Local refine around PROTEINS anchor_boost mode (a2g4 + dropout/pool).
 ANCHOR_REFINE_DS_TAGS: frozenset[str] = frozenset({"proteins"})
+# Local refine around NCI1 fixed8/a2g4 deep center + dropout/pool.
+NCI1_REFINE_DS_TAGS: frozenset[str] = frozenset({"nci1"})
 
 DS_TAG_TO_NAME: dict[str, str] = {
     "enzymes": "ENZYMES",
@@ -265,6 +282,11 @@ def a1g2_nci1_micro_sigma_grid_entries() -> list[dict[str, Any]]:
 def anchor_refine_sigma_grid_entries() -> list[dict[str, Any]]:
     """Tiny PROTEINS refine grid around anchor_boost mode (``anchor_refine``)."""
     return expand_grid(SIGMA_ANCHOR_REFINE_GRID)
+
+
+def nci1_refine_sigma_grid_entries() -> list[dict[str, Any]]:
+    """Tiny NCI1 refine grid around fixed8/a2g4 deep center (``nci1_refine``)."""
+    return expand_grid(SIGMA_NCI1_REFINE_GRID)
 
 
 def expand_grid(grid: dict[str, list[Any]]) -> list[dict[str, Any]]:

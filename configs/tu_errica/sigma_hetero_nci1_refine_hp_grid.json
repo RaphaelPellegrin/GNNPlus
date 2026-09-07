@@ -1,0 +1,27 @@
+{
+  "model": "sigma_hetero",
+  "mode": "nci1_refine",
+  "note": "NCI1 refine around fixed8/a2g4 deep center (bs=32, lr=1e-3, L=12, d_h=16): dropout=0.5 \u00d7 pool\u2208{add,mean} (2 configs \u00d7 10 folds = 20 select).",
+  "grid": [
+    {
+      "batch_size": 32,
+      "base_lr": 0.001,
+      "layers_mp": 12,
+      "dim_inner": 64,
+      "d_h": 16,
+      "dropout": 0.5,
+      "graph_pooling": "add",
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.001,
+      "layers_mp": 12,
+      "dim_inner": 64,
+      "d_h": 16,
+      "dropout": 0.5,
+      "graph_pooling": "mean",
+      "early_stop_use_loss": false
+    }
+  ]
+}
