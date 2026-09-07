@@ -66,8 +66,12 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 | **3a§-rerun** | full64 FAILED relaunch | **44509970** | 🔄 **1777/2479** | ~19 R · 13 FAIL |
 | **3a-AB** | `sigma_grid_select` **anchor_boost** | **44840486** | 🔄 **REDDIT left** | PROTEINS select ✅ 240/240 |
 | **4e-AB-P** | `sigma_grid_eval` anchor_boost **PROTEINS** | **44938699** | ✅ **30/30** | **73.68±3.08** · wait REDDIT select → re-agg → eval 31–60 |
-| **3a-A1** | `sigma_grid_select` **a1g2_micro** | — | ⏳ launch | PROTEINS+REDDIT · 80 · GCN+GIN |
-| **3a-A1N** | `sigma_grid_select` **a1g2_nci1_micro** | — | ⏳ launch | NCI1 · 40 · GIN+SAGE |
+| **3a-A1** | `sigma_grid_select` **a1g2_micro** | **45054117** | 🔄 REDDIT 2 R | `_42`,`_50` left · PROTEINS select ✅ |
+| **4e-A1-P** | `sigma_grid_eval` a1g2 **PROTEINS** | **45067214** | ✅ **30/30** | **72.2±2.9** · below a2g4 73.68 · REDDIT select 2 R left |
+| **3a-A1N** | `sigma_grid_select` **a1g2_nci1_micro** | **45054174** | ✅ **40/40** | agg → `sigma_a1g2_nci1_micro_per_fold.json` (10 folds, GIN+SAGE) |
+| **4e-A1N** | `sigma_grid_eval` a1g2 **NCI1** | **45074636** | ✅ **30/30** | **80.4±2.0** (GIN+SAGE) · vs fixed8 SiGMA 80.66±1.89 |
+| **4e-F64** | `sigma_grid_eval` **full64** P/NCI1/REDDIT | **45131301** | 🔄 NCI1+REDDIT | PROTEINS ✅ **71.6±3.7** (worse than a2g4 73.68) |
+| **3a-AR** | `sigma_grid_select` **anchor_refine** | — | ⏳ ready | PROTEINS only · 4 HPs (drop×pool) · 40 select |
 | **3a-U** | `sigma_grid_select` **fixed8 ungated** | **44869251** | ⏸️ **HELD** | `scontrol hold` 2026-09-06 — **must `scontrol release 44869251` later** · leftover `R` finish OK |
 | **3a-fill** | fixed8 **COLLAB f9 hp7** fill | **44507757** | ✅ **COMPLETED** | task **560** · netscratch logs |
 | **3b** | `aggregate_sigma` | — | ✅ **70/70 folds** | `sigma_fixed8_per_fold.json` |
@@ -217,6 +221,21 @@ bash bash_interface/cluster/submit_tu_errica_a1g2_nci1_micro_select.sh
 # after select:
 bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_a1g2_nci1_micro
 bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_a1g2_nci1_micro
+```
+
+### SiGMA PROTEINS anchor_refine (2026-09-07)
+
+Tiny chase around modal ``anchor_boost`` PROTEINS winner
+(`bs=16`, `lr=1e-3`, `L=12`, `d_h=8`) adding axes never searched there:
+`dropout ∈ {0,0.5}` × `graph_pooling ∈ {add,mean}` → **4** configs × 10 folds = **40** select / **30** eval.
+Arch stays **a2g4** (`sigma-hetero-errica-base.yaml`). Goal: beat GCN **73.9** (current best SiGMA = **73.68**).
+
+```bash
+python scripts/tu_errica/generate_sigma_errica_grids.py --mode anchor_refine
+bash bash_interface/cluster/submit_tu_errica_anchor_refine_select.sh
+# after select:
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_anchor_refine
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_anchor_refine
 ```
 
 ### SiGMA ungated Errica (`fixed8_ungated`, 2026-09-06)

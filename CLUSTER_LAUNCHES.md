@@ -864,49 +864,28 @@ git pull
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
-║  🔄  READY  ·  Tab.17/18 depth ablation L∈{4,2,1} gated+ungated · 720    ║
-║  🎯  SiGMA hetero vs ungated · H=64 · dh16+dh4 · paste JOBID after submit ║
+║  ✅  SUBMITTED  ·  SLURM 45134881  ·  2026-09-07  ·  1-720%3             ║
+║  🎯  Tab.17/18 depth ablation L∈{4,2,1} gated+ungated · 720 jobs         ║
 ║  📄  Paper_tu_sigma_homo_hetero.md                                       ║
 ╚══════════════════════════════════════════════════════════════════════════╝
 ```
 
 ```bash
-# --- local ---
-cd /Users/pellegrinraphael/Desktop/Academic_Research/Repos_GNN/GNNPlus
-git add bash_interface/cluster/run_tu_sigma_tab_depth.sh \
-        bash_interface/cluster/submit_tu_sigma_tab_depth.sh \
-        Paper_tu_sigma_homo_hetero.md \
-        CLUSTER_LAUNCHES.md
-git commit -m "$(cat <<'EOF'
-Add TU Tab.17/18 SiGMA gated vs ungated depth ablation at L∈{4,2,1}.
-
-EOF
-)"
-git push origin HEAD
-
-# --- cluster ---
-source ~/.gnnplus_env
-export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
-export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
-cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
-git pull
-
-# smoke then full
-TU_TAB_L_ARRAY=1,11 TU_TAB_L_PARALLEL=2 TU_TAB_L_NICE=0 \
-  bash bash_interface/cluster/submit_tu_sigma_tab_depth.sh
-TU_TAB_L_NICE=0 bash bash_interface/cluster/submit_tu_sigma_tab_depth.sh
+# ✅ already submitted — do not re-run unless re-launching
+# TU_TAB_L_PARALLEL=3 TU_TAB_L_NICE=0 \
+#   bash bash_interface/cluster/submit_tu_sigma_tab_depth.sh
 ```
 
 | Field | Value |
 |-------|-------|
-| **SLURM** | 🔄 paste after submit |
+| **SLURM** | 🔄 **`45134881`** · `1-720%3` · `mweber_gpu` · Nice=0 |
 | **Submit** | `bash_interface/cluster/submit_tu_sigma_tab_depth.sh` |
-| **Tasks** | `1-720%20` · L=4 `1–240` · L=2 `241–480` · L=1 `481–720` |
+| **Tasks** | `1-720%3` · L=4 `1–240` · L=2 `241–480` · L=1 `481–720` |
 | **Variants** | gated hetero ×2 LR + ungated ×2 LR |
 | **W&B** | `tu_L<k>_hh_*` (Tab.17) · `tu_L<k>_1x_*` (Tab.18) |
 | **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_tab_depth/` |
 | **Docs** | [`Paper_tu_sigma_homo_hetero.md`](Paper_tu_sigma_homo_hetero.md) |
-| **Logs** | `logs_gnnplus/tu_tab_L_<JOBID>_<TASK>.log` |
+| **Logs** | `logs_gnnplus/tu_tab_L_45134881_<TASK>.log` |
 
 ---
 
@@ -1283,7 +1262,8 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **`a1g2_micro` eval PROTEINS** | **45067214** | 30 (1–30) | ✅ **72.2±2.9** |
 | **`a1g2_nci1_micro` select** | **45054174** | 40 | ✅ · agg → `sigma_a1g2_nci1_micro_per_fold.json` (10 folds) |
 | **`a1g2_nci1_micro` eval** | **45074636** | 30 (1–30) | ✅ **80.4±2.0** |
-| **`full64` eval P/NCI1/REDDIT** | **45131301** | 90 (31–90,151–180) | 🔄 submitted 2026-09-07 · skip COLLAB/ENZYMES/DD/IMDB |
+| **`full64` eval P/NCI1/REDDIT** | **45131301** | 90 (31–90,151–180) | 🔄 · PROTEINS ✅ **71.6±3.7** |
+| **`anchor_refine` select** | — | 40 | ⏳ ready to submit · PROTEINS drop×pool |
 | **`fixed8_ungated` select** | **44869251** | 560 | ⏸️ **HELD** · `scontrol release 44869251` when ready |
 | `aggregate_sigma` → `sigma_grid_eval_fixed8` | — | 210 | ✅ selection done · eval **44621846** |
 

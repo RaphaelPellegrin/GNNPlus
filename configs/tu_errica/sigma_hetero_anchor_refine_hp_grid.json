@@ -1,0 +1,47 @@
+{
+  "model": "sigma_hetero",
+  "mode": "anchor_refine",
+  "note": "PROTEINS refine around modal anchor_boost winner (bs=16, lr=1e-3, L=12, d_h=8): search dropout\u00d7pooling (4 configs \u00d7 10 folds = 40 select).",
+  "grid": [
+    {
+      "batch_size": 16,
+      "base_lr": 0.001,
+      "layers_mp": 12,
+      "dim_inner": 64,
+      "d_h": 8,
+      "dropout": 0.0,
+      "graph_pooling": "add",
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 16,
+      "base_lr": 0.001,
+      "layers_mp": 12,
+      "dim_inner": 64,
+      "d_h": 8,
+      "dropout": 0.0,
+      "graph_pooling": "mean",
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 16,
+      "base_lr": 0.001,
+      "layers_mp": 12,
+      "dim_inner": 64,
+      "d_h": 8,
+      "dropout": 0.5,
+      "graph_pooling": "add",
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 16,
+      "base_lr": 0.001,
+      "layers_mp": 12,
+      "dim_inner": 64,
+      "d_h": 8,
+      "dropout": 0.5,
+      "graph_pooling": "mean",
+      "early_stop_use_loss": false
+    }
+  ]
+}
