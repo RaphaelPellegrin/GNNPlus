@@ -25,6 +25,18 @@ mode winner (bs=16, lr=1e-3, L=12, d_h=8 × dropout × pooling). Writes
 deep center (bs=32, lr=1e-3, L=12, d_h=16 × dropout=0.5 × pooling).
 Writes ``configs/tu_errica/sigma_grids_nci1_refine/``.
 
+``--mode native_fair``: compact SiGMA fair on PROTEINS/NCI1/REDDIT (16 configs):
+a0g2 + a1g2 specialists × (lr × L); bs=32, d_h=16 fixed. Writes
+``configs/tu_errica/sigma_grids_native_fair/``.
+
+``--mode a0g_pnr``: MP-only (drop global attention) on PROTEINS / NCI1 /
+REDDIT-BINARY. Wider train than native_fair; a0g4 full + a0g2 specialists.
+Writes ``configs/tu_errica/sigma_grids_a0g_pnr/``.
+
+``--mode tiny_pnr``: ultra-tiny sensible SiGMA select on PROTEINS / NCI1 /
+REDDIT (bs∈{16,32} × d_h∈{8,16}, lr=1e-3, L=12, a2g4). 120 select / 90 eval.
+Writes ``configs/tu_errica/sigma_grids_tiny_pnr/``.
+
 Legacy (``--mode budget_bio``): bio folds lock depth/width to the GIN winner
 and keep SiGMA params ≤ that GIN budget; social folds use ``SIGMA_GRID``.
 """
@@ -48,6 +60,9 @@ SigmaGridMode = Literal[
     "a1g2_nci1_micro",
     "anchor_refine",
     "nci1_refine",
+    "native_fair",
+    "a0g_pnr",
+    "tiny_pnr",
 ]
 
 
@@ -70,6 +85,12 @@ A1G2_NCI1_MICRO_DS_TAGS = _hp.A1G2_NCI1_MICRO_DS_TAGS
 ANCHOR_BOOST_DS_TAGS = _hp.ANCHOR_BOOST_DS_TAGS
 ANCHOR_REFINE_DS_TAGS = _hp.ANCHOR_REFINE_DS_TAGS
 NCI1_REFINE_DS_TAGS = _hp.NCI1_REFINE_DS_TAGS
+A0G_PNR_DS_TAGS = _hp.A0G_PNR_DS_TAGS
+A0G_PNR_DS_ORDER = _hp.A0G_PNR_DS_ORDER
+TINY_PNR_DS_TAGS = _hp.TINY_PNR_DS_TAGS
+TINY_PNR_DS_ORDER = _hp.TINY_PNR_DS_ORDER
+NATIVE_FAIR_DS_TAGS = _hp.NATIVE_FAIR_DS_TAGS
+NATIVE_FAIR_DS_ORDER = _hp.NATIVE_FAIR_DS_ORDER
 BIO_DS_TAGS = _hp.BIO_DS_TAGS
 DS_TAG_TO_NAME = _hp.DS_TAG_TO_NAME
 SOCIAL_DS_TAGS = _hp.SOCIAL_DS_TAGS
@@ -78,6 +99,9 @@ a1g2_nci1_micro_sigma_grid_entries = _hp.a1g2_nci1_micro_sigma_grid_entries
 anchor_boost_sigma_grid_entries = _hp.anchor_boost_sigma_grid_entries
 anchor_refine_sigma_grid_entries = _hp.anchor_refine_sigma_grid_entries
 nci1_refine_sigma_grid_entries = _hp.nci1_refine_sigma_grid_entries
+native_fair_sigma_grid_entries = _hp.native_fair_sigma_grid_entries
+a0g_pnr_sigma_grid_entries = _hp.a0g_pnr_sigma_grid_entries
+tiny_pnr_sigma_grid_entries = _hp.tiny_pnr_sigma_grid_entries
 build_bio_sigma_micro_grid = _hp.build_bio_sigma_micro_grid
 full64_sigma_grid_entries = _hp.full64_sigma_grid_entries
 social_sigma_grid_entries = _hp.social_sigma_grid_entries
@@ -97,6 +121,12 @@ def grids_dir_for_mode(mode: SigmaGridMode) -> Path:
         return _REPO_ROOT / "configs/tu_errica/sigma_grids_anchor_refine"
     if mode == "nci1_refine":
         return _REPO_ROOT / "configs/tu_errica/sigma_grids_nci1_refine"
+    if mode == "native_fair":
+        return _REPO_ROOT / "configs/tu_errica/sigma_grids_native_fair"
+    if mode == "a0g_pnr":
+        return _REPO_ROOT / "configs/tu_errica/sigma_grids_a0g_pnr"
+    if mode == "tiny_pnr":
+        return _REPO_ROOT / "configs/tu_errica/sigma_grids_tiny_pnr"
     return _REPO_ROOT / "configs/tu_errica/sigma_grids"
 
 
@@ -117,6 +147,15 @@ def _dataset_items_for_mode(mode: SigmaGridMode) -> list[tuple[str, str]]:
     elif mode == "nci1_refine":
         tags = NCI1_REFINE_DS_TAGS
         order = ("nci1",)
+    elif mode == "a0g_pnr":
+        tags = A0G_PNR_DS_TAGS
+        order = A0G_PNR_DS_ORDER
+    elif mode == "tiny_pnr":
+        tags = TINY_PNR_DS_TAGS
+        order = TINY_PNR_DS_ORDER
+    elif mode == "native_fair":
+        tags = NATIVE_FAIR_DS_TAGS
+        order = NATIVE_FAIR_DS_ORDER
     else:
         return list(DS_TAG_TO_NAME.items())
     return [(tag, DS_TAG_TO_NAME[tag]) for tag in order if tag in tags]
@@ -223,6 +262,33 @@ def _grid_for_fold(
             raise KeyError(f"nci1_refine skips dataset {ds_tag}")
         return _annotate_grid(
             nci1_refine_sigma_grid_entries(),
+            dataset_name=ds_name,
+            gin_params=None,
+            with_params=False,
+        )
+    if mode == "native_fair":
+        if ds_tag not in NATIVE_FAIR_DS_TAGS:
+            raise KeyError(f"native_fair skips dataset {ds_tag}")
+        return _annotate_grid(
+            native_fair_sigma_grid_entries(),
+            dataset_name=ds_name,
+            gin_params=None,
+            with_params=False,
+        )
+    if mode == "a0g_pnr":
+        if ds_tag not in A0G_PNR_DS_TAGS:
+            raise KeyError(f"a0g_pnr skips dataset {ds_tag}")
+        return _annotate_grid(
+            a0g_pnr_sigma_grid_entries(),
+            dataset_name=ds_name,
+            gin_params=None,
+            with_params=False,
+        )
+    if mode == "tiny_pnr":
+        if ds_tag not in TINY_PNR_DS_TAGS:
+            raise KeyError(f"tiny_pnr skips dataset {ds_tag}")
+        return _annotate_grid(
+            tiny_pnr_sigma_grid_entries(),
             dataset_name=ds_name,
             gin_params=None,
             with_params=False,
@@ -463,6 +529,68 @@ def write_grids(
             ),
             encoding="utf-8",
         )
+    if mode == "native_fair" and written:
+        sample = next(iter(written))
+        sample_grid = json.loads((grids_sub / sample).read_text(encoding="utf-8"))
+        vendored = _REPO_ROOT / "configs/tu_errica/sigma_hetero_native_fair_hp_grid.json"
+        vendored.write_text(
+            json.dumps(
+                {
+                    "model": "sigma_hetero",
+                    "mode": "native_fair",
+                    "note": (
+                        "Compact SiGMA fair on PROTEINS/NCI1/REDDIT (gpu_h200). "
+                        "a1g2_{gin_sage,gcn_gin} + a0g2_{gin_sage,gcn_gin} × "
+                        "lr∈{1e-3,1e-2} × L∈{4,12}; bs=32, d_h=16, H=64 fixed "
+                        "→ 16 configs × 3 × 10 = 480 select / 90 eval."
+                    ),
+                    "grid": sample_grid["grid"],
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+    if mode == "a0g_pnr" and written:
+        sample = next(iter(written))
+        sample_grid = json.loads((grids_sub / sample).read_text(encoding="utf-8"))
+        vendored = _REPO_ROOT / "configs/tu_errica/sigma_hetero_a0g_pnr_hp_grid.json"
+        vendored.write_text(
+            json.dumps(
+                {
+                    "model": "sigma_hetero",
+                    "mode": "a0g_pnr",
+                    "note": (
+                        "MP-only Errica fair on PROTEINS/NCI1/REDDIT (drop global attn). "
+                        "a0g4_full + a0g2_gin_sage + a0g2_gcn_gin × same train axes as "
+                        "native_fair → 48 configs × 3 × 10 = 1440 select / 90 eval."
+                    ),
+                    "grid": sample_grid["grid"],
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+    if mode == "tiny_pnr" and written:
+        sample = next(iter(written))
+        sample_grid = json.loads((grids_sub / sample).read_text(encoding="utf-8"))
+        vendored = _REPO_ROOT / "configs/tu_errica/sigma_hetero_tiny_pnr_hp_grid.json"
+        vendored.write_text(
+            json.dumps(
+                {
+                    "model": "sigma_hetero",
+                    "mode": "tiny_pnr",
+                    "note": (
+                        "Ultra-tiny sensible SiGMA on PROTEINS/NCI1/REDDIT (a2g4). "
+                        "bs∈{16,32} × d_h∈{8,16}, lr=1e-3, L=12, drop=0.5, pool=add "
+                        "→ 4 configs × 3 × 10 = 120 select / 90 eval. "
+                        "Avoids full64's lr=0.01 + L=4."
+                    ),
+                    "grid": sample_grid["grid"],
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
 
 
 def main() -> None:
@@ -479,10 +607,16 @@ def main() -> None:
             "a1g2_nci1_micro",
             "anchor_refine",
             "nci1_refine",
+            "native_fair",
+            "a0g_pnr",
+            "tiny_pnr",
         ),
         default="fixed8",
         help="fixed8: 8-config SIGMA_GRID (default). "
-        "full64: GIN-isomorphic 64-config grid. "
+        "full64: GIN-isomorphic 64-config grid (shallow; prefer native_fair). "
+        "native_fair: a0g2+a1g2 on P/NCI1/REDDIT, lr×L only (480 select). "
+        "a0g_pnr: MP-only a0g* on PROTEINS/NCI1/REDDIT (1440 select). "
+        "tiny_pnr: ultra-tiny sensible a2g4 on P/NCI1/REDDIT (120 select). "
         "anchor_boost: paper a2g4-centered grid on PROTEINS+REDDIT. "
         "a1g2_micro: tiny bs×lr grid for SiGMA a1g2 on PROTEINS+REDDIT. "
         "a1g2_nci1_micro: tiny bs×lr grid for SiGMA a1g2 (GIN,SAGE) on NCI1. "

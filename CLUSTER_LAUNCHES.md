@@ -1264,8 +1264,12 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **`a1g2_nci1_micro` select** | **45054174** | 40 | ✅ · agg → `sigma_a1g2_nci1_micro_per_fold.json` (10 folds) |
 | **`a1g2_nci1_micro` eval** | **45074636** | 30 (1–30) | ✅ **80.4±2.0** |
 | **`full64` eval P/NCI1/REDDIT** | **45131301** | 90 (31–90,151–180) | 🔄 · PROTEINS ✅ **71.6±3.7** |
-| **`anchor_refine` select** | **45146136** | 40 | 🔄 4-HP version (submitted before shrink) |
+| **`anchor_refine` select** | **45146136** | 40 | ✅ → `sigma_anchor_refine_per_fold.json` |
+| **`anchor_refine` eval** | **45192875** | 30 (1–30) | 🔄 PROTEINS · `%20` |
 | **`nci1_refine` select** | **45149015** | 20 (1–20%5) | 🔄 drop0.5×{add,mean} · `%5` |
+| **`native_fair` select** | — | **480** | ⏳ ready · a0g2+a1g2 · lr×L · P/NCI1/REDDIT · **gpu_h200** |
+| **`a0g_pnr` select** | — | **1440** | ⏳ ready later · a0g4/a0g2 · P/NCI1/REDDIT |
+| **`tiny_pnr` select** | — | **120** | ⏳ ready · sensible a2g4 · bs×d_h only |
 | **`fixed8_ungated` select** | **44869251** | 560 | ⏸️ **HELD** · `scontrol release 44869251` when ready |
 | `aggregate_sigma` → `sigma_grid_eval_fixed8` | — | 210 | ✅ selection done · eval **44621846** |
 

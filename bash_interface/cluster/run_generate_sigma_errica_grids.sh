@@ -9,6 +9,9 @@
 #   bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode a1g2_nci1_micro
 #   bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode anchor_refine
 #   bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode nci1_refine
+#   bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode native_fair
+#   bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode a0g_pnr
+#   bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode tiny_pnr
 #   bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode budget_bio
 #
 # Legacy budget_bio still needs gin_per_fold.json:
@@ -54,6 +57,12 @@ elif [ "${MODE}" = "anchor_refine" ]; then
     log_message "Generating SiGMA grids (anchor_refine: PROTEINS, dropout×pool)"
 elif [ "${MODE}" = "nci1_refine" ]; then
     log_message "Generating SiGMA grids (nci1_refine: NCI1, 2 configs, drop0.5×pool)"
+elif [ "${MODE}" = "native_fair" ]; then
+    log_message "Generating SiGMA grids (native_fair: a1g4+a1g2 P/NCI1/REDDIT, 360 select)"
+elif [ "${MODE}" = "a0g_pnr" ]; then
+    log_message "Generating SiGMA grids (a0g_pnr: MP-only P/NCI1/REDDIT, 1440 select)"
+elif [ "${MODE}" = "tiny_pnr" ]; then
+    log_message "Generating SiGMA grids (tiny_pnr: sensible a2g4 P/NCI1/REDDIT, 120 select)"
 else
     log_message "Generating SiGMA grids (fixed8 SIGMA_GRID, no param ceiling)"
 fi
@@ -78,6 +87,15 @@ elif [ "${MODE}" = "anchor_refine" ]; then
 elif [ "${MODE}" = "nci1_refine" ]; then
     manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids_nci1_refine/manifest.json"
     next_phase="sigma_grid_select_nci1_refine"
+elif [ "${MODE}" = "native_fair" ]; then
+    manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids_native_fair/manifest.json"
+    next_phase="sigma_grid_select_native_fair"
+elif [ "${MODE}" = "a0g_pnr" ]; then
+    manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids_a0g_pnr/manifest.json"
+    next_phase="sigma_grid_select_a0g_pnr"
+elif [ "${MODE}" = "tiny_pnr" ]; then
+    manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids_tiny_pnr/manifest.json"
+    next_phase="sigma_grid_select_tiny_pnr"
 else
     manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids/manifest.json"
     next_phase="sigma_grid_select"

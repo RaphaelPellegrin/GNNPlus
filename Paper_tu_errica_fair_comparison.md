@@ -71,8 +71,12 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 | **3a-A1N** | `sigma_grid_select` **a1g2_nci1_micro** | **45054174** | ✅ **40/40** | agg → `sigma_a1g2_nci1_micro_per_fold.json` (10 folds, GIN+SAGE) |
 | **4e-A1N** | `sigma_grid_eval` a1g2 **NCI1** | **45074636** | ✅ **30/30** | **80.4±2.0** (GIN+SAGE) · vs fixed8 SiGMA 80.66±1.89 |
 | **4e-F64** | `sigma_grid_eval` **full64** P/NCI1/REDDIT | **45131301** | 🔄 NCI1+REDDIT | PROTEINS ✅ **71.6±3.7** (worse than a2g4 73.68) |
-| **3a-AR** | `sigma_grid_select` **anchor_refine** | **45146136** | 🔄 **1–40** | PROTEINS 4-HP drop×pool (submitted before shrink) |
-| **3a-NR** | `sigma_grid_select` **nci1_refine** | — | ⏳ ready | NCI1 · **2** HPs (drop0.5×pool) · **20** select |
+| **3a-AR** | `sigma_grid_select` **anchor_refine** | **45146136** | ✅ **40/40** | PROTEINS 4-HP drop×pool → `sigma_anchor_refine_per_fold.json` |
+| **4e-AR** | `sigma_grid_eval` **anchor_refine** | **45192875** | 🔄 **1–30** | PROTEINS · `%20` · chase GCN 73.9 |
+| **3a-NR** | `sigma_grid_select` **nci1_refine** | **45149015** | 🔄 **1–20%5** | NCI1 · **2** HPs (drop0.5×pool) · **20** select |
+| **3a-NF** | `sigma_grid_select` **native_fair** | — | ⏳ ready | a0g2+a1g2 · P/NCI1/REDDIT · **480** select · **gpu_h200** |
+| **3a-A0** | `sigma_grid_select` **a0g_pnr** | — | ⏳ ready later | MP-only **a0g4/a0g2** on P/NCI1/REDDIT · **1440** select |
+| **3a-TP** | `sigma_grid_select` **tiny_pnr** | — | ⏳ ready | Ultra-tiny sensible a2g4 · **4** HPs × 3 ds = **120** select |
 | **3a-U** | `sigma_grid_select` **fixed8 ungated** | **44869251** | ⏸️ **HELD** | `scontrol hold` 2026-09-06 — **must `scontrol release 44869251` later** · leftover `R` finish OK |
 | **3a-fill** | fixed8 **COLLAB f9 hp7** fill | **44507757** | ✅ **COMPLETED** | task **560** · netscratch logs |
 | **3b** | `aggregate_sigma` | — | ✅ **70/70 folds** | `sigma_fixed8_per_fold.json` |
@@ -233,11 +237,85 @@ Tiny chase around modal ``anchor_boost`` PROTEINS winner
 Arch stays **a2g4**. Goal: beat GCN **73.9** (current best SiGMA = **73.68**).
 
 ```bash
-python scripts/tu_errica/generate_sigma_errica_grids.py --mode anchor_refine
-bash bash_interface/cluster/submit_tu_errica_anchor_refine_select.sh
+# select 45146136 ✅ → agg wrote sigma_anchor_refine_per_fold.json
+# eval submitted 2026-09-07: JOBID=45192875  (1–30%20)
+squeue -j 45192875
+# when empty, pull numbers:
+python scripts/tu_errica/aggregate_errica_results.py --source wandb \
+  --campaign sigma_grid_eval_anchor_refine --models SiGMA_hetero
+```
+
+### SiGMA native_fair (PROTEINS/NCI1/REDDIT on gpu_h200, 2026-09-07)
+
+**Problem:** `full64` was GIN-isomorphic (`L=4`, `lr=0.01`) and never searched MP
+heads — it underperformed (PROTEINS **71.6**, NCI1 **77.6**).
+
+Hard datasets only. Compact prayer grid: **a1g2 + a0g2** with the best 2-MP
+specialists (drop full a*g4). Train: **lr × layers_mp** only (bs/d_h/H fixed).
+
+| Axis | Values |
+|------|--------|
+| **MP family** | `a1g2_gin_sage` · `a1g2_gcn_gin` · `a0g2_gin_sage` · `a0g2_gcn_gin` |
+| `base_lr` | 0.001, 0.01 |
+| `layers_mp` | 4, **12** |
+| `batch_size` / `d_h` / H / drop / pool | **32** / **16** / **64** / 0.5 / add |
+
+→ **16** configs × 3 × 10 = **480** select · eval = **90**. Partition: **`gpu_h200`**.
+
+```bash
+python scripts/tu_errica/generate_sigma_errica_grids.py --mode native_fair
+bash bash_interface/cluster/submit_tu_errica_native_fair_select.sh
 # after select:
-bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_anchor_refine
-bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_anchor_refine
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_native_fair
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_native_fair
+```
+
+### SiGMA a0g_pnr — drop global attention (ready later, 2026-09-07)
+
+Same Errica protocol on the hard datasets only (**PROTEINS / NCI1 / REDDIT-BINARY**).
+Take the best MP mixes from native_fair and **drop global attention**
+(`num_attn_heads=0`):
+
+| MP family | Heads | Types |
+|-----------|------:|-------|
+| `a0g4_full` | 0 attn + 4 MP | GCN,GIN,SAGE,GAT |
+| `a0g2_gin_sage` | 0 attn + 2 MP | GIN,SAGE |
+| `a0g2_gcn_gin` | 0 attn + 2 MP | GCN,GIN |
+
+Train axes: wider than native_fair (`bs`×`lr`×`L`×`d_h`).
+→ **48** configs × 3 × 10 = **1,440** select · eval = **90** (3×10×3).
+W&B model tag: `SiGMA_a0g`. No forced bs override.
+
+```bash
+python scripts/tu_errica/generate_sigma_errica_grids.py --mode a0g_pnr
+# later:
+bash bash_interface/cluster/submit_tu_errica_a0g_pnr_select.sh
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_a0g_pnr
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_a0g_pnr
+```
+
+### SiGMA tiny_pnr — sensible ultra-tiny select (2026-09-07)
+
+Fast path on **PROTEINS / NCI1 / REDDIT** after `full64` used the wrong SiGMA
+recipe (`lr=0.01`, `L=4`). Fix arch to **a2g4** and only search around the
+known deep recipe:
+
+| Axis | Values (vs full64) |
+|------|--------------------|
+| `base_lr` | **0.001** (not 0.01) |
+| `layers_mp` | **12** (not 4) |
+| `batch_size` | 16, 32 |
+| `d_h` | 8, 16 |
+| H / drop / pool | 64 / 0.5 / add |
+
+→ **4** configs × 3 × 10 = **120** select · eval = **90**. No bs override.
+
+```bash
+python scripts/tu_errica/generate_sigma_errica_grids.py --mode tiny_pnr
+bash bash_interface/cluster/submit_tu_errica_tiny_pnr_select.sh
+# after:
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_tiny_pnr
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_tiny_pnr
 ```
 
 ### SiGMA NCI1 nci1_refine (2026-09-07)
@@ -248,9 +326,8 @@ with only GCN-like corner: `dropout=0.5` × `pool ∈ {add,mean}` → **2** conf
 folds = **20** select / **30** eval. Goal: beat GraphSAGE **81.6**.
 
 ```bash
-python scripts/tu_errica/generate_sigma_errica_grids.py --mode nci1_refine
-bash bash_interface/cluster/submit_tu_errica_nci1_refine_select.sh
-# after select:
+# Submitted 2026-09-07: JOBID=45149015  (1–20%5)
+# after select empty:
 bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_nci1_refine
 bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_nci1_refine
 ```

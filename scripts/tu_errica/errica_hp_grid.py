@@ -198,6 +198,113 @@ SIGMA_NCI1_REFINE_GRID: dict[str, list[Any]] = {
     "early_stop_use_loss": [False],
 }
 
+# ---------------------------------------------------------------------------
+# native_fair — compact SiGMA fair search on PROTEINS / NCI1 / REDDIT.
+#
+# Why not full64? full64 locked GIN's L=4 + lr=0.01 and never varied MP heads.
+# Launch partition: gpu_h200 (see submit_tu_errica_native_fair_select.sh).
+#
+# Compact prayer grid (no a1g4 / a0g4 full mixes):
+#   • a1g2_gin_sage / a1g2_gcn_gin — best 2-MP specialists + 1 attn
+#   • a0g2_gin_sage / a0g2_gcn_gin — same MP mixes, drop global attn
+# Train sweep (bs=32, d_h=16, H=64 fixed): lr × layers_mp (MLP depth) only.
+# Count: 4 × 2 × 2 = 16 → 16 × 3 × 10 = 480 select / 90 eval.
+# ---------------------------------------------------------------------------
+SIGMA_NATIVE_FAIR_MP_FAMILIES: list[dict[str, Any]] = [
+    {
+        "mp_family": "a1g2_gin_sage",
+        "num_attn_heads": 1,
+        "num_gnn_heads": 2,
+        "gnn_types": "GIN,SAGE",
+    },
+    {
+        "mp_family": "a1g2_gcn_gin",
+        "num_attn_heads": 1,
+        "num_gnn_heads": 2,
+        "gnn_types": "GCN,GIN",
+    },
+    {
+        "mp_family": "a0g2_gin_sage",
+        "num_attn_heads": 0,
+        "num_gnn_heads": 2,
+        "gnn_types": "GIN,SAGE",
+    },
+    {
+        "mp_family": "a0g2_gcn_gin",
+        "num_attn_heads": 0,
+        "num_gnn_heads": 2,
+        "gnn_types": "GCN,GIN",
+    },
+]
+
+SIGMA_NATIVE_FAIR_TRAIN_GRID: dict[str, list[Any]] = {
+    "batch_size": [32],
+    "base_lr": [0.001, 0.01],
+    "layers_mp": [4, 12],
+    "dim_inner": [64],
+    "d_h": [16],
+    "dropout": [0.5],
+    "graph_pooling": ["add"],
+    "early_stop_use_loss": [False],
+}
+
+# ---------------------------------------------------------------------------
+# a0g_pnr — MP-only (drop global attention) on PROTEINS / NCI1 / REDDIT.
+#
+# Same specialist MP mixes as native_fair (a0g*), wider train (bs×d_h).
+# Count: 3 × 16 = 48 → 48 × 3 × 10 = 1,440 select.
+# ---------------------------------------------------------------------------
+SIGMA_A0G_PNR_MP_FAMILIES: list[dict[str, Any]] = [
+    {
+        "mp_family": "a0g4_full",
+        "num_attn_heads": 0,
+        "num_gnn_heads": 4,
+        "gnn_types": "GCN,GIN,SAGE,GAT",
+    },
+    {
+        "mp_family": "a0g2_gin_sage",
+        "num_attn_heads": 0,
+        "num_gnn_heads": 2,
+        "gnn_types": "GIN,SAGE",
+    },
+    {
+        "mp_family": "a0g2_gcn_gin",
+        "num_attn_heads": 0,
+        "num_gnn_heads": 2,
+        "gnn_types": "GCN,GIN",
+    },
+]
+
+# Wider train than native_fair (kept independent — native_fair dropped bs/d_h).
+SIGMA_A0G_PNR_TRAIN_GRID: dict[str, list[Any]] = {
+    "batch_size": [32, 128],
+    "base_lr": [0.001, 0.01],
+    "layers_mp": [4, 12],
+    "dim_inner": [64],
+    "d_h": [8, 16],
+    "dropout": [0.5],
+    "graph_pooling": ["add"],
+    "early_stop_use_loss": [False],
+}
+
+# ---------------------------------------------------------------------------
+# tiny_pnr — ultra-tiny select on PROTEINS / NCI1 / REDDIT with *sensible*
+# SiGMA HPs (contrast full64: lr=0.01 + L=4).
+#
+# Arch: a2g4 gated (yaml). Only search bs×d_h around the known deep recipe.
+# Count: 4 → 4 × 3 × 10 = 120 select / 90 eval. Fast path to a competitive eval.
+# ---------------------------------------------------------------------------
+SIGMA_TINY_PNR_GRID: dict[str, list[Any]] = {
+    "batch_size": [16, 32],
+    "base_lr": [0.001],
+    "layers_mp": [12],
+    "dim_inner": [64],
+    "d_h": [8, 16],
+    "dropout": [0.5],
+    "graph_pooling": ["add"],
+    "early_stop_use_loss": [False],
+}
+
 # Dataset families for hybrid SiGMA search (Option 3).
 BIO_DS_TAGS: frozenset[str] = frozenset({"enzymes", "proteins", "nci1", "dd"})
 SOCIAL_DS_TAGS: frozenset[str] = frozenset({"imdb-b", "reddit-b", "collab"})
@@ -210,6 +317,13 @@ A1G2_NCI1_MICRO_DS_TAGS: frozenset[str] = frozenset({"nci1"})
 ANCHOR_REFINE_DS_TAGS: frozenset[str] = frozenset({"proteins"})
 # Local refine around NCI1 fixed8/a2g4 deep center + dropout/pool.
 NCI1_REFINE_DS_TAGS: frozenset[str] = frozenset({"nci1"})
+# native_fair / a0g_pnr / tiny_pnr: PROTEINS + NCI1 + REDDIT.
+NATIVE_FAIR_DS_TAGS: frozenset[str] = frozenset({"proteins", "nci1", "reddit-b"})
+NATIVE_FAIR_DS_ORDER: tuple[str, ...] = ("proteins", "nci1", "reddit-b")
+A0G_PNR_DS_TAGS: frozenset[str] = NATIVE_FAIR_DS_TAGS
+A0G_PNR_DS_ORDER: tuple[str, ...] = NATIVE_FAIR_DS_ORDER
+TINY_PNR_DS_TAGS: frozenset[str] = NATIVE_FAIR_DS_TAGS
+TINY_PNR_DS_ORDER: tuple[str, ...] = NATIVE_FAIR_DS_ORDER
 
 DS_TAG_TO_NAME: dict[str, str] = {
     "enzymes": "ENZYMES",
@@ -287,6 +401,56 @@ def anchor_refine_sigma_grid_entries() -> list[dict[str, Any]]:
 def nci1_refine_sigma_grid_entries() -> list[dict[str, Any]]:
     """Tiny NCI1 refine grid around fixed8/a2g4 deep center (``nci1_refine``)."""
     return expand_grid(SIGMA_NCI1_REFINE_GRID)
+
+
+def native_fair_sigma_grid_entries() -> list[dict[str, Any]]:
+    """Compact SiGMA fair grid: a0g2/a1g2 specialists × lr × L (``native_fair``).
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        Flattened configs (16 by default). Each entry includes ``mp_family``
+        metadata plus ``num_attn_heads`` / ``num_gnn_heads`` / ``gnn_types``
+        for ``emit_cfg_overrides``.
+    """
+    train = expand_grid(SIGMA_NATIVE_FAIR_TRAIN_GRID)
+    combos: list[dict[str, Any]] = []
+    for family in SIGMA_NATIVE_FAIR_MP_FAMILIES:
+        for train_hp in train:
+            row = dict(train_hp)
+            row.update(family)
+            combos.append(row)
+    return combos
+
+
+def a0g_pnr_sigma_grid_entries() -> list[dict[str, Any]]:
+    """MP-only (a0g*) fair grid on PROTEINS/NCI1/REDDIT (``a0g_pnr``).
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        Flattened configs (48 by default): a0g4 full + a0g2 specialists ×
+        the same train axes as ``native_fair``.
+    """
+    train = expand_grid(SIGMA_A0G_PNR_TRAIN_GRID)
+    combos: list[dict[str, Any]] = []
+    for family in SIGMA_A0G_PNR_MP_FAMILIES:
+        for train_hp in train:
+            row = dict(train_hp)
+            row.update(family)
+            combos.append(row)
+    return combos
+
+
+def tiny_pnr_sigma_grid_entries() -> list[dict[str, Any]]:
+    """Ultra-tiny sensible SiGMA grid on PROTEINS/NCI1/REDDIT (``tiny_pnr``).
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        4 configs: bs∈{16,32} × d_h∈{8,16} at lr=1e-3, L=12 (a2g4 yaml).
+    """
+    return expand_grid(SIGMA_TINY_PNR_GRID)
 
 
 def expand_grid(grid: dict[str, list[Any]]) -> list[dict[str, Any]]:
