@@ -1,0 +1,39 @@
+{
+  "model": "sigma_a1g2_ginsage",
+  "mode": "a1g2_nci1_micro",
+  "note": "SiGMA a1g2 (1 attn + GIN,SAGE) on NCI1: L12/H64/d_h16 fixed; search bs\u2208{32,128} \u00d7 lr\u2208{1e-3,1e-2} only (40 select tasks).",
+  "grid": [
+    {
+      "batch_size": 32,
+      "base_lr": 0.001,
+      "layers_mp": 12,
+      "dim_inner": 64,
+      "d_h": 16,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 32,
+      "base_lr": 0.01,
+      "layers_mp": 12,
+      "dim_inner": 64,
+      "d_h": 16,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.001,
+      "layers_mp": 12,
+      "dim_inner": 64,
+      "d_h": 16,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 128,
+      "base_lr": 0.01,
+      "layers_mp": 12,
+      "dim_inner": 64,
+      "d_h": 16,
+      "early_stop_use_loss": false
+    }
+  ]
+}
