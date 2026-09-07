@@ -66,12 +66,22 @@ case "${campaign}" in
     sigma_grid_select_anchor_boost)
         num_tasks=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids_anchor_boost/manifest.json'))['num_tasks'])")
         ;;
+    sigma_grid_select_a1g2_micro)
+        num_tasks=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids_a1g2_micro/manifest.json'))['num_tasks'])")
+        ;;
+    sigma_grid_select_a1g2_nci1_micro)
+        num_tasks=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids_a1g2_nci1_micro/manifest.json'))['num_tasks'])")
+        ;;
     grid_eval|sigma_grid_eval|sigma_grid_eval_fixed8|sigma_grid_eval_full64|sigma_grid_eval_fixed8_ungated)
         num_tasks=$((num_datasets * num_folds * num_seeds))
         ;;
-    sigma_grid_eval_anchor_boost)
+    sigma_grid_eval_anchor_boost|sigma_grid_eval_a1g2_micro)
         # PROTEINS + REDDIT-BINARY only (2 × 10 × 3).
         num_tasks=$((2 * num_folds * num_seeds))
+        ;;
+    sigma_grid_eval_a1g2_nci1_micro)
+        # NCI1 only (1 × 10 × 3).
+        num_tasks=$((num_folds * num_seeds))
         ;;
     *)
         log_message "Unknown TU_ERRICA_CAMPAIGN=${campaign}"
@@ -187,6 +197,44 @@ print(t['ds_tag'], t['fold'], t['grid_file'], t['hp_id'])
         done
         emit_extra=(--sigma-grid-file "${sigma_grid_file}" --hp-id="${hp_id}")
         ;;
+    sigma_grid_select_a1g2_micro)
+        cfg="configs/tu_errica/sigma-hetero-a1g2-errica-base.yaml"
+        model_key="sigma_hetero"
+        model_tag="SiGMA_a1g2"
+        seed=$((seed_offset))
+        read -r ds_tag fold_idx grid_rel hp_id < <(python3 -c "
+import json
+t=json.load(open('configs/tu_errica/sigma_grids_a1g2_micro/manifest.json'))['tasks'][${idx}]
+print(t['ds_tag'], t['fold'], t['grid_file'], t['hp_id'])
+")
+        sigma_grid_file="configs/tu_errica/sigma_grids_a1g2_micro/grids/${grid_rel}"
+        for i in "${!datasets[@]}"; do
+            if [ "${datasets[$i]}" = "${ds_tag}" ]; then
+                dataset_idx=$i
+                break
+            fi
+        done
+        emit_extra=(--sigma-grid-file "${sigma_grid_file}" --hp-id="${hp_id}")
+        ;;
+    sigma_grid_select_a1g2_nci1_micro)
+        cfg="configs/tu_errica/sigma-hetero-a1g2-nci1-errica-base.yaml"
+        model_key="sigma_hetero"
+        model_tag="SiGMA_a1g2_ginsage"
+        seed=$((seed_offset))
+        read -r ds_tag fold_idx grid_rel hp_id < <(python3 -c "
+import json
+t=json.load(open('configs/tu_errica/sigma_grids_a1g2_nci1_micro/manifest.json'))['tasks'][${idx}]
+print(t['ds_tag'], t['fold'], t['grid_file'], t['hp_id'])
+")
+        sigma_grid_file="configs/tu_errica/sigma_grids_a1g2_nci1_micro/grids/${grid_rel}"
+        for i in "${!datasets[@]}"; do
+            if [ "${datasets[$i]}" = "${ds_tag}" ]; then
+                dataset_idx=$i
+                break
+            fi
+        done
+        emit_extra=(--sigma-grid-file "${sigma_grid_file}" --hp-id="${hp_id}")
+        ;;
     sigma_grid_eval|sigma_grid_eval_fixed8|sigma_grid_eval_full64|sigma_grid_eval_fixed8_ungated)
         if [[ "${campaign}" == *ungated* ]]; then
             cfg="configs/tu_errica/sigma-hetero-ungated-errica-base.yaml"
@@ -228,6 +276,37 @@ print(t['ds_tag'], t['fold'], t['grid_file'], t['hp_id'])
         esac
         use_selection=1
         ;;
+    sigma_grid_eval_a1g2_micro)
+        cfg="configs/tu_errica/sigma-hetero-a1g2-errica-base.yaml"
+        model_key="sigma_hetero"
+        model_tag="SiGMA_a1g2"
+        selection_file="${TU_ERRICA_SELECTION_FILE:-configs/tu_errica/selections/sigma_a1g2_micro_per_fold.json}"
+        seed=$((seed_offset + (idx % num_seeds)))
+        rest=$((idx / num_seeds))
+        fold_idx=$((rest % num_folds))
+        local_ds=$((rest / num_folds))
+        case "${local_ds}" in
+            0) ds_tag="proteins"; dataset_idx=1 ;;
+            1) ds_tag="reddit-b"; dataset_idx=5 ;;
+            *) log_message "a1g2_micro eval local_ds=${local_ds} out of range"; exit 1 ;;
+        esac
+        use_selection=1
+        ;;
+    sigma_grid_eval_a1g2_nci1_micro)
+        cfg="configs/tu_errica/sigma-hetero-a1g2-nci1-errica-base.yaml"
+        model_key="sigma_hetero"
+        model_tag="SiGMA_a1g2_ginsage"
+        selection_file="${TU_ERRICA_SELECTION_FILE:-configs/tu_errica/selections/sigma_a1g2_nci1_micro_per_fold.json}"
+        seed=$((seed_offset + (idx % num_seeds)))
+        fold_idx=$((idx / num_seeds))
+        if [ "${fold_idx}" -ge "${num_folds}" ]; then
+            log_message "a1g2_nci1_micro eval fold=${fold_idx} out of range"
+            exit 1
+        fi
+        ds_tag="nci1"
+        dataset_idx=2
+        use_selection=1
+        ;;
     canonical)
         models=(gin graphsage sigma_hetero)
         seed=$((seed_offset + (idx % num_seeds)))
@@ -248,7 +327,11 @@ if [[ "${campaign}" != sigma_grid_select \
     && "${campaign}" != sigma_grid_select_fixed8_ungated \
     && "${campaign}" != sigma_grid_select_full64 \
     && "${campaign}" != sigma_grid_select_anchor_boost \
-    && "${campaign}" != sigma_grid_eval_anchor_boost ]]; then
+    && "${campaign}" != sigma_grid_select_a1g2_micro \
+    && "${campaign}" != sigma_grid_select_a1g2_nci1_micro \
+    && "${campaign}" != sigma_grid_eval_anchor_boost \
+    && "${campaign}" != sigma_grid_eval_a1g2_micro \
+    && "${campaign}" != sigma_grid_eval_a1g2_nci1_micro ]]; then
     ds_tag="${datasets[$dataset_idx]}"
 fi
 ds_name="${dataset_names[$dataset_idx]}"
@@ -280,7 +363,9 @@ if [ "${hp_id}" -ge 0 ]; then
         || "${campaign}" == sigma_grid_select_fixed8 \
         || "${campaign}" == sigma_grid_select_fixed8_ungated \
         || "${campaign}" == sigma_grid_select_full64 \
-        || "${campaign}" == sigma_grid_select_anchor_boost ]]; then
+        || "${campaign}" == sigma_grid_select_anchor_boost \
+        || "${campaign}" == sigma_grid_select_a1g2_micro \
+        || "${campaign}" == sigma_grid_select_a1g2_nci1_micro ]]; then
         hp_tag="f${fold_idx}_hp${hp_id}"
     else
         hp_tag="hp${hp_id}"
@@ -314,10 +399,14 @@ if [ -n "${GNNPLUS_DATASET_DIR:-}" ]; then
 fi
 
 batch_override_args=()
-# anchor_boost searches batch_size explicitly (paper uses 16/64); do not clobber.
+# anchor_boost / a1g2_*_micro search batch_size explicitly; do not clobber.
 if [ "${model_key}" = "sigma_hetero" ] \
     && [[ "${campaign}" != sigma_grid_select_anchor_boost \
-        && "${campaign}" != sigma_grid_eval_anchor_boost ]]; then
+        && "${campaign}" != sigma_grid_eval_anchor_boost \
+        && "${campaign}" != sigma_grid_select_a1g2_micro \
+        && "${campaign}" != sigma_grid_eval_a1g2_micro \
+        && "${campaign}" != sigma_grid_select_a1g2_nci1_micro \
+        && "${campaign}" != sigma_grid_eval_a1g2_nci1_micro ]]; then
     case "${ds_tag}" in
         dd|reddit-b|collab) batch_override_args+=(train.batch_size 16) ;;
     esac

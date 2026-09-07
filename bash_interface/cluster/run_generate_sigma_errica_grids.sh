@@ -5,6 +5,8 @@
 #   bash bash_interface/cluster/run_generate_sigma_errica_grids.sh
 #   bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode full64
 #   bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode anchor_boost
+#   bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode a1g2_micro
+#   bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode a1g2_nci1_micro
 #   bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode budget_bio
 #
 # Legacy budget_bio still needs gin_per_fold.json:
@@ -42,6 +44,10 @@ elif [ "${MODE}" = "full64" ]; then
     log_message "Generating SiGMA grids (full64 GIN-isomorphic, 64 configs)"
 elif [ "${MODE}" = "anchor_boost" ]; then
     log_message "Generating SiGMA grids (anchor_boost: PROTEINS+REDDIT, 24 configs)"
+elif [ "${MODE}" = "a1g2_micro" ]; then
+    log_message "Generating SiGMA grids (a1g2_micro: PROTEINS+REDDIT, 4 configs)"
+elif [ "${MODE}" = "a1g2_nci1_micro" ]; then
+    log_message "Generating SiGMA grids (a1g2_nci1_micro: NCI1, 4 configs, GIN+SAGE)"
 else
     log_message "Generating SiGMA grids (fixed8 SIGMA_GRID, no param ceiling)"
 fi
@@ -54,6 +60,12 @@ if [ "${MODE}" = "full64" ]; then
 elif [ "${MODE}" = "anchor_boost" ]; then
     manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids_anchor_boost/manifest.json"
     next_phase="sigma_grid_select_anchor_boost"
+elif [ "${MODE}" = "a1g2_micro" ]; then
+    manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids_a1g2_micro/manifest.json"
+    next_phase="sigma_grid_select_a1g2_micro"
+elif [ "${MODE}" = "a1g2_nci1_micro" ]; then
+    manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids_a1g2_nci1_micro/manifest.json"
+    next_phase="sigma_grid_select_a1g2_nci1_micro"
 else
     manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids/manifest.json"
     next_phase="sigma_grid_select"

@@ -144,11 +144,38 @@ SIGMA_ANCHOR_BOOST_GRID: dict[str, list[Any]] = {
     "early_stop_use_loss": [False],
 }
 
+# Tiny SiGMA a1g2 select grid (Errica has no published SiGMA recipe — small
+# custom grids are protocol-OK). Paper depth/width fixed; only search batch × LR
+# (the axes that differ between PROTEINS and REDDIT paper recipes).
+# Count: 2×2×1×1×1 = 4 → 4 × 2 datasets × 10 folds = 80 select tasks.
+SIGMA_A1G2_MICRO_GRID: dict[str, list[Any]] = {
+    "batch_size": [16, 64],
+    "base_lr": [0.001, 0.01],
+    "layers_mp": [12],
+    "dim_inner": [64],
+    "d_h": [16],
+    "early_stop_use_loss": [False],
+}
+
+# NCI1 a1g2 micro: same tiny search, bio-style batches (fixed8 axes).
+# Count: 4 → 4 × 1 dataset × 10 folds = 40 select tasks.
+SIGMA_A1G2_NCI1_MICRO_GRID: dict[str, list[Any]] = {
+    "batch_size": [32, 128],
+    "base_lr": [0.001, 0.01],
+    "layers_mp": [12],
+    "dim_inner": [64],
+    "d_h": [16],
+    "early_stop_use_loss": [False],
+}
+
 # Dataset families for hybrid SiGMA search (Option 3).
 BIO_DS_TAGS: frozenset[str] = frozenset({"enzymes", "proteins", "nci1", "dd"})
 SOCIAL_DS_TAGS: frozenset[str] = frozenset({"imdb-b", "reddit-b", "collab"})
 # Errica datasets to push with the paper a2g4 anchor recipe.
 ANCHOR_BOOST_DS_TAGS: frozenset[str] = frozenset({"proteins", "reddit-b"})
+# Same datasets for a1g2 micro select.
+A1G2_MICRO_DS_TAGS: frozenset[str] = frozenset({"proteins", "reddit-b"})
+A1G2_NCI1_MICRO_DS_TAGS: frozenset[str] = frozenset({"nci1"})
 
 DS_TAG_TO_NAME: dict[str, str] = {
     "enzymes": "ENZYMES",
@@ -206,6 +233,16 @@ def full64_sigma_grid_entries() -> list[dict[str, Any]]:
 def anchor_boost_sigma_grid_entries() -> list[dict[str, Any]]:
     """Paper a2g4-centered SiGMA grid (``anchor_boost`` mode)."""
     return expand_grid(SIGMA_ANCHOR_BOOST_GRID)
+
+
+def a1g2_micro_sigma_grid_entries() -> list[dict[str, Any]]:
+    """Tiny a1g2 SiGMA grid (batch × LR only; ``a1g2_micro`` mode)."""
+    return expand_grid(SIGMA_A1G2_MICRO_GRID)
+
+
+def a1g2_nci1_micro_sigma_grid_entries() -> list[dict[str, Any]]:
+    """Tiny a1g2 NCI1 SiGMA grid (``a1g2_nci1_micro`` mode)."""
+    return expand_grid(SIGMA_A1G2_NCI1_MICRO_GRID)
 
 
 def expand_grid(grid: dict[str, list[Any]]) -> list[dict[str, Any]]:

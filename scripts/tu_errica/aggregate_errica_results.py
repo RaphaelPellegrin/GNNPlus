@@ -136,6 +136,8 @@ def _wandb_group(ds_tag: str, model: str, campaign: str = "canonical") -> str:
         "sigma_grid_eval_fixed8",
         "sigma_grid_eval_full64",
         "sigma_grid_eval_anchor_boost",
+        "sigma_grid_eval_a1g2_micro",
+        "sigma_grid_eval_a1g2_nci1_micro",
         "sigma_grid_eval_fixed8_ungated",
     ):
         hp_tag = "selected"

@@ -15,8 +15,8 @@ Entity/project: [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/webe
 
 | | |
 |--|--|
-| **Status** | 🔄 **RESUBMIT after fix** — `44903886` FAILED (config_used.yaml always MUTAG; ENZYMES ckpt shape mismatch). Fix: force `dataset.name` from run slug. |
-| **When** | 2026-09-06 (first submit); fix pending resubmit |
+| **Status** | ✅ **RESUBMITTED** `44924809` (gcs: a0g2_gated + a1g2_gated; dataset.name fix) |
+| **When** | 2026-09-06 · prior `44903886` FAILED (MUTAG yaml / ENZYMES ckpt) |
 | **Submit** | `bash bash_interface/cluster/submit_eval_tu_preferred_head_masks.sh` |
 | **Worker** | `bash_interface/cluster/run_eval_tu_preferred_head_masks.sh` |
 | **Script** | `scripts/heterogeneity/eval_tu_preferred_head_masks.py` |
@@ -24,12 +24,12 @@ Entity/project: [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/webe
 | **Partition** | `gpu_h200` · nice=0 |
 | **Also later** | `TU_PREF_MASK_FAMILY=a2g4` or `both` |
 | **Docs** | [`Paper_tu_gate_hetero_bridge.md`](Paper_tu_gate_hetero_bridge.md) |
-| **Log** | `logs_gnnplus/tu_pref_mask_44903886.log` |
+| **Log** | `logs_gnnplus/tu_pref_mask_44924809.log` |
 | **Outs** | `results/heterogeneity/tu_pref_mask_gcs_{a0g2_gated,a1g2_gated}/` |
 
 ```bash
-squeue -u $USER -j 44903886
-tail -f logs_gnnplus/tu_pref_mask_44903886.log
+squeue -u $USER -j 44924809
+tail -f logs_gnnplus/tu_pref_mask_44924809.log
 # after DONE, rsync results/heterogeneity/tu_pref_mask_gcs_* back to Mac
 ```
 
@@ -976,6 +976,32 @@ TU_LDHH_HS="4 2" TU_LDHH_ARRAY=801-1600 \
 
 ```text
 ╔══════════════════════════════════════════════════════════════════════════╗
+║  🔄  H∈{8,4,2} gpu_h200 · ENZYMES→REDDIT + PROTEINS                      ║
+║  🎯  delta heatmaps · MUTAG skipped (existing)                           ║
+║  📄  Paper_tu_sigma_depth_dh_h.md                                        ║
+╚══════════════════════════════════════════════════════════════════════════╝
+```
+
+```bash
+squeue -u $USER -j 44930340,44930486,44930487,44930489,44930491 \
+  -o "%.18i %.9P %.2t %.10M %.20R"
+```
+
+| Field | Value |
+|-------|-------|
+| **ENZYMES** | ✅ **`44930486`** · `1201-2400` · `gpu_h200` |
+| **PROTEINS** | ✅ **`44930340`** · `2401-3600` · `gpu_h200` |
+| **COLLAB** | ✅ **`44930491`** · `3601-4800` · `gpu_h200` |
+| **IMDB** | ✅ **`44930487`** · `4801-6000` · `gpu_h200` |
+| **REDDIT** | ✅ **`44930489`** · `6001-7200` · `gpu_h200` |
+| **H** | `{8, 4, 2}` · 72h · Nice=0 · `%20` |
+| **W&B** | `tu_L*_dh*_H{8,4,2}_*` |
+| **Plots** | `fig_<ds>_delta_heatmap_H{8,4,2}.png` |
+
+---
+
+```text
+╔══════════════════════════════════════════════════════════════════════════╗
 ║  🔄  gate dump · smoke 44904350 · full 44904351 (1-20)                   ║
 ║  🎯  MUTAG L=1 H=8 best-LR gated → gate_values_per_graph.pt              ║
 ║  📄  Paper_tu_sigma_depth_dh_h.md                                        ║
@@ -1189,8 +1215,11 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **fixed8 COLLAB fill** | **44507757** | 1 (task 560) | ✅ COMPLETED |
 | **`sigma_grid_eval_fixed8`** | **44621846** | 210 | ✅ 209 + fill **44748166** |
 | **eval COLLAB f0 s0 fill** | **44748166** | 1 (task 181) | ✅ COMPLETED |
-| **`anchor_boost` select** | **44840486** | 480 | 🔄 mweber `%20` Nice=0 · PROTEINS+REDDIT |
-| **`fixed8_ungated` select** | **44869251** | 560 | 🔄 mweber `%20` Nice=0 · `gate=none` |
+| **`anchor_boost` select** | **44840486** | 480 | 🔄 REDDIT left · PROTEINS ✅ |
+| **`anchor_boost` eval PROTEINS** | **44938699** | 30 (1–30) | ✅ **73.68±3.08** |
+| **`a1g2_micro` select** | — | 80 | ⏳ PROTEINS+REDDIT · GCN+GIN |
+| **`a1g2_nci1_micro` select** | — | 40 | ⏳ NCI1 · GIN+SAGE |
+| **`fixed8_ungated` select** | **44869251** | 560 | ⏸️ **HELD** · `scontrol release 44869251` when ready |
 | `aggregate_sigma` → `sigma_grid_eval_fixed8` | — | 210 | ✅ selection done · eval **44621846** |
 
 ```bash

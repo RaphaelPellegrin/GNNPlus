@@ -10,6 +10,13 @@ Writes ``configs/tu_errica/sigma_grids_full64/`` so it does not clobber fixed8.
 ``--mode anchor_boost``: paper a2g4-centered 24-config grid on PROTEINS +
 REDDIT-BINARY only. Writes ``configs/tu_errica/sigma_grids_anchor_boost/``.
 
+``--mode a1g2_micro``: tiny 4-config grid (bs×lr at L12/d_h16) for SiGMA a1g2
+(GCN+GIN) on PROTEINS + REDDIT-BINARY. Writes
+``configs/tu_errica/sigma_grids_a1g2_micro/``.
+
+``--mode a1g2_nci1_micro``: tiny 4-config grid for SiGMA a1g2 (GIN+SAGE) on
+NCI1 only. Writes ``configs/tu_errica/sigma_grids_a1g2_nci1_micro/``.
+
 Legacy (``--mode budget_bio``): bio folds lock depth/width to the GIN winner
 and keep SiGMA params ≤ that GIN budget; social folds use ``SIGMA_GRID``.
 """
@@ -24,7 +31,14 @@ from typing import Any, Literal
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
-SigmaGridMode = Literal["fixed8", "budget_bio", "full64", "anchor_boost"]
+SigmaGridMode = Literal[
+    "fixed8",
+    "budget_bio",
+    "full64",
+    "anchor_boost",
+    "a1g2_micro",
+    "a1g2_nci1_micro",
+]
 
 
 def _load_module(name: str, rel_path: str) -> Any:
@@ -41,10 +55,14 @@ def _load_module(name: str, rel_path: str) -> Any:
 
 _hp = _load_module("errica_hp_grid", "scripts/tu_errica/errica_hp_grid.py")
 
+A1G2_MICRO_DS_TAGS = _hp.A1G2_MICRO_DS_TAGS
+A1G2_NCI1_MICRO_DS_TAGS = _hp.A1G2_NCI1_MICRO_DS_TAGS
 ANCHOR_BOOST_DS_TAGS = _hp.ANCHOR_BOOST_DS_TAGS
 BIO_DS_TAGS = _hp.BIO_DS_TAGS
 DS_TAG_TO_NAME = _hp.DS_TAG_TO_NAME
 SOCIAL_DS_TAGS = _hp.SOCIAL_DS_TAGS
+a1g2_micro_sigma_grid_entries = _hp.a1g2_micro_sigma_grid_entries
+a1g2_nci1_micro_sigma_grid_entries = _hp.a1g2_nci1_micro_sigma_grid_entries
 anchor_boost_sigma_grid_entries = _hp.anchor_boost_sigma_grid_entries
 build_bio_sigma_micro_grid = _hp.build_bio_sigma_micro_grid
 full64_sigma_grid_entries = _hp.full64_sigma_grid_entries
@@ -57,18 +75,27 @@ def grids_dir_for_mode(mode: SigmaGridMode) -> Path:
         return _REPO_ROOT / "configs/tu_errica/sigma_grids_full64"
     if mode == "anchor_boost":
         return _REPO_ROOT / "configs/tu_errica/sigma_grids_anchor_boost"
+    if mode == "a1g2_micro":
+        return _REPO_ROOT / "configs/tu_errica/sigma_grids_a1g2_micro"
+    if mode == "a1g2_nci1_micro":
+        return _REPO_ROOT / "configs/tu_errica/sigma_grids_a1g2_nci1_micro"
     return _REPO_ROOT / "configs/tu_errica/sigma_grids"
 
 
 def _dataset_items_for_mode(mode: SigmaGridMode) -> list[tuple[str, str]]:
     """Return ``(ds_tag, ds_name)`` pairs included in ``mode``."""
     if mode == "anchor_boost":
-        return [
-            (tag, DS_TAG_TO_NAME[tag])
-            for tag in ("proteins", "reddit-b")
-            if tag in ANCHOR_BOOST_DS_TAGS
-        ]
-    return list(DS_TAG_TO_NAME.items())
+        tags = ANCHOR_BOOST_DS_TAGS
+        order = ("proteins", "reddit-b")
+    elif mode == "a1g2_micro":
+        tags = A1G2_MICRO_DS_TAGS
+        order = ("proteins", "reddit-b")
+    elif mode == "a1g2_nci1_micro":
+        tags = A1G2_NCI1_MICRO_DS_TAGS
+        order = ("nci1",)
+    else:
+        return list(DS_TAG_TO_NAME.items())
+    return [(tag, DS_TAG_TO_NAME[tag]) for tag in order if tag in tags]
 
 
 def _budget_module() -> Any:
@@ -136,6 +163,24 @@ def _grid_for_fold(
             raise KeyError(f"anchor_boost skips dataset {ds_tag}")
         return _annotate_grid(
             anchor_boost_sigma_grid_entries(),
+            dataset_name=ds_name,
+            gin_params=None,
+            with_params=False,
+        )
+    if mode == "a1g2_micro":
+        if ds_tag not in A1G2_MICRO_DS_TAGS:
+            raise KeyError(f"a1g2_micro skips dataset {ds_tag}")
+        return _annotate_grid(
+            a1g2_micro_sigma_grid_entries(),
+            dataset_name=ds_name,
+            gin_params=None,
+            with_params=False,
+        )
+    if mode == "a1g2_nci1_micro":
+        if ds_tag not in A1G2_NCI1_MICRO_DS_TAGS:
+            raise KeyError(f"a1g2_nci1_micro skips dataset {ds_tag}")
+        return _annotate_grid(
+            a1g2_nci1_micro_sigma_grid_entries(),
             dataset_name=ds_name,
             gin_params=None,
             with_params=False,
@@ -297,6 +342,45 @@ def write_grids(
             ),
             encoding="utf-8",
         )
+    if mode == "a1g2_micro" and written:
+        sample = next(iter(written))
+        sample_grid = json.loads((grids_sub / sample).read_text(encoding="utf-8"))
+        vendored = _REPO_ROOT / "configs/tu_errica/sigma_hetero_a1g2_micro_hp_grid.json"
+        vendored.write_text(
+            json.dumps(
+                {
+                    "model": "sigma_a1g2",
+                    "mode": "a1g2_micro",
+                    "note": (
+                        "SiGMA a1g2 (1 attn + GCN,GIN): L12/H64/d_h16 fixed; "
+                        "search bs∈{16,64} × lr∈{1e-3,1e-2} only. "
+                        "PROTEINS+REDDIT-BINARY Errica select (80 tasks)."
+                    ),
+                    "grid": sample_grid["grid"],
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+    if mode == "a1g2_nci1_micro" and written:
+        sample = next(iter(written))
+        sample_grid = json.loads((grids_sub / sample).read_text(encoding="utf-8"))
+        vendored = _REPO_ROOT / "configs/tu_errica/sigma_hetero_a1g2_nci1_micro_hp_grid.json"
+        vendored.write_text(
+            json.dumps(
+                {
+                    "model": "sigma_a1g2_ginsage",
+                    "mode": "a1g2_nci1_micro",
+                    "note": (
+                        "SiGMA a1g2 (1 attn + GIN,SAGE) on NCI1: L12/H64/d_h16 fixed; "
+                        "search bs∈{32,128} × lr∈{1e-3,1e-2} only (40 select tasks)."
+                    ),
+                    "grid": sample_grid["grid"],
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
 
 
 def main() -> None:
@@ -304,11 +388,20 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--mode",
-        choices=("fixed8", "budget_bio", "full64", "anchor_boost"),
+        choices=(
+            "fixed8",
+            "budget_bio",
+            "full64",
+            "anchor_boost",
+            "a1g2_micro",
+            "a1g2_nci1_micro",
+        ),
         default="fixed8",
         help="fixed8: 8-config SIGMA_GRID (default). "
         "full64: GIN-isomorphic 64-config grid. "
         "anchor_boost: paper a2g4-centered grid on PROTEINS+REDDIT. "
+        "a1g2_micro: tiny bs×lr grid for SiGMA a1g2 on PROTEINS+REDDIT. "
+        "a1g2_nci1_micro: tiny bs×lr grid for SiGMA a1g2 (GIN,SAGE) on NCI1. "
         "budget_bio: legacy GIN-budgeted bio micro-grid.",
     )
     parser.add_argument(

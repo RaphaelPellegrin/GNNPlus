@@ -1,0 +1,39 @@
+{
+  "model": "sigma_a1g2",
+  "mode": "a1g2_micro",
+  "note": "SiGMA a1g2 (1 attn + GCN,GIN): L12/H64/d_h16 fixed; search bs\u2208{16,64} \u00d7 lr\u2208{1e-3,1e-2} only. PROTEINS+REDDIT-BINARY Errica select (80 tasks).",
+  "grid": [
+    {
+      "batch_size": 16,
+      "base_lr": 0.001,
+      "layers_mp": 12,
+      "dim_inner": 64,
+      "d_h": 16,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 16,
+      "base_lr": 0.01,
+      "layers_mp": 12,
+      "dim_inner": 64,
+      "d_h": 16,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 64,
+      "base_lr": 0.001,
+      "layers_mp": 12,
+      "dim_inner": 64,
+      "d_h": 16,
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 64,
+      "base_lr": 0.01,
+      "layers_mp": 12,
+      "dim_inner": 64,
+      "d_h": 16,
+      "early_stop_use_loss": false
+    }
+  ]
+}
