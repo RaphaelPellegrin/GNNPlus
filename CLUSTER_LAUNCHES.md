@@ -1270,7 +1270,7 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **`nci1_refine` select** | **45149015** | 20 (1–20%5) | 🔄 drop0.5×{add,mean} · `%5` |
 | **`native_fair` select** | **45235956** | **480** | 🚀 rerun · fixed `mp_family` emit · a0g2+a1g2 · **gpu_h200** `%40` |
 | **`native_fair_v2` select** | **45263051** | **180** | ✅ COMPLETED |
-| **`native_fair_v2` agg→eval** | **45265929** | 1 → 90 eval | ❌ FAILED 3s (env import) · resubmit with LIGHTWEIGHT |
+| **`native_fair_v2` agg→eval** | **45423314** | 1 → 90 eval | ❌ FAILED · BASH_SOURCE/common_env path (fixed; resubmit) |
 | **`native_fair_v2_l4` select** | **45268464** | **180** | ❌ CANCELLED (`afterok` on failed agg) · resubmit |
 | **`native_fair_v2_joint` agg→eval** | **45299758** | 1 → 90 eval | ❌ CANCELLED · resubmit after L4 |
 | **`specialist_tiny` select** | **45303391** | **120** | ✅ COMPLETED |

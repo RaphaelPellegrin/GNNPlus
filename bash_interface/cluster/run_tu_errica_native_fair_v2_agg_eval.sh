@@ -4,12 +4,16 @@
 # Intended as the body of a SLURM job that depends on the select array
 # (see submit_tu_errica_native_fair_v2_agg_eval.sh). Sources conda / W&B via
 # common_env.sh (same as other cluster workers).
+#
+# NOTE: Do not resolve SCRIPT_DIR via BASH_SOURCE — Slurm copies this file to
+# /var/slurmd/.../slurm_script. Use SLURM_SUBMIT_DIR / GNNPLUS_PROJECT_ROOT
+# (same pattern as run_tu_errica_fair.sh).
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+REPO_ROOT="${SLURM_SUBMIT_DIR:-${GNNPLUS_PROJECT_ROOT:-/n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus}}"
 cd "${REPO_ROOT}"
+SCRIPT_DIR="${REPO_ROOT}/bash_interface/cluster"
 
 # shellcheck source=common_env.sh
 # Agg/eval orchestration only needs wandb + python (no torch train import).
