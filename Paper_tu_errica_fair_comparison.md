@@ -74,7 +74,8 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 | **3a-AR** | `sigma_grid_select` **anchor_refine** | **45146136** | ✅ **40/40** | PROTEINS 4-HP drop×pool → `sigma_anchor_refine_per_fold.json` |
 | **4e-AR** | `sigma_grid_eval` **anchor_refine** | **45192875** | 🔄 **1–30** | PROTEINS · `%20` · chase GCN 73.9 |
 | **3a-NR** | `sigma_grid_select` **nci1_refine** | **45149015** | 🔄 **1–20%5** | NCI1 · **2** HPs (drop0.5×pool) · **20** select |
-| **3a-NF** | `sigma_grid_select` **native_fair** | — | ⏳ ready | a0g2+a1g2 · P/NCI1/REDDIT · **480** select · **gpu_h200** |
+| **3a-NF** | `sigma_grid_select` **native_fair** | **45235956** | 🚀 rerun | a0g2+a1g2 · P/NCI1/REDDIT · **480** · **gpu_h200** `%40` (prev **45215941** died on `mp_family`) |
+| **3a-NFv2** | `sigma_grid_select` **native_fair_v2** | — | ⏳ ready | UniGCN mixes + lr∈{1e-3,5e-3} · **720** select · **mweber** `%20` |
 | **3a-A0** | `sigma_grid_select` **a0g_pnr** | — | ⏳ ready later | MP-only **a0g4/a0g2** on P/NCI1/REDDIT · **1440** select |
 | **3a-TP** | `sigma_grid_select` **tiny_pnr** | — | ⏳ ready | Ultra-tiny sensible a2g4 · **4** HPs × 3 ds = **120** select |
 | **3a-U** | `sigma_grid_select` **fixed8 ungated** | **44869251** | ⏸️ **HELD** | `scontrol hold` 2026-09-06 — **must `scontrol release 44869251` later** · leftover `R` finish OK |
@@ -261,6 +262,7 @@ specialists (drop full a*g4). Train: **lr × layers_mp** only (bs/d_h/H fixed).
 | `batch_size` / `d_h` / H / drop / pool | **32** / **16** / **64** / 0.5 / add |
 
 → **16** configs × 3 × 10 = **480** select · eval = **90**. Partition: **`gpu_h200`**.
+**JOBID=`45235956`** (rerun 2026-09-07 after emit fix; prev `45215941` failed on `mp_family`).
 
 ```bash
 python scripts/tu_errica/generate_sigma_errica_grids.py --mode native_fair
@@ -268,6 +270,27 @@ bash bash_interface/cluster/submit_tu_errica_native_fair_select.sh
 # after select:
 bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_native_fair
 bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_native_fair
+```
+
+### SiGMA native_fair_v2 (mweber companion, 2026-09-07)
+
+Same PNR datasets; adds **UniGCN** specialist mixes and mid LR `5e-3` (instead of `1e-2`).
+
+| Axis | Values |
+|------|--------|
+| **MP family** | `a1g2_gin_sage` · `a1g2_gin_unigcn` · `a1g2_gcn_gin` · `a0g2_gin_sage` · `a0g2_gcn_gin` · `a0g2_gcn_unigcn` |
+| `base_lr` | 0.001, **0.005** |
+| `layers_mp` | 4, **12** |
+| Fixed | bs=32 / d_h=16 / H=64 / drop 0.5 / pool add |
+
+→ **24** configs × 3 × 10 = **720** select · eval = **90**. Partition: **`mweber_gpu`** `%20`.
+
+```bash
+python scripts/tu_errica/generate_sigma_errica_grids.py --mode native_fair_v2
+bash bash_interface/cluster/submit_tu_errica_native_fair_v2_select.sh
+# after select:
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_native_fair_v2
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_native_fair_v2
 ```
 
 ### SiGMA a0g_pnr — drop global attention (ready later, 2026-09-07)

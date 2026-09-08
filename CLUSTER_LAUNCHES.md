@@ -882,6 +882,7 @@ git pull
 | **Submit** | `bash_interface/cluster/submit_tu_sigma_tab_depth.sh` |
 | **Tasks** | `1-720%7` · L=4 `1–240` · L=2 `241–480` · L=1 `481–720` |
 | **Skip COLLAB** | L∈{1,2}: `scancel 45134881_[301-320,421-440,541-560,661-680]` |
+| **Skip REDDIT** | all L: `scancel 45134881_[101-120,221-240,341-360,461-480,581-600,701-720]` |
 | **Variants** | gated hetero ×2 LR + ungated ×2 LR |
 | **W&B** | `tu_L<k>_hh_*` (Tab.17) · `tu_L<k>_1x_*` (Tab.18) |
 | **Out** | `$GNNPLUS_OUT_DIR/tu_sigma_tab_depth/` |
@@ -1267,7 +1268,8 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **`anchor_refine` select** | **45146136** | 40 | ✅ → `sigma_anchor_refine_per_fold.json` |
 | **`anchor_refine` eval** | **45192875** | 30 (1–30) | 🔄 PROTEINS · `%20` |
 | **`nci1_refine` select** | **45149015** | 20 (1–20%5) | 🔄 drop0.5×{add,mean} · `%5` |
-| **`native_fair` select** | — | **480** | ⏳ ready · a0g2+a1g2 · lr×L · P/NCI1/REDDIT · **gpu_h200** |
+| **`native_fair` select** | **45235956** | **480** | 🚀 rerun · fixed `mp_family` emit · a0g2+a1g2 · **gpu_h200** `%40` |
+| **`native_fair_v2` select** | — | **720** | ⏳ ready · UniGCN mixes + lr∈{1e-3,5e-3} · **mweber** `%20` |
 | **`a0g_pnr` select** | — | **1440** | ⏳ ready later · a0g4/a0g2 · P/NCI1/REDDIT |
 | **`tiny_pnr` select** | — | **120** | ⏳ ready · sensible a2g4 · bs×d_h only |
 | **`fixed8_ungated` select** | **44869251** | 560 | ⏸️ **HELD** · `scontrol release 44869251` when ready |

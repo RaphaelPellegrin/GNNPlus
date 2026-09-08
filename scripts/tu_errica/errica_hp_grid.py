@@ -249,6 +249,68 @@ SIGMA_NATIVE_FAIR_TRAIN_GRID: dict[str, list[Any]] = {
 }
 
 # ---------------------------------------------------------------------------
+# native_fair_v2 — mweber companion to native_fair (H200).
+#
+# Adds UniGCN specialist mixes + mid LR (5e-3 instead of 1e-2).
+# Launch: mweber_gpu %20 (see submit_tu_errica_native_fair_v2_select.sh).
+#
+# MP families (6):
+#   • a1g2_gin_sage / a1g2_gcn_gin / a1g2_gin_unigcn
+#   • a0g2_gin_sage / a0g2_gcn_gin / a0g2_gcn_unigcn
+# Train: lr∈{1e-3,5e-3} × L∈{4,12}; bs=32, d_h=16, H=64 fixed.
+# Count: 6 × 2 × 2 = 24 → 24 × 3 × 10 = 720 select / 90 eval.
+# ---------------------------------------------------------------------------
+SIGMA_NATIVE_FAIR_V2_MP_FAMILIES: list[dict[str, Any]] = [
+    {
+        "mp_family": "a1g2_gin_sage",
+        "num_attn_heads": 1,
+        "num_gnn_heads": 2,
+        "gnn_types": "GIN,SAGE",
+    },
+    {
+        "mp_family": "a1g2_gin_unigcn",
+        "num_attn_heads": 1,
+        "num_gnn_heads": 2,
+        "gnn_types": "GIN,UNIGCN",
+    },
+    {
+        "mp_family": "a1g2_gcn_gin",
+        "num_attn_heads": 1,
+        "num_gnn_heads": 2,
+        "gnn_types": "GCN,GIN",
+    },
+    {
+        "mp_family": "a0g2_gin_sage",
+        "num_attn_heads": 0,
+        "num_gnn_heads": 2,
+        "gnn_types": "GIN,SAGE",
+    },
+    {
+        "mp_family": "a0g2_gcn_gin",
+        "num_attn_heads": 0,
+        "num_gnn_heads": 2,
+        "gnn_types": "GCN,GIN",
+    },
+    {
+        "mp_family": "a0g2_gcn_unigcn",
+        "num_attn_heads": 0,
+        "num_gnn_heads": 2,
+        "gnn_types": "GCN,UNIGCN",
+    },
+]
+
+SIGMA_NATIVE_FAIR_V2_TRAIN_GRID: dict[str, list[Any]] = {
+    "batch_size": [32],
+    "base_lr": [0.001, 0.005],
+    "layers_mp": [4, 12],
+    "dim_inner": [64],
+    "d_h": [16],
+    "dropout": [0.5],
+    "graph_pooling": ["add"],
+    "early_stop_use_loss": [False],
+}
+
+# ---------------------------------------------------------------------------
 # a0g_pnr — MP-only (drop global attention) on PROTEINS / NCI1 / REDDIT.
 #
 # Same specialist MP mixes as native_fair (a0g*), wider train (bs×d_h).
@@ -317,9 +379,11 @@ A1G2_NCI1_MICRO_DS_TAGS: frozenset[str] = frozenset({"nci1"})
 ANCHOR_REFINE_DS_TAGS: frozenset[str] = frozenset({"proteins"})
 # Local refine around NCI1 fixed8/a2g4 deep center + dropout/pool.
 NCI1_REFINE_DS_TAGS: frozenset[str] = frozenset({"nci1"})
-# native_fair / a0g_pnr / tiny_pnr: PROTEINS + NCI1 + REDDIT.
+# native_fair / native_fair_v2 / a0g_pnr / tiny_pnr: PROTEINS + NCI1 + REDDIT.
 NATIVE_FAIR_DS_TAGS: frozenset[str] = frozenset({"proteins", "nci1", "reddit-b"})
 NATIVE_FAIR_DS_ORDER: tuple[str, ...] = ("proteins", "nci1", "reddit-b")
+NATIVE_FAIR_V2_DS_TAGS: frozenset[str] = NATIVE_FAIR_DS_TAGS
+NATIVE_FAIR_V2_DS_ORDER: tuple[str, ...] = NATIVE_FAIR_DS_ORDER
 A0G_PNR_DS_TAGS: frozenset[str] = NATIVE_FAIR_DS_TAGS
 A0G_PNR_DS_ORDER: tuple[str, ...] = NATIVE_FAIR_DS_ORDER
 TINY_PNR_DS_TAGS: frozenset[str] = NATIVE_FAIR_DS_TAGS
@@ -416,6 +480,25 @@ def native_fair_sigma_grid_entries() -> list[dict[str, Any]]:
     train = expand_grid(SIGMA_NATIVE_FAIR_TRAIN_GRID)
     combos: list[dict[str, Any]] = []
     for family in SIGMA_NATIVE_FAIR_MP_FAMILIES:
+        for train_hp in train:
+            row = dict(train_hp)
+            row.update(family)
+            combos.append(row)
+    return combos
+
+
+def native_fair_v2_sigma_grid_entries() -> list[dict[str, Any]]:
+    """Expanded PNR fair grid with UniGCN mixes (``native_fair_v2``).
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        Flattened configs (24 by default): 6 MP families × lr∈{1e-3,5e-3} ×
+        L∈{4,12}. Includes ``mp_family`` metadata for logging only.
+    """
+    train = expand_grid(SIGMA_NATIVE_FAIR_V2_TRAIN_GRID)
+    combos: list[dict[str, Any]] = []
+    for family in SIGMA_NATIVE_FAIR_V2_MP_FAMILIES:
         for train_hp in train:
             row = dict(train_hp)
             row.update(family)

@@ -58,6 +58,12 @@
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_native_fair
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_native_fair
 #
+# native_fair_v2 (UniGCN mixes + mid LR; mweber_gpu %20):
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh generate_sigma_grids_native_fair_v2
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_select_native_fair_v2
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_native_fair_v2
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_native_fair_v2
+#
 # MP-only a0g* on PROTEINS/NCI1/REDDIT (drop global attention):
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh generate_sigma_grids_a0g_pnr
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_select_a0g_pnr
@@ -151,6 +157,9 @@ case "${phase}" in
     generate_sigma_grids_native_fair)
         bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode native_fair
         ;;
+    generate_sigma_grids_native_fair_v2)
+        bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode native_fair_v2
+        ;;
     generate_sigma_grids_a0g_pnr)
         bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode a0g_pnr
         ;;
@@ -168,6 +177,9 @@ case "${phase}" in
         ;;
     sigma_grid_select_native_fair)
         bash bash_interface/cluster/submit_tu_errica_native_fair_select.sh
+        ;;
+    sigma_grid_select_native_fair_v2)
+        bash bash_interface/cluster/submit_tu_errica_native_fair_v2_select.sh
         ;;
     sigma_grid_select_a0g_pnr)
         bash bash_interface/cluster/submit_tu_errica_a0g_pnr_select.sh
@@ -209,6 +221,12 @@ case "${phase}" in
             --campaign sigma_grid_select_native_fair \
             --manifest configs/tu_errica/sigma_grids_native_fair/manifest.json \
             --out configs/tu_errica/selections/sigma_native_fair_per_fold.json
+        ;;
+    aggregate_sigma_native_fair_v2)
+        _run_python scripts/tu_errica/aggregate_sigma_hp_selection.py \
+            --campaign sigma_grid_select_native_fair_v2 \
+            --manifest configs/tu_errica/sigma_grids_native_fair_v2/manifest.json \
+            --out configs/tu_errica/selections/sigma_native_fair_v2_per_fold.json
         ;;
     aggregate_sigma_a0g_pnr)
         _run_python scripts/tu_errica/aggregate_sigma_hp_selection.py \
@@ -286,6 +304,13 @@ case "${phase}" in
             TU_ERRICA_MEM=128GB TU_ERRICA_TIME=72:00:00 TU_ERRICA_NICE=0 \
             TU_ERRICA_PARALLEL=20 TU_ERRICA_PARTITION=gpu_h200 \
             TU_ERRICA_SELECTION_FILE=configs/tu_errica/selections/sigma_native_fair_per_fold.json \
+            bash bash_interface/cluster/submit_tu_errica_fair.sh
+        ;;
+    sigma_grid_eval_native_fair_v2)
+        TU_ERRICA_CAMPAIGN=sigma_grid_eval_native_fair_v2 \
+            TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:00:00 TU_ERRICA_NICE=0 \
+            TU_ERRICA_PARALLEL=20 TU_ERRICA_PARTITION=mweber_gpu \
+            TU_ERRICA_SELECTION_FILE=configs/tu_errica/selections/sigma_native_fair_v2_per_fold.json \
             bash bash_interface/cluster/submit_tu_errica_fair.sh
         ;;
     sigma_grid_eval_a0g_pnr)

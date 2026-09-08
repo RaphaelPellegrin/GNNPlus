@@ -58,7 +58,9 @@ elif [ "${MODE}" = "anchor_refine" ]; then
 elif [ "${MODE}" = "nci1_refine" ]; then
     log_message "Generating SiGMA grids (nci1_refine: NCI1, 2 configs, drop0.5×pool)"
 elif [ "${MODE}" = "native_fair" ]; then
-    log_message "Generating SiGMA grids (native_fair: a1g4+a1g2 P/NCI1/REDDIT, 360 select)"
+    log_message "Generating SiGMA grids (native_fair: a0g2+a1g2 P/NCI1/REDDIT, 480 select)"
+elif [ "${MODE}" = "native_fair_v2" ]; then
+    log_message "Generating SiGMA grids (native_fair_v2: UniGCN mixes P/NCI1/REDDIT, 720 select)"
 elif [ "${MODE}" = "a0g_pnr" ]; then
     log_message "Generating SiGMA grids (a0g_pnr: MP-only P/NCI1/REDDIT, 1440 select)"
 elif [ "${MODE}" = "tiny_pnr" ]; then
@@ -90,6 +92,9 @@ elif [ "${MODE}" = "nci1_refine" ]; then
 elif [ "${MODE}" = "native_fair" ]; then
     manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids_native_fair/manifest.json"
     next_phase="sigma_grid_select_native_fair"
+elif [ "${MODE}" = "native_fair_v2" ]; then
+    manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids_native_fair_v2/manifest.json"
+    next_phase="sigma_grid_select_native_fair_v2"
 elif [ "${MODE}" = "a0g_pnr" ]; then
     manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids_a0g_pnr/manifest.json"
     next_phase="sigma_grid_select_a0g_pnr"
