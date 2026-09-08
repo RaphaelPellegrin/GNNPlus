@@ -76,11 +76,12 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 | **3a-NR** | `sigma_grid_select` **nci1_refine** | **45149015** | 🔄 **1–20%5** | NCI1 · **2** HPs (drop0.5×pool) · **20** select |
 | **3a-NF** | `sigma_grid_select` **native_fair** | **45235956** | 🚀 rerun | a0g2+a1g2 · P/NCI1/REDDIT · **480** · **gpu_h200** `%40` (prev **45215941** died on `mp_family`) |
 | **3a-NFv2** | `sigma_grid_select` **native_fair_v2** | **45263051** | ✅ **180/180** | UniGCN mixes · lr=1e-3 L=12 d_h=32 · **mweber** |
-| **3a-NFv2e** | agg→eval (depends on select) | **45265929** | ❌ FAILED | 3s exit · env import; resubmit LIGHTWEIGHT |
-| **3a-NFv2L4** | `sigma_grid_select` **native_fair_v2_l4** | **45268464** | ❌ CANCELLED | `afterok` on failed agg; resubmit |
-| **3a-NFv2j** | joint merge→eval L∈{4,12} | **45299758** | ❌ CANCELLED | resubmit after L4 |
+| **3a-NFv2e** | agg→eval | **45423512** | 🚀 resubmit | SLURM_SUBMIT_DIR fix |
+| **3a-NFv2L4** | `sigma_grid_select` **native_fair_v2_l4** | **45423514** | 🚀 running | L=4 add-on · **180** |
+| **3a-NFv2L4e** | L4-only agg→eval | — | ⏳ submit after select | `sigma_native_fair_v2_l4_per_fold.json` → 90 eval |
+| **3a-NFv2j** | joint merge→eval L∈{4,12} | **45423667** | ⏳ `afterok` | waits on **45423514** |
 | **3a-ST** | `sigma_grid_select` **specialist_tiny** | **45303391** | ✅ **120/120** | GCN (P/REDDIT) / SAGE (NCI1) · a0g1+a1g1 × lr |
-| **3a-STe** | agg→eval (depends on select) | **45304563** | ❌ FAILED | 3s exit · env import; resubmit LIGHTWEIGHT |
+| **3a-STe** | agg→eval | **45423513** | 🚀 resubmit | SLURM_SUBMIT_DIR fix |
 | **3a-A0** | `sigma_grid_select` **a0g_pnr** | — | ⏳ ready later | MP-only **a0g4/a0g2** on P/NCI1/REDDIT · **1440** select |
 | **3a-TP** | `sigma_grid_select` **tiny_pnr** | — | ⏳ ready | Ultra-tiny sensible a2g4 · **4** HPs × 3 ds = **120** select |
 | **3a-U** | `sigma_grid_select` **fixed8 ungated** | **44869251** | ⏸️ **HELD** | `scontrol hold` 2026-09-06 — **must `scontrol release 44869251` later** · leftover `R` finish OK |
@@ -304,8 +305,15 @@ Same UniGCN arches / `lr=1e-3` / `d_h=32` as v2, **`layers_mp=4` only**.
 Does **not** redo L=12 (avoids a full 360 re-select). Queue after v2 agg→eval
 so shallow fill starts once L=12 winners + eval are submitted.
 
-→ **6** configs × 3 × 10 = **180** select. After finish: merge W&B campaigns
-`sigma_grid_select_native_fair_v2` + `_l4` for fold winners (effective L∈{4,12}).
+→ **6** configs × 3 × 10 = **180** select.
+
+**Three independent eval columns** (separate selection JSONs / W&B campaigns):
+
+| Column | Selection JSON | Eval campaign |
+|--------|----------------|---------------|
+| L12-only | `sigma_native_fair_v2_per_fold.json` | `sigma_grid_eval_native_fair_v2` |
+| L4-only | `sigma_native_fair_v2_l4_per_fold.json` | `sigma_grid_eval_native_fair_v2_l4` |
+| Joint L∈{4,12} | `sigma_native_fair_v2_joint_per_fold.json` | `sigma_grid_eval_native_fair_v2_joint` |
 
 ```bash
 python scripts/tu_errica/generate_sigma_errica_grids.py --mode native_fair_v2_l4
@@ -313,14 +321,16 @@ TU_ERRICA_DEPENDENCY_JOBID=45265929 \
   bash bash_interface/cluster/submit_tu_errica_native_fair_v2_l4_select.sh
 ```
 
-After L4 select finishes, joint merge→eval (does **not** overwrite L12-only
-`sigma_native_fair_v2_per_fold.json` / `sigma_grid_eval_native_fair_v2`):
+After L4 select finishes (or while still running with `afterok`):
 
 ```bash
-TU_ERRICA_DEPENDENCY_JOBID=45268464 \
+# L4-only agg→eval (90):
+TU_ERRICA_DEPENDENCY_JOBID=45423514 \
+  bash bash_interface/cluster/submit_tu_errica_native_fair_v2_l4_agg_eval.sh
+
+# Joint merge→eval (90; does not overwrite L12-only or L4-only):
+TU_ERRICA_DEPENDENCY_JOBID=45423514 \
   bash bash_interface/cluster/submit_tu_errica_native_fair_v2_joint_agg_eval.sh
-# → selections/sigma_native_fair_v2_joint_per_fold.json
-# → campaign sigma_grid_eval_native_fair_v2_joint (90 eval)
 ```
 
 ### SiGMA specialist_tiny — classical single-MP (2026-09-07)

@@ -1270,11 +1270,12 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **`nci1_refine` select** | **45149015** | 20 (1–20%5) | 🔄 drop0.5×{add,mean} · `%5` |
 | **`native_fair` select** | **45235956** | **480** | 🚀 rerun · fixed `mp_family` emit · a0g2+a1g2 · **gpu_h200** `%40` |
 | **`native_fair_v2` select** | **45263051** | **180** | ✅ COMPLETED |
-| **`native_fair_v2` agg→eval** | **45423314** | 1 → 90 eval | ❌ FAILED · BASH_SOURCE/common_env path (fixed; resubmit) |
-| **`native_fair_v2_l4` select** | **45268464** | **180** | ❌ CANCELLED (`afterok` on failed agg) · resubmit |
-| **`native_fair_v2_joint` agg→eval** | **45299758** | 1 → 90 eval | ❌ CANCELLED · resubmit after L4 |
+| **`native_fair_v2` agg→eval** | **45423512** | 1 → 90 eval | 🚀 resubmit (SLURM_SUBMIT_DIR fix; prev **45423314**/**45265929** FAILED) |
+| **`native_fair_v2_l4` select** | **45423514** | **180** | 🚀 running · L=4 add-on (prev **45268464** CANCELLED) |
+| **`native_fair_v2_l4` agg→eval** | — | 1 → 90 eval | ⏳ submit after select · L=4-only column |
+| **`native_fair_v2_joint` agg→eval** | **45423667** | 1 → 90 eval | ⏳ `afterok:45423514` |
 | **`specialist_tiny` select** | **45303391** | **120** | ✅ COMPLETED |
-| **`specialist_tiny` agg→eval** | **45304563** | 1 → 90 eval | ❌ FAILED 3s (env import) · resubmit with LIGHTWEIGHT |
+| **`specialist_tiny` agg→eval** | **45423513** | 1 → 90 eval | 🚀 resubmit (prev **45304563** FAILED) |
 | **`a0g_pnr` select** | — | **1440** | ⏳ ready later · a0g4/a0g2 · P/NCI1/REDDIT |
 | **`tiny_pnr` select** | — | **120** | ⏳ ready · sensible a2g4 · bs×d_h only |
 | **`fixed8_ungated` select** | **44869251** | 560 | ⏸️ **HELD** · `scontrol release 44869251` when ready |
