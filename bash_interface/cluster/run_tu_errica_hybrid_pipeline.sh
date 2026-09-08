@@ -64,6 +64,10 @@
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_native_fair_v2
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_native_fair_v2
 #
+# native_fair_v2 aggregate→eval (depends on select JOBID):
+#   TU_ERRICA_DEPENDENCY_JOBID=<select_jobid> \
+#     bash bash_interface/cluster/submit_tu_errica_native_fair_v2_agg_eval.sh
+#
 # MP-only a0g* on PROTEINS/NCI1/REDDIT (drop global attention):
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh generate_sigma_grids_a0g_pnr
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_select_a0g_pnr
