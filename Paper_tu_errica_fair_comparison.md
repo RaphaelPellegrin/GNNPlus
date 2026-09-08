@@ -78,7 +78,8 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 | **3a-NFv2** | `sigma_grid_select` **native_fair_v2** | **45263051** | 🚀 running | UniGCN mixes · lr=1e-3 L=12 d_h=32 · **180** · **mweber** `%20` |
 | **3a-NFv2e** | agg→eval (depends on select) | **45265929** | ⏳ `afterok` | waits on **45263051** → aggregate + **90** eval |
 | **3a-NFv2L4** | `sigma_grid_select` **native_fair_v2_l4** | **45268464** | ⏳ `afterok` | L=4 add-on · **180** · waits on **45265929** · merge L12+L4 later |
-| **3a-NFv2j** | joint merge→eval L∈{4,12} | — | ⏳ queue | `afterok:45268464` · **separate** `*_joint_*` paths (L12-only untouched) |
+| **3a-NFv2j** | joint merge→eval L∈{4,12} | **45299758** | ⏳ `afterok` | waits on **45268464** · **separate** `*_joint_*` paths (L12-only untouched) |
+| **3a-ST** | `sigma_grid_select` **specialist_tiny** | — | ⏳ ready | GCN (P/REDDIT) / SAGE (NCI1) · a0g1+a1g1 × lr · **120** |
 | **3a-A0** | `sigma_grid_select` **a0g_pnr** | — | ⏳ ready later | MP-only **a0g4/a0g2** on P/NCI1/REDDIT · **1440** select |
 | **3a-TP** | `sigma_grid_select` **tiny_pnr** | — | ⏳ ready | Ultra-tiny sensible a2g4 · **4** HPs × 3 ds = **120** select |
 | **3a-U** | `sigma_grid_select` **fixed8 ungated** | **44869251** | ⏸️ **HELD** | `scontrol hold` 2026-09-06 — **must `scontrol release 44869251` later** · leftover `R` finish OK |
@@ -319,6 +320,26 @@ TU_ERRICA_DEPENDENCY_JOBID=45268464 \
   bash bash_interface/cluster/submit_tu_errica_native_fair_v2_joint_agg_eval.sh
 # → selections/sigma_native_fair_v2_joint_per_fold.json
 # → campaign sigma_grid_eval_native_fair_v2_joint (90 eval)
+```
+
+### SiGMA specialist_tiny — classical single-MP (2026-09-07)
+
+Match classical winners with a **single** MP head + optional 1 attn:
+
+| Dataset | MP | Arches |
+|---------|-----|--------|
+| PROTEINS / REDDIT | **GCN** | `a0g1_gcn`, `a1g1_gcn` |
+| NCI1 | **SAGE** | `a0g1_sage`, `a1g1_sage` |
+
+Train: `lr ∈ {1e-3, 1e-4}`; fixed L=12 / d_h=16 / bs=32 / drop0.5 / pool add.
+→ **4** configs × 3 × 10 = **120** select · eval = **90**. W&B tag: `SiGMA_spec_tiny`.
+
+```bash
+python scripts/tu_errica/generate_sigma_errica_grids.py --mode specialist_tiny
+bash bash_interface/cluster/submit_tu_errica_specialist_tiny_select.sh
+# after select:
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_specialist_tiny
+bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_specialist_tiny
 ```
 
 ### SiGMA a0g_pnr — drop global attention (ready later, 2026-09-07)

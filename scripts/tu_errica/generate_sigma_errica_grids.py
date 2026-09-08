@@ -43,6 +43,10 @@ Writes ``configs/tu_errica/sigma_grids_a0g_pnr/``.
 REDDIT (bs∈{16,32} × d_h∈{8,16}, lr=1e-3, L=12, a2g4). 120 select / 90 eval.
 Writes ``configs/tu_errica/sigma_grids_tiny_pnr/``.
 
+``--mode specialist_tiny``: single-MP specialists (GCN on PROTEINS/REDDIT,
+SAGE on NCI1) with a0g1+a1g1 × lr∈{1e-3,1e-4}. 120 select / 90 eval.
+Writes ``configs/tu_errica/sigma_grids_specialist_tiny/``.
+
 Legacy (``--mode budget_bio``): bio folds lock depth/width to the GIN winner
 and keep SiGMA params ≤ that GIN budget; social folds use ``SIGMA_GRID``.
 """
@@ -71,6 +75,7 @@ SigmaGridMode = Literal[
     "native_fair_v2_l4",
     "a0g_pnr",
     "tiny_pnr",
+    "specialist_tiny",
 ]
 
 
@@ -97,6 +102,8 @@ A0G_PNR_DS_TAGS = _hp.A0G_PNR_DS_TAGS
 A0G_PNR_DS_ORDER = _hp.A0G_PNR_DS_ORDER
 TINY_PNR_DS_TAGS = _hp.TINY_PNR_DS_TAGS
 TINY_PNR_DS_ORDER = _hp.TINY_PNR_DS_ORDER
+SPECIALIST_TINY_DS_TAGS = _hp.SPECIALIST_TINY_DS_TAGS
+SPECIALIST_TINY_DS_ORDER = _hp.SPECIALIST_TINY_DS_ORDER
 NATIVE_FAIR_DS_TAGS = _hp.NATIVE_FAIR_DS_TAGS
 NATIVE_FAIR_DS_ORDER = _hp.NATIVE_FAIR_DS_ORDER
 NATIVE_FAIR_V2_DS_TAGS = _hp.NATIVE_FAIR_V2_DS_TAGS
@@ -116,6 +123,7 @@ native_fair_v2_sigma_grid_entries = _hp.native_fair_v2_sigma_grid_entries
 native_fair_v2_l4_sigma_grid_entries = _hp.native_fair_v2_l4_sigma_grid_entries
 a0g_pnr_sigma_grid_entries = _hp.a0g_pnr_sigma_grid_entries
 tiny_pnr_sigma_grid_entries = _hp.tiny_pnr_sigma_grid_entries
+specialist_tiny_sigma_grid_entries = _hp.specialist_tiny_sigma_grid_entries
 build_bio_sigma_micro_grid = _hp.build_bio_sigma_micro_grid
 full64_sigma_grid_entries = _hp.full64_sigma_grid_entries
 social_sigma_grid_entries = _hp.social_sigma_grid_entries
@@ -145,6 +153,8 @@ def grids_dir_for_mode(mode: SigmaGridMode) -> Path:
         return _REPO_ROOT / "configs/tu_errica/sigma_grids_a0g_pnr"
     if mode == "tiny_pnr":
         return _REPO_ROOT / "configs/tu_errica/sigma_grids_tiny_pnr"
+    if mode == "specialist_tiny":
+        return _REPO_ROOT / "configs/tu_errica/sigma_grids_specialist_tiny"
     return _REPO_ROOT / "configs/tu_errica/sigma_grids"
 
 
@@ -171,6 +181,9 @@ def _dataset_items_for_mode(mode: SigmaGridMode) -> list[tuple[str, str]]:
     elif mode == "tiny_pnr":
         tags = TINY_PNR_DS_TAGS
         order = TINY_PNR_DS_ORDER
+    elif mode == "specialist_tiny":
+        tags = SPECIALIST_TINY_DS_TAGS
+        order = SPECIALIST_TINY_DS_ORDER
     elif mode == "native_fair":
         tags = NATIVE_FAIR_DS_TAGS
         order = NATIVE_FAIR_DS_ORDER
@@ -331,6 +344,15 @@ def _grid_for_fold(
             raise KeyError(f"tiny_pnr skips dataset {ds_tag}")
         return _annotate_grid(
             tiny_pnr_sigma_grid_entries(),
+            dataset_name=ds_name,
+            gin_params=None,
+            with_params=False,
+        )
+    if mode == "specialist_tiny":
+        if ds_tag not in SPECIALIST_TINY_DS_TAGS:
+            raise KeyError(f"specialist_tiny skips dataset {ds_tag}")
+        return _annotate_grid(
+            specialist_tiny_sigma_grid_entries(ds_tag),
             dataset_name=ds_name,
             gin_params=None,
             with_params=False,
@@ -676,6 +698,32 @@ def write_grids(
             ),
             encoding="utf-8",
         )
+    if mode == "specialist_tiny" and written:
+        # Grids differ by dataset (GCN vs SAGE); vendor PROTEINS sample + note.
+        proteins_sample = "proteins_f0.json"
+        if proteins_sample not in written:
+            proteins_sample = next(iter(written))
+        sample_grid = json.loads(
+            (grids_sub / proteins_sample).read_text(encoding="utf-8")
+        )
+        vendored = _REPO_ROOT / "configs/tu_errica/sigma_hetero_specialist_tiny_hp_grid.json"
+        vendored.write_text(
+            json.dumps(
+                {
+                    "model": "sigma_hetero",
+                    "mode": "specialist_tiny",
+                    "note": (
+                        "Single-MP specialists: GCN on PROTEINS/REDDIT, SAGE on NCI1; "
+                        "a0g1+a1g1 × lr∈{1e-3,1e-4}; L=12 d_h=16 bs=32. "
+                        "→ 4 configs × 3 × 10 = 120 select / 90 eval. "
+                        f"(Vendored sample={proteins_sample}; NCI1 grids use SAGE.)"
+                    ),
+                    "grid": sample_grid["grid"],
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
 
 
 def main() -> None:
@@ -697,6 +745,7 @@ def main() -> None:
             "native_fair_v2_l4",
             "a0g_pnr",
             "tiny_pnr",
+            "specialist_tiny",
         ),
         default="fixed8",
         help="fixed8: 8-config SIGMA_GRID (default). "
@@ -706,6 +755,7 @@ def main() -> None:
         "native_fair_v2_l4: L=4 add-on for v2 (180 select; merge with L=12). "
         "a0g_pnr: MP-only a0g* on PROTEINS/NCI1/REDDIT (1440 select). "
         "tiny_pnr: ultra-tiny sensible a2g4 on P/NCI1/REDDIT (120 select). "
+        "specialist_tiny: GCN (P/REDDIT) / SAGE (NCI1) a0g1+a1g1 × lr (120 select). "
         "anchor_boost: paper a2g4-centered grid on PROTEINS+REDDIT. "
         "a1g2_micro: tiny bs×lr grid for SiGMA a1g2 on PROTEINS+REDDIT. "
         "a1g2_nci1_micro: tiny bs×lr grid for SiGMA a1g2 (GIN,SAGE) on NCI1. "

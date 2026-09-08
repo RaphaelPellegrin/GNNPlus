@@ -89,6 +89,12 @@
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_tiny_pnr
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_tiny_pnr
 #
+# specialist_tiny (GCN on P/REDDIT, SAGE on NCI1; a0g1+a1g1 × lr∈{1e-3,1e-4}):
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh generate_sigma_grids_specialist_tiny
+#   bash bash_interface/cluster/submit_tu_errica_specialist_tiny_select.sh
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_specialist_tiny
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_specialist_tiny
+#
 # SiGMA ungated (same fixed8 grid, gate=none):
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_select_fixed8_ungated
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_fixed8_ungated
@@ -182,6 +188,9 @@ case "${phase}" in
     generate_sigma_grids_tiny_pnr)
         bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode tiny_pnr
         ;;
+    generate_sigma_grids_specialist_tiny)
+        bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode specialist_tiny
+        ;;
     sigma_grid_select)
         # Prefer fixed8 campaign name so W&B groups do not collide with budget_bio.
         TU_ERRICA_CAMPAIGN=sigma_grid_select_fixed8 TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:00:00 \
@@ -205,6 +214,9 @@ case "${phase}" in
         ;;
     sigma_grid_select_tiny_pnr)
         bash bash_interface/cluster/submit_tu_errica_tiny_pnr_select.sh
+        ;;
+    sigma_grid_select_specialist_tiny)
+        bash bash_interface/cluster/submit_tu_errica_specialist_tiny_select.sh
         ;;
     sigma_grid_select_anchor_boost)
         TU_ERRICA_CAMPAIGN=sigma_grid_select_anchor_boost \
@@ -268,6 +280,13 @@ case "${phase}" in
             --campaign sigma_grid_select_tiny_pnr \
             --manifest configs/tu_errica/sigma_grids_tiny_pnr/manifest.json \
             --out configs/tu_errica/selections/sigma_tiny_pnr_per_fold.json
+        ;;
+    aggregate_sigma_specialist_tiny)
+        _run_python scripts/tu_errica/aggregate_sigma_hp_selection.py \
+            --campaign sigma_grid_select_specialist_tiny \
+            --model-tag SiGMA_spec_tiny \
+            --manifest configs/tu_errica/sigma_grids_specialist_tiny/manifest.json \
+            --out configs/tu_errica/selections/sigma_specialist_tiny_per_fold.json
         ;;
     aggregate_sigma_anchor_boost)
         _run_python scripts/tu_errica/aggregate_sigma_hp_selection.py \
@@ -360,6 +379,13 @@ case "${phase}" in
             TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:00:00 TU_ERRICA_NICE=0 \
             TU_ERRICA_PARALLEL=20 TU_ERRICA_PARTITION=mweber_gpu \
             TU_ERRICA_SELECTION_FILE=configs/tu_errica/selections/sigma_tiny_pnr_per_fold.json \
+            bash bash_interface/cluster/submit_tu_errica_fair.sh
+        ;;
+    sigma_grid_eval_specialist_tiny)
+        TU_ERRICA_CAMPAIGN=sigma_grid_eval_specialist_tiny \
+            TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:00:00 TU_ERRICA_NICE=0 \
+            TU_ERRICA_PARALLEL=20 TU_ERRICA_PARTITION=mweber_gpu \
+            TU_ERRICA_SELECTION_FILE=configs/tu_errica/selections/sigma_specialist_tiny_per_fold.json \
             bash bash_interface/cluster/submit_tu_errica_fair.sh
         ;;
     sigma_grid_eval_anchor_boost)

@@ -93,6 +93,9 @@ case "${campaign}" in
     sigma_grid_select_tiny_pnr)
         num_tasks=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids_tiny_pnr/manifest.json'))['num_tasks'])")
         ;;
+    sigma_grid_select_specialist_tiny)
+        num_tasks=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids_specialist_tiny/manifest.json'))['num_tasks'])")
+        ;;
     grid_eval|sigma_grid_eval|sigma_grid_eval_fixed8|sigma_grid_eval_full64|sigma_grid_eval_fixed8_ungated)
         num_tasks=$((num_datasets * num_folds * num_seeds))
         ;;
@@ -100,7 +103,7 @@ case "${campaign}" in
         # PROTEINS + REDDIT-BINARY only (2 × 10 × 3).
         num_tasks=$((2 * num_folds * num_seeds))
         ;;
-    sigma_grid_eval_a0g_pnr|sigma_grid_eval_tiny_pnr|sigma_grid_eval_native_fair|sigma_grid_eval_native_fair_v2|sigma_grid_eval_native_fair_v2_joint)
+    sigma_grid_eval_a0g_pnr|sigma_grid_eval_tiny_pnr|sigma_grid_eval_specialist_tiny|sigma_grid_eval_native_fair|sigma_grid_eval_native_fair_v2|sigma_grid_eval_native_fair_v2_joint)
         # PROTEINS + NCI1 + REDDIT (3 × 10 × 3).
         num_tasks=$((3 * num_folds * num_seeds))
         ;;
@@ -397,6 +400,26 @@ print(t['ds_tag'], t['fold'], t['grid_file'], t['hp_id'])
         done
         emit_extra=(--sigma-grid-file "${sigma_grid_file}" --hp-id="${hp_id}")
         ;;
+    sigma_grid_select_specialist_tiny)
+        # Per-dataset GCN (P/REDDIT) or SAGE (NCI1); a0g1/a1g1 via grid overrides.
+        cfg="configs/tu_errica/sigma-hetero-errica-base.yaml"
+        model_key="sigma_hetero"
+        model_tag="SiGMA_spec_tiny"
+        seed=$((seed_offset))
+        read -r ds_tag fold_idx grid_rel hp_id < <(python3 -c "
+import json
+t=json.load(open('configs/tu_errica/sigma_grids_specialist_tiny/manifest.json'))['tasks'][${idx}]
+print(t['ds_tag'], t['fold'], t['grid_file'], t['hp_id'])
+")
+        sigma_grid_file="configs/tu_errica/sigma_grids_specialist_tiny/grids/${grid_rel}"
+        for i in "${!datasets[@]}"; do
+            if [ "${datasets[$i]}" = "${ds_tag}" ]; then
+                dataset_idx=$i
+                break
+            fi
+        done
+        emit_extra=(--sigma-grid-file "${sigma_grid_file}" --hp-id="${hp_id}")
+        ;;
     sigma_grid_eval|sigma_grid_eval_fixed8|sigma_grid_eval_full64|sigma_grid_eval_fixed8_ungated)
         if [[ "${campaign}" == *ungated* ]]; then
             cfg="configs/tu_errica/sigma-hetero-ungated-errica-base.yaml"
@@ -586,6 +609,23 @@ print(t['ds_tag'], t['fold'], t['grid_file'], t['hp_id'])
         esac
         use_selection=1
         ;;
+    sigma_grid_eval_specialist_tiny)
+        cfg="configs/tu_errica/sigma-hetero-errica-base.yaml"
+        model_key="sigma_hetero"
+        model_tag="SiGMA_spec_tiny"
+        selection_file="${TU_ERRICA_SELECTION_FILE:-configs/tu_errica/selections/sigma_specialist_tiny_per_fold.json}"
+        seed=$((seed_offset + (idx % num_seeds)))
+        rest=$((idx / num_seeds))
+        fold_idx=$((rest % num_folds))
+        local_ds=$((rest / num_folds))
+        case "${local_ds}" in
+            0) ds_tag="proteins"; dataset_idx=1 ;;
+            1) ds_tag="nci1"; dataset_idx=2 ;;
+            2) ds_tag="reddit-b"; dataset_idx=5 ;;
+            *) log_message "specialist_tiny eval local_ds=${local_ds} out of range"; exit 1 ;;
+        esac
+        use_selection=1
+        ;;
     canonical)
         models=(gin graphsage sigma_hetero)
         seed=$((seed_offset + (idx % num_seeds)))
@@ -618,6 +658,8 @@ if [[ "${campaign}" != sigma_grid_select \
     && "${campaign}" != sigma_grid_eval_native_fair_v2_joint \
     && "${campaign}" != sigma_grid_select_a0g_pnr \
     && "${campaign}" != sigma_grid_select_tiny_pnr \
+    && "${campaign}" != sigma_grid_select_specialist_tiny \
+    && "${campaign}" != sigma_grid_eval_specialist_tiny \
     && "${campaign}" != sigma_grid_eval_anchor_boost \
     && "${campaign}" != sigma_grid_eval_a1g2_micro \
     && "${campaign}" != sigma_grid_eval_a0g_pnr \
@@ -665,7 +707,8 @@ if [ "${hp_id}" -ge 0 ]; then
         || "${campaign}" == sigma_grid_select_native_fair_v2 \
         || "${campaign}" == sigma_grid_select_native_fair_v2_l4 \
         || "${campaign}" == sigma_grid_select_a0g_pnr \
-        || "${campaign}" == sigma_grid_select_tiny_pnr ]]; then
+        || "${campaign}" == sigma_grid_select_tiny_pnr \
+        || "${campaign}" == sigma_grid_select_specialist_tiny ]]; then
         hp_tag="f${fold_idx}_hp${hp_id}"
     else
         hp_tag="hp${hp_id}"
@@ -720,7 +763,9 @@ if [ "${model_key}" = "sigma_hetero" ] \
         && "${campaign}" != sigma_grid_select_a0g_pnr \
         && "${campaign}" != sigma_grid_eval_a0g_pnr \
         && "${campaign}" != sigma_grid_select_tiny_pnr \
-        && "${campaign}" != sigma_grid_eval_tiny_pnr ]]; then
+        && "${campaign}" != sigma_grid_eval_tiny_pnr \
+        && "${campaign}" != sigma_grid_select_specialist_tiny \
+        && "${campaign}" != sigma_grid_eval_specialist_tiny ]]; then
     case "${ds_tag}" in
         dd|reddit-b|collab) batch_override_args+=(train.batch_size 16) ;;
     esac

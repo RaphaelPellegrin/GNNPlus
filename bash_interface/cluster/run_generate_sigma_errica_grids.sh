@@ -67,6 +67,8 @@ elif [ "${MODE}" = "a0g_pnr" ]; then
     log_message "Generating SiGMA grids (a0g_pnr: MP-only P/NCI1/REDDIT, 1440 select)"
 elif [ "${MODE}" = "tiny_pnr" ]; then
     log_message "Generating SiGMA grids (tiny_pnr: sensible a2g4 P/NCI1/REDDIT, 120 select)"
+elif [ "${MODE}" = "specialist_tiny" ]; then
+    log_message "Generating SiGMA grids (specialist_tiny: GCN/SAGE a0g1+a1g1 × lr, 120 select)"
 else
     log_message "Generating SiGMA grids (fixed8 SIGMA_GRID, no param ceiling)"
 fi
@@ -106,6 +108,9 @@ elif [ "${MODE}" = "a0g_pnr" ]; then
 elif [ "${MODE}" = "tiny_pnr" ]; then
     manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids_tiny_pnr/manifest.json"
     next_phase="sigma_grid_select_tiny_pnr"
+elif [ "${MODE}" = "specialist_tiny" ]; then
+    manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids_specialist_tiny/manifest.json"
+    next_phase="sigma_grid_select_specialist_tiny"
 else
     manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids/manifest.json"
     next_phase="sigma_grid_select"

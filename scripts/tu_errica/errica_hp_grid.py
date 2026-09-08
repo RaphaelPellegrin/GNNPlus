@@ -381,6 +381,53 @@ SIGMA_TINY_PNR_GRID: dict[str, list[Any]] = {
     "early_stop_use_loss": [False],
 }
 
+# ---------------------------------------------------------------------------
+# specialist_tiny — single-MP specialists matching classical winners:
+#   PROTEINS / REDDIT → GCN; NCI1 → SAGE.
+# Arches: a0g1 + a1g1; train: lr∈{1e-3, 1e-4}; L=12, d_h=16, bs=32 fixed.
+# Count: 4 configs × 3 × 10 = 120 select / 90 eval.
+# ---------------------------------------------------------------------------
+SIGMA_SPECIALIST_TINY_TRAIN_GRID: dict[str, list[Any]] = {
+    "batch_size": [32],
+    "base_lr": [0.001, 0.0001],
+    "layers_mp": [12],
+    "dim_inner": [64],
+    "d_h": [16],
+    "dropout": [0.5],
+    "graph_pooling": ["add"],
+    "early_stop_use_loss": [False],
+}
+
+SIGMA_SPECIALIST_TINY_GCN_FAMILIES: list[dict[str, Any]] = [
+    {
+        "mp_family": "a0g1_gcn",
+        "num_attn_heads": 0,
+        "num_gnn_heads": 1,
+        "gnn_types": "GCN",
+    },
+    {
+        "mp_family": "a1g1_gcn",
+        "num_attn_heads": 1,
+        "num_gnn_heads": 1,
+        "gnn_types": "GCN",
+    },
+]
+
+SIGMA_SPECIALIST_TINY_SAGE_FAMILIES: list[dict[str, Any]] = [
+    {
+        "mp_family": "a0g1_sage",
+        "num_attn_heads": 0,
+        "num_gnn_heads": 1,
+        "gnn_types": "SAGE",
+    },
+    {
+        "mp_family": "a1g1_sage",
+        "num_attn_heads": 1,
+        "num_gnn_heads": 1,
+        "gnn_types": "SAGE",
+    },
+]
+
 # Dataset families for hybrid SiGMA search (Option 3).
 BIO_DS_TAGS: frozenset[str] = frozenset({"enzymes", "proteins", "nci1", "dd"})
 SOCIAL_DS_TAGS: frozenset[str] = frozenset({"imdb-b", "reddit-b", "collab"})
@@ -404,6 +451,10 @@ A0G_PNR_DS_TAGS: frozenset[str] = NATIVE_FAIR_DS_TAGS
 A0G_PNR_DS_ORDER: tuple[str, ...] = NATIVE_FAIR_DS_ORDER
 TINY_PNR_DS_TAGS: frozenset[str] = NATIVE_FAIR_DS_TAGS
 TINY_PNR_DS_ORDER: tuple[str, ...] = NATIVE_FAIR_DS_ORDER
+SPECIALIST_TINY_DS_TAGS: frozenset[str] = NATIVE_FAIR_DS_TAGS
+SPECIALIST_TINY_DS_ORDER: tuple[str, ...] = NATIVE_FAIR_DS_ORDER
+SPECIALIST_TINY_GCN_DS_TAGS: frozenset[str] = frozenset({"proteins", "reddit-b"})
+SPECIALIST_TINY_SAGE_DS_TAGS: frozenset[str] = frozenset({"nci1"})
 
 DS_TAG_TO_NAME: dict[str, str] = {
     "enzymes": "ENZYMES",
@@ -569,6 +620,38 @@ def tiny_pnr_sigma_grid_entries() -> list[dict[str, Any]]:
         4 configs: bs∈{16,32} × d_h∈{8,16} at lr=1e-3, L=12 (a2g4 yaml).
     """
     return expand_grid(SIGMA_TINY_PNR_GRID)
+
+
+def specialist_tiny_sigma_grid_entries(ds_tag: str) -> list[dict[str, Any]]:
+    """Per-dataset single-MP specialist grid (``specialist_tiny``).
+
+    PROTEINS / REDDIT use GCN (``a0g1`` / ``a1g1``); NCI1 uses SAGE.
+    Train axes: ``lr ∈ {1e-3, 1e-4}`` only (L=12, d_h=16, bs=32 fixed).
+
+    Parameters
+    ----------
+    ds_tag:
+        Dataset tag (``proteins``, ``reddit-b``, or ``nci1``).
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        4 configs with ``mp_family`` / head / ``gnn_types`` overrides.
+    """
+    if ds_tag in SPECIALIST_TINY_GCN_DS_TAGS:
+        families = SIGMA_SPECIALIST_TINY_GCN_FAMILIES
+    elif ds_tag in SPECIALIST_TINY_SAGE_DS_TAGS:
+        families = SIGMA_SPECIALIST_TINY_SAGE_FAMILIES
+    else:
+        raise KeyError(f"specialist_tiny skips dataset {ds_tag}")
+    train = expand_grid(SIGMA_SPECIALIST_TINY_TRAIN_GRID)
+    combos: list[dict[str, Any]] = []
+    for family in families:
+        for train_hp in train:
+            row = dict(train_hp)
+            row.update(family)
+            combos.append(row)
+    return combos
 
 
 def expand_grid(grid: dict[str, list[Any]]) -> list[dict[str, Any]]:
