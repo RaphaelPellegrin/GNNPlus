@@ -12,6 +12,8 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${REPO_ROOT}"
 
 # shellcheck source=common_env.sh
+# Agg/eval orchestration only needs wandb + python (no torch train import).
+export GNNPLUS_LIGHTWEIGHT_ENV="${GNNPLUS_LIGHTWEIGHT_ENV:-1}"
 source "${SCRIPT_DIR}/common_env.sh"
 
 if [ -z "${GNNPLUS_OUT_DIR:-}" ]; then

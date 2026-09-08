@@ -64,7 +64,7 @@ JOBID="$(sbatch --parsable \
   --nice="${NICE}" \
   --gpus=1 \
   --cpus-per-task=4 \
-  --export=ALL,GNNPLUS_DATASET_DIR,GNNPLUS_OUT_DIR \
+  --export=ALL,GNNPLUS_DATASET_DIR,GNNPLUS_OUT_DIR,GNNPLUS_LIGHTWEIGHT_ENV=1 \
   --output="${LOGDIR}/agg_eval_%j.log" \
   "${SCRIPT_DIR}/run_tu_errica_native_fair_v2_joint_agg_eval.sh")"
 
