@@ -1269,6 +1269,7 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **`anchor_refine` eval** | **45192875** | 30 (1–30) | 🔄 PROTEINS · `%20` |
 | **`nci1_refine` select** | **45149015** | 20 (1–20%5) | 🔄 drop0.5×{add,mean} · `%5` |
 | **`native_fair` select** | **45235956** | **480** | 🚀 rerun · fixed `mp_family` emit · a0g2+a1g2 · **gpu_h200** `%40` |
+| **`native_fair` agg→eval** | — | 1 → 90 eval | ⏳ submit `afterok:45235956` · eval on **gpu_h200** |
 | **`native_fair_v2` select** | **45263051** | **180** | ✅ COMPLETED |
 | **`native_fair_v2` agg→eval** | **45423512** | 1 → 90 eval | 🚀 resubmit (SLURM_SUBMIT_DIR fix; prev **45423314**/**45265929** FAILED) |
 | **`native_fair_v2_l4` select** | **45423514** | **180** | 🚀 running · L=4 add-on (prev **45268464** CANCELLED) |

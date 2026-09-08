@@ -75,6 +75,7 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 | **4e-AR** | `sigma_grid_eval` **anchor_refine** | **45192875** | 🔄 **1–30** | PROTEINS · `%20` · chase GCN 73.9 |
 | **3a-NR** | `sigma_grid_select` **nci1_refine** | **45149015** | 🔄 **1–20%5** | NCI1 · **2** HPs (drop0.5×pool) · **20** select |
 | **3a-NF** | `sigma_grid_select` **native_fair** | **45235956** | 🚀 rerun | a0g2+a1g2 · P/NCI1/REDDIT · **480** · **gpu_h200** `%40` (prev **45215941** died on `mp_family`) |
+| **3a-NFe** | agg→eval native_fair | — | ⏳ submit `afterok:45235956` | → `sigma_native_fair_per_fold.json` · eval **gpu_h200** 90 |
 | **3a-NFv2** | `sigma_grid_select` **native_fair_v2** | **45263051** | ✅ **180/180** | UniGCN mixes · lr=1e-3 L=12 d_h=32 · **mweber** |
 | **3a-NFv2e** | agg→eval | **45423512** | 🚀 resubmit | SLURM_SUBMIT_DIR fix |
 | **3a-NFv2L4** | `sigma_grid_select` **native_fair_v2_l4** | **45423514** | 🚀 running | L=4 add-on · **180** |
@@ -273,9 +274,11 @@ specialists (drop full a*g4). Train: **lr × layers_mp** only (bs/d_h/H fixed).
 ```bash
 python scripts/tu_errica/generate_sigma_errica_grids.py --mode native_fair
 bash bash_interface/cluster/submit_tu_errica_native_fair_select.sh
-# after select:
-bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_native_fair
-bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_native_fair
+# after select (or with afterok while still running):
+TU_ERRICA_DEPENDENCY_JOBID=45235956 \
+  bash bash_interface/cluster/submit_tu_errica_native_fair_agg_eval.sh
+# → selections/sigma_native_fair_per_fold.json
+# → campaign sigma_grid_eval_native_fair (90 on gpu_h200)
 ```
 
 ### SiGMA native_fair_v2 (mweber companion, 2026-09-07)
