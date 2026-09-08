@@ -73,6 +73,10 @@
 #   TU_ERRICA_DEPENDENCY_JOBID=45265929 \
 #     bash bash_interface/cluster/submit_tu_errica_native_fair_v2_l4_select.sh
 #
+# native_fair_v2_joint (merge L12+L4 → separate selection + eval; after L4 select):
+#   TU_ERRICA_DEPENDENCY_JOBID=45268464 \
+#     bash bash_interface/cluster/submit_tu_errica_native_fair_v2_joint_agg_eval.sh
+#
 # MP-only a0g* on PROTEINS/NCI1/REDDIT (drop global attention):
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh generate_sigma_grids_a0g_pnr
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_select_a0g_pnr
@@ -243,6 +247,15 @@ case "${phase}" in
             --manifest configs/tu_errica/sigma_grids_native_fair_v2/manifest.json \
             --out configs/tu_errica/selections/sigma_native_fair_v2_per_fold.json
         ;;
+    aggregate_sigma_native_fair_v2_joint)
+        # Merge L=12 + L=4 selects into a separate JSON (does not overwrite L12-only).
+        _run_python scripts/tu_errica/aggregate_sigma_hp_selection.py \
+            --campaign sigma_grid_select_native_fair_v2 \
+            --manifest configs/tu_errica/sigma_grids_native_fair_v2/manifest.json \
+            --also-campaign sigma_grid_select_native_fair_v2_l4 \
+            --also-manifest configs/tu_errica/sigma_grids_native_fair_v2_l4/manifest.json \
+            --out configs/tu_errica/selections/sigma_native_fair_v2_joint_per_fold.json
+        ;;
     aggregate_sigma_a0g_pnr)
         _run_python scripts/tu_errica/aggregate_sigma_hp_selection.py \
             --campaign sigma_grid_select_a0g_pnr \
@@ -326,6 +339,13 @@ case "${phase}" in
             TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:00:00 TU_ERRICA_NICE=0 \
             TU_ERRICA_PARALLEL=20 TU_ERRICA_PARTITION=mweber_gpu \
             TU_ERRICA_SELECTION_FILE=configs/tu_errica/selections/sigma_native_fair_v2_per_fold.json \
+            bash bash_interface/cluster/submit_tu_errica_fair.sh
+        ;;
+    sigma_grid_eval_native_fair_v2_joint)
+        TU_ERRICA_CAMPAIGN=sigma_grid_eval_native_fair_v2_joint \
+            TU_ERRICA_MEM=128GB TU_ERRICA_TIME=96:00:00 TU_ERRICA_NICE=0 \
+            TU_ERRICA_PARALLEL=20 TU_ERRICA_PARTITION=mweber_gpu \
+            TU_ERRICA_SELECTION_FILE=configs/tu_errica/selections/sigma_native_fair_v2_joint_per_fold.json \
             bash bash_interface/cluster/submit_tu_errica_fair.sh
         ;;
     sigma_grid_eval_a0g_pnr)

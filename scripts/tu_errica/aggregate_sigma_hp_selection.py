@@ -40,9 +40,14 @@ def collect_sigma_runs(
     manifest: dict[str, Any],
     states: list[str],
     campaign: str,
+    grids_dir: Path,
     model_tag: str = "SiGMA_hetero",
 ) -> list[dict[str, Any]]:
-    """Fetch sigma_grid_select runs listed in the manifest."""
+    """Fetch sigma_grid_select runs listed in the manifest.
+
+    Each row records ``grids_dir`` and ``campaign`` so multi-source merges can
+    resolve ``hp_id`` against the correct grid file.
+    """
     try:
         import wandb
     except ImportError as exc:  # pragma: no cover
@@ -51,6 +56,7 @@ def collect_sigma_runs(
     api = wandb.Api()
     path = f"{entity}/{project}"
     rows: list[dict[str, Any]] = []
+    grids_dir_resolved = str(grids_dir.resolve())
 
     for task in manifest["tasks"]:
         ds_tag = str(task["ds_tag"])
@@ -79,6 +85,8 @@ def collect_sigma_runs(
                     "fold": fold,
                     "hp_id": hp_id,
                     "grid_file": task["grid_file"],
+                    "grids_dir": grids_dir_resolved,
+                    "campaign": campaign,
                     "val_accuracy": val,
                     "run_id": run.id,
                 }
@@ -89,9 +97,13 @@ def collect_sigma_runs(
 def select_best_sigma(
     rows: list[dict[str, Any]],
     *,
-    grids_dir: Path,
+    grids_dir: Path | None = None,
 ) -> dict[str, dict[str, dict[str, Any]]]:
-    """Nested ds_tag → fold → best sigma grid entry."""
+    """Nested ds_tag → fold → best sigma grid entry.
+
+    Prefer each row's ``grids_dir`` (set by ``collect_sigma_runs``). Fall back to
+    ``grids_dir`` for single-campaign calls that omit per-row paths.
+    """
     best: dict[tuple[str, int], dict[str, Any]] = {}
     for row in rows:
         key = (row["ds_tag"], int(row["fold"]))
@@ -100,17 +112,27 @@ def select_best_sigma(
 
     out: dict[str, dict[str, dict[str, Any]]] = {}
     for (ds_tag, fold), row in sorted(best.items()):
-        grid_path = grids_dir / str(row["grid_file"])
+        row_grids = Path(str(row["grids_dir"])) if row.get("grids_dir") else None
+        if row_grids is None:
+            if grids_dir is None:
+                raise ValueError(
+                    f"row missing grids_dir and no default for {ds_tag} fold {fold}"
+                )
+            row_grids = grids_dir
+        grid_path = row_grids / str(row["grid_file"])
         with grid_path.open(encoding="utf-8") as handle:
             grid = json.load(handle)["grid"]
         hp = dict(grid[int(row["hp_id"])])
-        entry = {
+        entry: dict[str, Any] = {
             "hp_id": row["hp_id"],
             "grid_file": row["grid_file"],
+            "grids_dir": str(row_grids),
             "val_accuracy": row["val_accuracy"],
             "run_id": row["run_id"],
             "hp": hp,
         }
+        if row.get("campaign"):
+            entry["source_campaign"] = row["campaign"]
         out.setdefault(ds_tag, {})[str(fold)] = entry
     return out
 
@@ -128,6 +150,20 @@ def main() -> None:
         "(use sigma_grid_select for legacy budget_bio).",
     )
     parser.add_argument(
+        "--also-campaign",
+        action="append",
+        default=[],
+        help="Extra W&B select campaign to merge (repeatable; pair with "
+        "--also-manifest). Used for joint L∈{4,12} native_fair_v2.",
+    )
+    parser.add_argument(
+        "--also-manifest",
+        action="append",
+        default=[],
+        type=Path,
+        help="Manifest for each --also-campaign (same order / count).",
+    )
+    parser.add_argument(
         "--model-tag",
         default="SiGMA_hetero",
         help="W&B model tag in group names (SiGMA_hetero or SiGMA_ungated).",
@@ -140,34 +176,58 @@ def main() -> None:
     parser.add_argument("--state", default="finished")
     args = parser.parse_args()
 
-    with args.manifest.open(encoding="utf-8") as handle:
-        manifest = json.load(handle)
+    if len(args.also_campaign) != len(args.also_manifest):
+        parser.error(
+            f"--also-campaign ({len(args.also_campaign)}) and "
+            f"--also-manifest ({len(args.also_manifest)}) counts must match"
+        )
 
     states = [s.strip() for s in args.state.split(",") if s.strip()]
-    rows = collect_sigma_runs(
-        entity=args.entity,
-        project=args.project,
-        manifest=manifest,
-        states=states,
-        campaign=args.campaign,
-        model_tag=args.model_tag,
-    )
-    grids_dir = args.manifest.resolve().parent / "grids"
-    selection = select_best_sigma(rows, grids_dir=grids_dir)
+    sources: list[tuple[str, Path]] = [(args.campaign, args.manifest)]
+    sources.extend(zip(args.also_campaign, args.also_manifest, strict=True))
+
+    rows: list[dict[str, Any]] = []
+    for campaign, manifest_path in sources:
+        with manifest_path.open(encoding="utf-8") as handle:
+            manifest = json.load(handle)
+        grids_dir = manifest_path.resolve().parent / "grids"
+        part = collect_sigma_runs(
+            entity=args.entity,
+            project=args.project,
+            manifest=manifest,
+            states=states,
+            campaign=campaign,
+            grids_dir=grids_dir,
+            model_tag=args.model_tag,
+        )
+        print(
+            f"[aggregate] {campaign}: {len(part)} finished runs "
+            f"(manifest={manifest_path})",
+            file=sys.stderr,
+        )
+        rows.extend(part)
+
+    selection = select_best_sigma(rows)
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
+    payload: dict[str, Any] = {
         "model": "sigma_hetero_ungated"
         if args.model_tag == "SiGMA_ungated"
         else "sigma_hetero",
         "model_tag": args.model_tag,
-        "campaign": args.campaign,
+        "campaign": args.campaign
+        if not args.also_campaign
+        else "merged:" + "+".join(c for c, _ in sources),
+        "sources": [
+            {"campaign": c, "manifest": str(m.resolve())} for c, m in sources
+        ],
         "manifest": str(args.manifest),
         "selection": selection,
     }
     args.out.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     n_folds = sum(len(v) for v in selection.values())
     print(
-        f"Wrote {args.out} ({n_folds} folds, model_tag={args.model_tag})",
+        f"Wrote {args.out} ({n_folds} folds, model_tag={args.model_tag}, "
+        f"sources={len(sources)})",
         file=sys.stderr,
     )
 

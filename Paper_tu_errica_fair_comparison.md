@@ -77,7 +77,8 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 | **3a-NF** | `sigma_grid_select` **native_fair** | **45235956** | 🚀 rerun | a0g2+a1g2 · P/NCI1/REDDIT · **480** · **gpu_h200** `%40` (prev **45215941** died on `mp_family`) |
 | **3a-NFv2** | `sigma_grid_select` **native_fair_v2** | **45263051** | 🚀 running | UniGCN mixes · lr=1e-3 L=12 d_h=32 · **180** · **mweber** `%20` |
 | **3a-NFv2e** | agg→eval (depends on select) | **45265929** | ⏳ `afterok` | waits on **45263051** → aggregate + **90** eval |
-| **3a-NFv2L4** | `sigma_grid_select` **native_fair_v2_l4** | — | ⏳ queue | L=4 add-on · **180** · `afterok:45265929` · merge L12+L4 later |
+| **3a-NFv2L4** | `sigma_grid_select` **native_fair_v2_l4** | **45268464** | ⏳ `afterok` | L=4 add-on · **180** · waits on **45265929** · merge L12+L4 later |
+| **3a-NFv2j** | joint merge→eval L∈{4,12} | — | ⏳ queue | `afterok:45268464` · **separate** `*_joint_*` paths (L12-only untouched) |
 | **3a-A0** | `sigma_grid_select` **a0g_pnr** | — | ⏳ ready later | MP-only **a0g4/a0g2** on P/NCI1/REDDIT · **1440** select |
 | **3a-TP** | `sigma_grid_select` **tiny_pnr** | — | ⏳ ready | Ultra-tiny sensible a2g4 · **4** HPs × 3 ds = **120** select |
 | **3a-U** | `sigma_grid_select` **fixed8 ungated** | **44869251** | ⏸️ **HELD** | `scontrol hold` 2026-09-06 — **must `scontrol release 44869251` later** · leftover `R` finish OK |
@@ -308,6 +309,16 @@ so shallow fill starts once L=12 winners + eval are submitted.
 python scripts/tu_errica/generate_sigma_errica_grids.py --mode native_fair_v2_l4
 TU_ERRICA_DEPENDENCY_JOBID=45265929 \
   bash bash_interface/cluster/submit_tu_errica_native_fair_v2_l4_select.sh
+```
+
+After L4 select finishes, joint merge→eval (does **not** overwrite L12-only
+`sigma_native_fair_v2_per_fold.json` / `sigma_grid_eval_native_fair_v2`):
+
+```bash
+TU_ERRICA_DEPENDENCY_JOBID=45268464 \
+  bash bash_interface/cluster/submit_tu_errica_native_fair_v2_joint_agg_eval.sh
+# → selections/sigma_native_fair_v2_joint_per_fold.json
+# → campaign sigma_grid_eval_native_fair_v2_joint (90 eval)
 ```
 
 ### SiGMA a0g_pnr — drop global attention (ready later, 2026-09-07)

@@ -1271,7 +1271,8 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **`native_fair` select** | **45235956** | **480** | 🚀 rerun · fixed `mp_family` emit · a0g2+a1g2 · **gpu_h200** `%40` |
 | **`native_fair_v2` select** | **45263051** | **180** | 🚀 running · UniGCN mixes · lr=1e-3 L=12 d_h=32 · **mweber** `%20` |
 | **`native_fair_v2` agg→eval** | **45265929** | 1 → 90 eval | ⏳ `afterok:45263051` · then aggregate + submit eval |
-| **`native_fair_v2_l4` select** | — | **180** | ⏳ queue `afterok:45265929` · L=4 add-on (same arches) · merge L12+L4 later |
+| **`native_fair_v2_l4` select** | **45268464** | **180** | ⏳ `afterok:45265929` · L=4 add-on (same arches) · merge L12+L4 later |
+| **`native_fair_v2_joint` agg→eval** | — | 1 → 90 eval | ⏳ queue `afterok:45268464` · separate JSON/campaign (no L12 overwrite) |
 | **`a0g_pnr` select** | — | **1440** | ⏳ ready later · a0g4/a0g2 · P/NCI1/REDDIT |
 | **`tiny_pnr` select** | — | **120** | ⏳ ready · sensible a2g4 · bs×d_h only |
 | **`fixed8_ungated` select** | **44869251** | 560 | ⏸️ **HELD** · `scontrol release 44869251` when ready |
