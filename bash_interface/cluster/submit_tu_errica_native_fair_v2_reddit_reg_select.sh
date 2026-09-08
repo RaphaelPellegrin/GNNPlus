@@ -27,10 +27,15 @@ fi
 
 NUM_TASKS="$(python3 -c "import json; print(json.load(open('${MANIFEST}'))['num_tasks'])")"
 ARRAY_SPEC="${TU_ERRICA_ARRAY:-1-${NUM_TASKS}}"
+# gpu_h200 MaxTime is typically 3 days — 96h fails with "time limit is invalid".
 PARTITION="${TU_ERRICA_PARTITION:-gpu_h200}"
 PARALLEL="${TU_ERRICA_PARALLEL:-15}"
 MEM="${TU_ERRICA_MEM:-128GB}"
-TIME="${TU_ERRICA_TIME:-96:00:00}"
+if [ "${PARTITION}" = "gpu_h200" ]; then
+  TIME="${TU_ERRICA_TIME:-72:00:00}"
+else
+  TIME="${TU_ERRICA_TIME:-96:00:00}"
+fi
 NICE="${TU_ERRICA_NICE:-0}"
 DRY_RUN="${TU_ERRICA_DRY_RUN:-0}"
 DEPENDENCY_JOBID="${TU_ERRICA_DEPENDENCY_JOBID:-}"
