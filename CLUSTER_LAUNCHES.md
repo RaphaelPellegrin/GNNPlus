@@ -1258,27 +1258,31 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **fixed8 COLLAB fill** | **44507757** | 1 (task 560) | ✅ COMPLETED |
 | **`sigma_grid_eval_fixed8`** | **44621846** | 210 | ✅ 209 + fill **44748166** |
 | **eval COLLAB f0 s0 fill** | **44748166** | 1 (task 181) | ✅ COMPLETED |
-| **`anchor_boost` select** | **44840486** | 480 | 🔄 REDDIT left · PROTEINS ✅ |
+| **`anchor_boost` select** | **44840486** | 480 | PROTEINS ✅ · REDDIT **120/240** (120 failed = bs=64 half) |
 | **`anchor_boost` eval PROTEINS** | **44938699** | 30 (1–30) | ✅ **73.68±3.08** |
+| **`anchor_boost` REDDIT fill** | — | **120** | ⏳ submit `submit_tu_errica_anchor_boost_reddit_fill.sh` |
+| **`anchor_boost` REDDIT eval** | — | 30 (31–60) | ⏳ after fill + re-agg |
+| **`anchor_refine` eval** | **45192875** | 30 | ✅ PROTEINS **72.17±4.14** |
+| **`nci1_refine` agg→eval** | — | 1 → 30 | ⏳ submit now (select done) |
+| **`tiny_pnr` select** | — | **120** | ⏳ submit now · a2g4 bs×d_h |
+| **`tiny_pnr` agg→eval** | — | 1 → 90 | ⏳ `afterok` on tiny_pnr select |
 | **`a1g2_micro` select** | **45054117** | 80 | 🔄 REDDIT 2 R left (`_42`,`_50`) · PROTEINS ✅ |
 | **`a1g2_micro` eval PROTEINS** | **45067214** | 30 (1–30) | ✅ **72.2±2.9** |
 | **`a1g2_nci1_micro` select** | **45054174** | 40 | ✅ · agg → `sigma_a1g2_nci1_micro_per_fold.json` (10 folds) |
 | **`a1g2_nci1_micro` eval** | **45074636** | 30 (1–30) | ✅ **80.4±2.0** |
 | **`full64` eval P/NCI1/REDDIT** | **45131301** | 90 (31–90,151–180) | 🔄 · PROTEINS ✅ **71.6±3.7** |
 | **`anchor_refine` select** | **45146136** | 40 | ✅ → `sigma_anchor_refine_per_fold.json` |
-| **`anchor_refine` eval** | **45192875** | 30 (1–30) | 🔄 PROTEINS · `%20` |
-| **`nci1_refine` select** | **45149015** | 20 (1–20%5) | 🔄 drop0.5×{add,mean} · `%5` |
-| **`native_fair` select** | **45235956** | **480** | 🚀 rerun · fixed `mp_family` emit · a0g2+a1g2 · **gpu_h200** `%40` |
-| **`native_fair` agg→eval** | — | 1 → 90 eval | ⏳ submit `afterok:45235956` · eval on **gpu_h200** |
+| **`nci1_refine` select** | **45149015** | 20 | ✅ ready for agg→eval |
+| **`native_fair` select** | **45235956** | **480** | ✅ select done · agg **45429478** |
+| **`native_fair` agg→eval** | **45429478** | 1 → 90 eval | 🚀 PD Priority · eval on **gpu_h200** |
 | **`native_fair_v2` select** | **45263051** | **180** | ✅ COMPLETED |
-| **`native_fair_v2` agg→eval** | **45423512** | 1 → 90 eval | 🚀 resubmit (SLURM_SUBMIT_DIR fix; prev **45423314**/**45265929** FAILED) |
-| **`native_fair_v2_l4` select** | **45423514** | **180** | 🚀 running · L=4 add-on (prev **45268464** CANCELLED) |
-| **`native_fair_v2_l4` agg→eval** | — | 1 → 90 eval | ⏳ submit after select · L=4-only column |
+| **`native_fair_v2` eval** | **45423867** | 90 | 🚀 L12 eval (was Priority) |
+| **`native_fair_v2_l4` select** | **45423514** | **180** | 🚀 running · L=4 add-on |
+| **`native_fair_v2_l4` agg→eval** | **45428829** | 1 → 90 eval | ⏳ `afterok:45423514` |
 | **`native_fair_v2_joint` agg→eval** | **45423667** | 1 → 90 eval | ⏳ `afterok:45423514` |
 | **`specialist_tiny` select** | **45303391** | **120** | ✅ COMPLETED |
-| **`specialist_tiny` agg→eval** | **45423513** | 1 → 90 eval | 🚀 resubmit (prev **45304563** FAILED) |
+| **`specialist_tiny` eval** | **45423695** | 90 | 🚀 P/NCI1 done-ish · REDDIT running |
 | **`a0g_pnr` select** | — | **1440** | ⏳ ready later · a0g4/a0g2 · P/NCI1/REDDIT |
-| **`tiny_pnr` select** | — | **120** | ⏳ ready · sensible a2g4 · bs×d_h only |
 | **`fixed8_ungated` select** | **44869251** | 560 | ⏸️ **HELD** · `scontrol release 44869251` when ready |
 | `aggregate_sigma` → `sigma_grid_eval_fixed8` | — | 210 | ✅ selection done · eval **44621846** |
 

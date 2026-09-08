@@ -72,8 +72,12 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 | **4e-A1N** | `sigma_grid_eval` a1g2 **NCI1** | **45074636** | ✅ **30/30** | **80.4±2.0** (GIN+SAGE) · vs fixed8 SiGMA 80.66±1.89 |
 | **4e-F64** | `sigma_grid_eval` **full64** P/NCI1/REDDIT | **45131301** | 🔄 NCI1+REDDIT | PROTEINS ✅ **71.6±3.7** (worse than a2g4 73.68) |
 | **3a-AR** | `sigma_grid_select` **anchor_refine** | **45146136** | ✅ **40/40** | PROTEINS 4-HP drop×pool → `sigma_anchor_refine_per_fold.json` |
-| **4e-AR** | `sigma_grid_eval` **anchor_refine** | **45192875** | 🔄 **1–30** | PROTEINS · `%20` · chase GCN 73.9 |
-| **3a-NR** | `sigma_grid_select` **nci1_refine** | **45149015** | 🔄 **1–20%5** | NCI1 · **2** HPs (drop0.5×pool) · **20** select |
+| **4e-AR** | `sigma_grid_eval` **anchor_refine** | **45192875** | ✅ **30/30** | PROTEINS **72.17±4.14** (below anchor_boost 73.68) |
+| **3a-NR** | `sigma_grid_select` **nci1_refine** | **45149015** | ✅ **20/20** | ready for agg→eval |
+| **3a-NRe** | nci1_refine agg→eval | — | ⏳ submit now | 30 eval |
+| **3a-AB-Rf** | anchor_boost **REDDIT fill** | — | ⏳ submit now | 120 missing bs=64 HPs |
+| **3a-AB-Re** | AB re-agg + REDDIT eval 31–60 | — | ⏳ after fill | |
+| **3a-TP** | `sigma_grid_select` **tiny_pnr** | — | ⏳ submit now | a2g4 bs×d_h · **120** select |
 | **3a-NF** | `sigma_grid_select` **native_fair** | **45235956** | 🚀 rerun | a0g2+a1g2 · P/NCI1/REDDIT · **480** · **gpu_h200** `%40` (prev **45215941** died on `mp_family`) |
 | **3a-NFe** | agg→eval native_fair | — | ⏳ submit `afterok:45235956` | → `sigma_native_fair_per_fold.json` · eval **gpu_h200** 90 |
 | **3a-NFv2** | `sigma_grid_select` **native_fair_v2** | **45263051** | ✅ **180/180** | UniGCN mixes · lr=1e-3 L=12 d_h=32 · **mweber** |
@@ -84,7 +88,6 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 | **3a-ST** | `sigma_grid_select` **specialist_tiny** | **45303391** | ✅ **120/120** | GCN (P/REDDIT) / SAGE (NCI1) · a0g1+a1g1 × lr |
 | **3a-STe** | agg→eval | **45423513** | 🚀 resubmit | SLURM_SUBMIT_DIR fix |
 | **3a-A0** | `sigma_grid_select` **a0g_pnr** | — | ⏳ ready later | MP-only **a0g4/a0g2** on P/NCI1/REDDIT · **1440** select |
-| **3a-TP** | `sigma_grid_select` **tiny_pnr** | — | ⏳ ready | Ultra-tiny sensible a2g4 · **4** HPs × 3 ds = **120** select |
 | **3a-U** | `sigma_grid_select` **fixed8 ungated** | **44869251** | ⏸️ **HELD** | `scontrol hold` 2026-09-06 — **must `scontrol release 44869251` later** · leftover `R` finish OK |
 | **3a-fill** | fixed8 **COLLAB f9 hp7** fill | **44507757** | ✅ **COMPLETED** | task **560** · netscratch logs |
 | **3b** | `aggregate_sigma` | — | ✅ **70/70 folds** | `sigma_fixed8_per_fold.json` |

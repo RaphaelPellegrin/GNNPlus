@@ -93,9 +93,17 @@
 #
 # Ultra-tiny sensible a2g4 on PROTEINS/NCI1/REDDIT (120 select):
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh generate_sigma_grids_tiny_pnr
-#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_select_tiny_pnr
-#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_tiny_pnr
-#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_tiny_pnr
+#   bash bash_interface/cluster/submit_tu_errica_tiny_pnr_select.sh
+#   TU_ERRICA_DEPENDENCY_JOBID=<select_jobid> \
+#     bash bash_interface/cluster/submit_tu_errica_tiny_pnr_agg_eval.sh
+#
+# NCI1 nci1_refine agg→eval (select already done):
+#   bash bash_interface/cluster/submit_tu_errica_nci1_refine_agg_eval.sh
+#
+# anchor_boost REDDIT fill (missing bs=64 HPs) then re-agg + eval 31–60:
+#   bash bash_interface/cluster/submit_tu_errica_anchor_boost_reddit_fill.sh
+#   TU_ERRICA_DEPENDENCY_JOBID=<fill_jobid> \
+#     bash bash_interface/cluster/submit_tu_errica_anchor_boost_reddit_agg_eval.sh
 #
 # specialist_tiny (GCN on P/REDDIT, SAGE on NCI1; a0g1+a1g1 × lr∈{1e-3,1e-4}):
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh generate_sigma_grids_specialist_tiny
