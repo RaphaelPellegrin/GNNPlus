@@ -78,6 +78,10 @@ case "${CAMPAIGN}" in
         NUM_TASKS=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids_native_fair_v2/manifest.json'))['num_tasks'])")
         JOB_SUFFIX="${CAMPAIGN}"
         ;;
+    sigma_grid_select_native_fair_v2_l4)
+        NUM_TASKS=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids_native_fair_v2_l4/manifest.json'))['num_tasks'])")
+        JOB_SUFFIX="${CAMPAIGN}"
+        ;;
     sigma_grid_select_a0g_pnr)
         NUM_TASKS=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids_a0g_pnr/manifest.json'))['num_tasks'])")
         JOB_SUFFIX="${CAMPAIGN}"

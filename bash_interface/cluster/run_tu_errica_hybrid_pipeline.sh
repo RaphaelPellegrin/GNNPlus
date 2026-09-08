@@ -68,6 +68,11 @@
 #   TU_ERRICA_DEPENDENCY_JOBID=<select_jobid> \
 #     bash bash_interface/cluster/submit_tu_errica_native_fair_v2_agg_eval.sh
 #
+# native_fair_v2_l4 (L=4 add-on; same arches; queue after agg_eval 45265929):
+#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh generate_sigma_grids_native_fair_v2_l4
+#   TU_ERRICA_DEPENDENCY_JOBID=45265929 \
+#     bash bash_interface/cluster/submit_tu_errica_native_fair_v2_l4_select.sh
+#
 # MP-only a0g* on PROTEINS/NCI1/REDDIT (drop global attention):
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh generate_sigma_grids_a0g_pnr
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_select_a0g_pnr
@@ -164,6 +169,9 @@ case "${phase}" in
     generate_sigma_grids_native_fair_v2)
         bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode native_fair_v2
         ;;
+    generate_sigma_grids_native_fair_v2_l4)
+        bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode native_fair_v2_l4
+        ;;
     generate_sigma_grids_a0g_pnr)
         bash bash_interface/cluster/run_generate_sigma_errica_grids.sh --mode a0g_pnr
         ;;
@@ -184,6 +192,9 @@ case "${phase}" in
         ;;
     sigma_grid_select_native_fair_v2)
         bash bash_interface/cluster/submit_tu_errica_native_fair_v2_select.sh
+        ;;
+    sigma_grid_select_native_fair_v2_l4)
+        bash bash_interface/cluster/submit_tu_errica_native_fair_v2_l4_select.sh
         ;;
     sigma_grid_select_a0g_pnr)
         bash bash_interface/cluster/submit_tu_errica_a0g_pnr_select.sh

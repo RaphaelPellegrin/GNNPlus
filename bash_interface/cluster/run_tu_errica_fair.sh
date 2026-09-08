@@ -84,6 +84,9 @@ case "${campaign}" in
     sigma_grid_select_native_fair_v2)
         num_tasks=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids_native_fair_v2/manifest.json'))['num_tasks'])")
         ;;
+    sigma_grid_select_native_fair_v2_l4)
+        num_tasks=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids_native_fair_v2_l4/manifest.json'))['num_tasks'])")
+        ;;
     sigma_grid_select_a0g_pnr)
         num_tasks=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids_a0g_pnr/manifest.json'))['num_tasks'])")
         ;;
@@ -335,6 +338,26 @@ print(t['ds_tag'], t['fold'], t['grid_file'], t['hp_id'])
         done
         emit_extra=(--sigma-grid-file "${sigma_grid_file}" --hp-id="${hp_id}")
         ;;
+    sigma_grid_select_native_fair_v2_l4)
+        # L=4 add-on; same arches / lr / d_h as native_fair_v2.
+        cfg="configs/tu_errica/sigma-hetero-errica-base.yaml"
+        model_key="sigma_hetero"
+        model_tag="SiGMA_hetero"
+        seed=$((seed_offset))
+        read -r ds_tag fold_idx grid_rel hp_id < <(python3 -c "
+import json
+t=json.load(open('configs/tu_errica/sigma_grids_native_fair_v2_l4/manifest.json'))['tasks'][${idx}]
+print(t['ds_tag'], t['fold'], t['grid_file'], t['hp_id'])
+")
+        sigma_grid_file="configs/tu_errica/sigma_grids_native_fair_v2_l4/grids/${grid_rel}"
+        for i in "${!datasets[@]}"; do
+            if [ "${datasets[$i]}" = "${ds_tag}" ]; then
+                dataset_idx=$i
+                break
+            fi
+        done
+        emit_extra=(--sigma-grid-file "${sigma_grid_file}" --hp-id="${hp_id}")
+        ;;
     sigma_grid_select_a0g_pnr)
         # Base yaml a2g4; grid forces num_attn_heads=0 (a0g4 / a0g2).
         cfg="configs/tu_errica/sigma-hetero-errica-base.yaml"
@@ -573,6 +596,7 @@ if [[ "${campaign}" != sigma_grid_select \
     && "${campaign}" != sigma_grid_eval_native_fair \
     && "${campaign}" != sigma_grid_select_native_fair_v2 \
     && "${campaign}" != sigma_grid_eval_native_fair_v2 \
+    && "${campaign}" != sigma_grid_select_native_fair_v2_l4 \
     && "${campaign}" != sigma_grid_select_a0g_pnr \
     && "${campaign}" != sigma_grid_select_tiny_pnr \
     && "${campaign}" != sigma_grid_eval_anchor_boost \
@@ -620,6 +644,7 @@ if [ "${hp_id}" -ge 0 ]; then
         || "${campaign}" == sigma_grid_select_nci1_refine \
         || "${campaign}" == sigma_grid_select_native_fair \
         || "${campaign}" == sigma_grid_select_native_fair_v2 \
+        || "${campaign}" == sigma_grid_select_native_fair_v2_l4 \
         || "${campaign}" == sigma_grid_select_a0g_pnr \
         || "${campaign}" == sigma_grid_select_tiny_pnr ]]; then
         hp_tag="f${fold_idx}_hp${hp_id}"
@@ -671,6 +696,7 @@ if [ "${model_key}" = "sigma_hetero" ] \
         && "${campaign}" != sigma_grid_eval_native_fair \
         && "${campaign}" != sigma_grid_select_native_fair_v2 \
         && "${campaign}" != sigma_grid_eval_native_fair_v2 \
+        && "${campaign}" != sigma_grid_select_native_fair_v2_l4 \
         && "${campaign}" != sigma_grid_select_a0g_pnr \
         && "${campaign}" != sigma_grid_eval_a0g_pnr \
         && "${campaign}" != sigma_grid_select_tiny_pnr \

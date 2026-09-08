@@ -259,7 +259,7 @@ SIGMA_NATIVE_FAIR_TRAIN_GRID: dict[str, list[Any]] = {
 #   • a1g2_gin_sage / a1g2_gcn_gin / a1g2_gin_unigcn
 #   • a0g2_gin_sage / a0g2_gcn_gin / a0g2_gcn_unigcn
 # Count: 6 → 6 × 3 × 10 = 180 select / 90 eval.
-# Tomorrow expand: layers_mp=[4, 12] → 12 configs × 30 = 360 select (rerun).
+# L=4 fill: mode native_fair_v2_l4 (separate 180-task add-on; see submit_*_l4_select.sh).
 # ---------------------------------------------------------------------------
 SIGMA_NATIVE_FAIR_V2_MP_FAMILIES: list[dict[str, Any]] = [
     {
@@ -304,6 +304,19 @@ SIGMA_NATIVE_FAIR_V2_TRAIN_GRID: dict[str, list[Any]] = {
     "batch_size": [32],
     "base_lr": [0.001],
     "layers_mp": [12],
+    "dim_inner": [64],
+    "d_h": [32],
+    "dropout": [0.5],
+    "graph_pooling": ["add"],
+    "early_stop_use_loss": [False],
+}
+
+# L=4 add-on for native_fair_v2 (same arches / lr / d_h). Run after L=12 select
+# finishes so we do not redo deep jobs. Count: 6 × 3 × 10 = 180 select.
+SIGMA_NATIVE_FAIR_V2_L4_TRAIN_GRID: dict[str, list[Any]] = {
+    "batch_size": [32],
+    "base_lr": [0.001],
+    "layers_mp": [4],
     "dim_inner": [64],
     "d_h": [32],
     "dropout": [0.5],
@@ -385,6 +398,8 @@ NATIVE_FAIR_DS_TAGS: frozenset[str] = frozenset({"proteins", "nci1", "reddit-b"}
 NATIVE_FAIR_DS_ORDER: tuple[str, ...] = ("proteins", "nci1", "reddit-b")
 NATIVE_FAIR_V2_DS_TAGS: frozenset[str] = NATIVE_FAIR_DS_TAGS
 NATIVE_FAIR_V2_DS_ORDER: tuple[str, ...] = NATIVE_FAIR_DS_ORDER
+NATIVE_FAIR_V2_L4_DS_TAGS: frozenset[str] = NATIVE_FAIR_DS_TAGS
+NATIVE_FAIR_V2_L4_DS_ORDER: tuple[str, ...] = NATIVE_FAIR_DS_ORDER
 A0G_PNR_DS_TAGS: frozenset[str] = NATIVE_FAIR_DS_TAGS
 A0G_PNR_DS_ORDER: tuple[str, ...] = NATIVE_FAIR_DS_ORDER
 TINY_PNR_DS_TAGS: frozenset[str] = NATIVE_FAIR_DS_TAGS
@@ -498,6 +513,25 @@ def native_fair_v2_sigma_grid_entries() -> list[dict[str, Any]]:
         d_h=32. Includes ``mp_family`` metadata for logging only.
     """
     train = expand_grid(SIGMA_NATIVE_FAIR_V2_TRAIN_GRID)
+    combos: list[dict[str, Any]] = []
+    for family in SIGMA_NATIVE_FAIR_V2_MP_FAMILIES:
+        for train_hp in train:
+            row = dict(train_hp)
+            row.update(family)
+            combos.append(row)
+    return combos
+
+
+def native_fair_v2_l4_sigma_grid_entries() -> list[dict[str, Any]]:
+    """L=4 add-on for ``native_fair_v2`` (same arches / lr / d_h).
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        6 configs at layers_mp=4. Run after the L=12 select so deep jobs are
+        not repeated; later merge both campaigns when picking fold winners.
+    """
+    train = expand_grid(SIGMA_NATIVE_FAIR_V2_L4_TRAIN_GRID)
     combos: list[dict[str, Any]] = []
     for family in SIGMA_NATIVE_FAIR_V2_MP_FAMILIES:
         for train_hp in train:
