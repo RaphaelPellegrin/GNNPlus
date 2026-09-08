@@ -39,9 +39,19 @@ _KEY_MAP: dict[str, str] = {
     "dropout": "gnn.dropout",
     "early_stop_use_loss": "train.early_stop_use_loss",
     "d_h": "gnn.hybrid.d_h",
+    "num_attn_heads": "gnn.hybrid.num_attn_heads",
+    "num_gnn_heads": "gnn.hybrid.num_gnn_heads",
+    "gnn_types": "gnn.hybrid.gnn_types",
 }
 
-_SKIP_HP_KEYS = frozenset({"sigma_params", "gin_params_budget", "under_budget"})
+_SKIP_HP_KEYS = frozenset(
+    {
+        "sigma_params",
+        "gin_params_budget",
+        "under_budget",
+        "mp_family",  # metadata only; heads/types carry the arch override
+    }
+)
 
 
 def _format_value(value: Any) -> str:
@@ -51,12 +61,18 @@ def _format_value(value: Any) -> str:
 
 
 def emit_overrides_from_hp(hp: dict[str, Any]) -> list[str]:
-    """Return flat CLI args from an HP dict."""
+    """Return flat CLI args from an HP dict.
+
+    Only keys in ``_KEY_MAP`` are emitted. Metadata (e.g. ``mp_family``) and
+    any other unknown keys are skipped so GraphGym/yacs never sees them.
+    """
     args: list[str] = []
     for key, value in hp.items():
         if key in _SKIP_HP_KEYS:
             continue
-        cfg_key = _KEY_MAP.get(key, key)
+        cfg_key = _KEY_MAP.get(key)
+        if cfg_key is None:
+            continue
         args.extend([cfg_key, _format_value(value)])
     return args
 

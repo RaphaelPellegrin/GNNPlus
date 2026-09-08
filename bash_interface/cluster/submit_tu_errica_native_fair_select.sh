@@ -27,7 +27,7 @@ NUM_TASKS="$(python3 -c "import json; print(json.load(open('${MANIFEST}'))['num_
 ARRAY_SPEC="${TU_ERRICA_ARRAY:-1-${NUM_TASKS}}"
 # gpu_h200 MaxTime is typically 3 days.
 PARTITION="${TU_ERRICA_PARTITION:-gpu_h200}"
-PARALLEL="${TU_ERRICA_PARALLEL:-20}"
+PARALLEL="${TU_ERRICA_PARALLEL:-40}"
 MEM="${TU_ERRICA_MEM:-128GB}"
 if [ "${PARTITION}" = "gpu_h200" ]; then
   TIME="${TU_ERRICA_TIME:-72:00:00}"
