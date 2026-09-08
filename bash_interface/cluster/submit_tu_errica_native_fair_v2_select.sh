@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 # Submit Errica SiGMA native_fair_v2 HP-select (PROTEINS / NCI1 / REDDIT on mweber_gpu).
 #
-# Companion to native_fair (H200): UniGCN mixes + mid LR.
+# Companion to native_fair (H200): UniGCN mixes, compact 12h-friendly grid.
 #   a1g2_{gin_sage,gin_unigcn,gcn_gin} + a0g2_{gin_sage,gcn_gin,gcn_unigcn}
-#   × lr∈{1e-3,5e-3} × L∈{4,12}
-#   bs=32, d_h=16, H=64 fixed → 24 configs × 3 × 10 = 720 select.
+#   lr=1e-3, L=12, d_h=32, bs=32, H=64 fixed → 6 configs × 3 × 10 = 180 select.
 #
 # Usage (cluster, after source ~/.gnnplus_env + git pull):
 #   bash bash_interface/cluster/submit_tu_errica_native_fair_v2_select.sh

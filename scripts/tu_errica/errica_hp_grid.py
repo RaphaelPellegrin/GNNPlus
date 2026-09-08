@@ -251,14 +251,15 @@ SIGMA_NATIVE_FAIR_TRAIN_GRID: dict[str, list[Any]] = {
 # ---------------------------------------------------------------------------
 # native_fair_v2 — mweber companion to native_fair (H200).
 #
-# Adds UniGCN specialist mixes + mid LR (5e-3 instead of 1e-2).
+# Adds UniGCN specialist mixes. Compact 12h-friendly grid:
+#   lr=1e-3, L=12, d_h=32 fixed (no lr/L/d_h sweep).
 # Launch: mweber_gpu %20 (see submit_tu_errica_native_fair_v2_select.sh).
 #
 # MP families (6):
 #   • a1g2_gin_sage / a1g2_gcn_gin / a1g2_gin_unigcn
 #   • a0g2_gin_sage / a0g2_gcn_gin / a0g2_gcn_unigcn
-# Train: lr∈{1e-3,5e-3} × L∈{4,12}; bs=32, d_h=16, H=64 fixed.
-# Count: 6 × 2 × 2 = 24 → 24 × 3 × 10 = 720 select / 90 eval.
+# Count: 6 → 6 × 3 × 10 = 180 select / 90 eval.
+# Tomorrow expand: layers_mp=[4, 12] → 12 configs × 30 = 360 select (rerun).
 # ---------------------------------------------------------------------------
 SIGMA_NATIVE_FAIR_V2_MP_FAMILIES: list[dict[str, Any]] = [
     {
@@ -301,10 +302,10 @@ SIGMA_NATIVE_FAIR_V2_MP_FAMILIES: list[dict[str, Any]] = [
 
 SIGMA_NATIVE_FAIR_V2_TRAIN_GRID: dict[str, list[Any]] = {
     "batch_size": [32],
-    "base_lr": [0.001, 0.005],
-    "layers_mp": [4, 12],
+    "base_lr": [0.001],
+    "layers_mp": [12],
     "dim_inner": [64],
-    "d_h": [16],
+    "d_h": [32],
     "dropout": [0.5],
     "graph_pooling": ["add"],
     "early_stop_use_loss": [False],
@@ -493,8 +494,8 @@ def native_fair_v2_sigma_grid_entries() -> list[dict[str, Any]]:
     Returns
     -------
     list[dict[str, Any]]
-        Flattened configs (24 by default): 6 MP families × lr∈{1e-3,5e-3} ×
-        L∈{4,12}. Includes ``mp_family`` metadata for logging only.
+        Flattened configs (6 by default): 6 MP families at lr=1e-3, L=12,
+        d_h=32. Includes ``mp_family`` metadata for logging only.
     """
     train = expand_grid(SIGMA_NATIVE_FAIR_V2_TRAIN_GRID)
     combos: list[dict[str, Any]] = []

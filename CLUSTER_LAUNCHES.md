@@ -1269,7 +1269,7 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **`anchor_refine` eval** | **45192875** | 30 (1–30) | 🔄 PROTEINS · `%20` |
 | **`nci1_refine` select** | **45149015** | 20 (1–20%5) | 🔄 drop0.5×{add,mean} · `%5` |
 | **`native_fair` select** | **45235956** | **480** | 🚀 rerun · fixed `mp_family` emit · a0g2+a1g2 · **gpu_h200** `%40` |
-| **`native_fair_v2` select** | — | **720** | ⏳ ready · UniGCN mixes + lr∈{1e-3,5e-3} · **mweber** `%20` |
+| **`native_fair_v2` select** | — | **180** | ⏳ ready · UniGCN mixes · lr=1e-3 L=12 d_h=32 · **mweber** `%20` |
 | **`a0g_pnr` select** | — | **1440** | ⏳ ready later · a0g4/a0g2 · P/NCI1/REDDIT |
 | **`tiny_pnr` select** | — | **120** | ⏳ ready · sensible a2g4 · bs×d_h only |
 | **`fixed8_ungated` select** | **44869251** | 560 | ⏸️ **HELD** · `scontrol release 44869251` when ready |

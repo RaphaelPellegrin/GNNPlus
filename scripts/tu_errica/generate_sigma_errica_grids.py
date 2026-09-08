@@ -29,9 +29,8 @@ Writes ``configs/tu_errica/sigma_grids_nci1_refine/``.
 a0g2 + a1g2 specialists × (lr × L); bs=32, d_h=16 fixed. Writes
 ``configs/tu_errica/sigma_grids_native_fair/``.
 
-``--mode native_fair_v2``: mweber companion (24 configs): same PNR datasets with
-UniGCN mixes + lr∈{1e-3,5e-3} × L∈{4,12}. Writes
-``configs/tu_errica/sigma_grids_native_fair_v2/``.
+``--mode native_fair_v2``: mweber companion (6 configs): UniGCN mixes at
+lr=1e-3, L=12, d_h=32. Writes ``configs/tu_errica/sigma_grids_native_fair_v2/``.
 
 ``--mode a0g_pnr``: MP-only (drop global attention) on PROTEINS / NCI1 /
 REDDIT-BINARY. Wider train than native_fair; a0g4 full + a0g2 specialists.
@@ -582,11 +581,11 @@ def write_grids(
                     "model": "sigma_hetero",
                     "mode": "native_fair_v2",
                     "note": (
-                        "PNR fair v2 on mweber_gpu: UniGCN mixes + mid LR. "
+                        "PNR fair v2 on mweber_gpu: UniGCN mixes, compact. "
                         "a1g2_{gin_sage,gin_unigcn,gcn_gin} + "
-                        "a0g2_{gin_sage,gcn_gin,gcn_unigcn} × "
-                        "lr∈{1e-3,5e-3} × L∈{4,12}; bs=32, d_h=16, H=64 fixed "
-                        "→ 24 configs × 3 × 10 = 720 select / 90 eval."
+                        "a0g2_{gin_sage,gcn_gin,gcn_unigcn}; "
+                        "lr=1e-3, L=12, d_h=32, bs=32, H=64 fixed "
+                        "→ 6 configs × 3 × 10 = 180 select / 90 eval."
                     ),
                     "grid": sample_grid["grid"],
                 },
@@ -660,7 +659,7 @@ def main() -> None:
         help="fixed8: 8-config SIGMA_GRID (default). "
         "full64: GIN-isomorphic 64-config grid (shallow; prefer native_fair). "
         "native_fair: a0g2+a1g2 on P/NCI1/REDDIT, lr×L only (480 select). "
-        "native_fair_v2: UniGCN mixes + lr∈{1e-3,5e-3} on P/NCI1/REDDIT (720 select). "
+        "native_fair_v2: UniGCN mixes on P/NCI1/REDDIT, lr=1e-3 L=12 d_h=32 (180 select). "
         "a0g_pnr: MP-only a0g* on PROTEINS/NCI1/REDDIT (1440 select). "
         "tiny_pnr: ultra-tiny sensible a2g4 on P/NCI1/REDDIT (120 select). "
         "anchor_boost: paper a2g4-centered grid on PROTEINS+REDDIT. "

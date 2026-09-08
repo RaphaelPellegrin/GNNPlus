@@ -58,7 +58,7 @@
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_native_fair
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_native_fair
 #
-# native_fair_v2 (UniGCN mixes + mid LR; mweber_gpu %20):
+# native_fair_v2 (UniGCN mixes; lr=1e-3 L=12 d_h=32; mweber_gpu %20):
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh generate_sigma_grids_native_fair_v2
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_select_native_fair_v2
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_native_fair_v2
