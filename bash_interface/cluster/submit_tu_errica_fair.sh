@@ -37,7 +37,7 @@ case "${CAMPAIGN}" in
         NUM_TASKS="${TU_ERRICA_NUM_TASKS:-$((NUM_DATASETS * GRID_SIZE * NUM_FOLDS))}"
         JOB_SUFFIX="grid_select_${HP_MODEL}"
         ;;
-    grid_eval|sigma_grid_eval|sigma_grid_eval_fixed8|sigma_grid_eval_full64|sigma_grid_eval_native_fair|sigma_grid_eval_native_fair_v2|sigma_grid_eval_native_fair_v2_l4|sigma_grid_eval_native_fair_v2_joint|sigma_grid_eval_anchor_boost|sigma_grid_eval_a1g2_micro|sigma_grid_eval_a1g2_nci1_micro|sigma_grid_eval_anchor_refine|sigma_grid_eval_nci1_refine|sigma_grid_eval_a0g_pnr|sigma_grid_eval_tiny_pnr|sigma_grid_eval_specialist_tiny|sigma_grid_eval_fixed8_ungated)
+    grid_eval|sigma_grid_eval|sigma_grid_eval_fixed8|sigma_grid_eval_full64|sigma_grid_eval_native_fair|sigma_grid_eval_native_fair_v2|sigma_grid_eval_native_fair_v2_l4|sigma_grid_eval_native_fair_v2_joint|sigma_grid_eval_native_fair_v2_reddit_reg_joint|sigma_grid_eval_anchor_boost|sigma_grid_eval_a1g2_micro|sigma_grid_eval_a1g2_nci1_micro|sigma_grid_eval_anchor_refine|sigma_grid_eval_nci1_refine|sigma_grid_eval_a0g_pnr|sigma_grid_eval_tiny_pnr|sigma_grid_eval_specialist_tiny|sigma_grid_eval_fixed8_ungated)
         NUM_TASKS="${TU_ERRICA_NUM_TASKS:-$((NUM_DATASETS * NUM_FOLDS * NUM_SEEDS))}"
         if [ "${CAMPAIGN}" = "grid_eval" ]; then
             JOB_SUFFIX="grid_eval_${TU_ERRICA_EVAL_MODEL:-gin}"
@@ -61,7 +61,8 @@ case "${CAMPAIGN}" in
         fi
         if [ "${CAMPAIGN}" = "sigma_grid_eval_a1g2_nci1_micro" ] \
             || [ "${CAMPAIGN}" = "sigma_grid_eval_anchor_refine" ] \
-            || [ "${CAMPAIGN}" = "sigma_grid_eval_nci1_refine" ]; then
+            || [ "${CAMPAIGN}" = "sigma_grid_eval_nci1_refine" ] \
+            || [ "${CAMPAIGN}" = "sigma_grid_eval_native_fair_v2_reddit_reg_joint" ]; then
             NUM_TASKS="${TU_ERRICA_NUM_TASKS:-$((NUM_FOLDS * NUM_SEEDS))}"
         fi
         ;;
@@ -83,6 +84,10 @@ case "${CAMPAIGN}" in
         ;;
     sigma_grid_select_native_fair_v2_l4)
         NUM_TASKS=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids_native_fair_v2_l4/manifest.json'))['num_tasks'])")
+        JOB_SUFFIX="${CAMPAIGN}"
+        ;;
+    sigma_grid_select_native_fair_v2_reddit_reg)
+        NUM_TASKS=$(python3 -c "import json; print(json.load(open('configs/tu_errica/sigma_grids_native_fair_v2_reddit_reg/manifest.json'))['num_tasks'])")
         JOB_SUFFIX="${CAMPAIGN}"
         ;;
     sigma_grid_select_a0g_pnr)

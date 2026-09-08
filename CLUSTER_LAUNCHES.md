@@ -1280,6 +1280,8 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **`native_fair_v2_l4` select** | **45423514** | **180** | 🚀 running · L=4 add-on |
 | **`native_fair_v2_l4` agg→eval** | **45428829** | 1 → 90 eval | ⏳ `afterok:45423514` |
 | **`native_fair_v2_joint` agg→eval** | **45423667** | 1 → 90 eval | ⏳ `afterok:45423514` |
+| **`native_fair_v2_reddit_reg` select** | — | **120** | ⏳ submit · REDDIT lr×drop · **gpu_h200** `%15` |
+| **`native_fair_v2_reddit_reg` UNION→eval** | — | 1 → **30** | ⏳ after select · REDDIT-only |
 | **`specialist_tiny` select** | **45303391** | **120** | ✅ COMPLETED |
 | **`specialist_tiny` eval** | **45423695** | 90 | 🚀 P/NCI1 done-ish · REDDIT running |
 | **`a0g_pnr` select** | — | **1440** | ⏳ ready later · a0g4/a0g2 · P/NCI1/REDDIT |

@@ -35,6 +35,12 @@ lr=1e-3, L=12, d_h=32. Writes ``configs/tu_errica/sigma_grids_native_fair_v2/``.
 ``--mode native_fair_v2_l4``: L=4 add-on for native_fair_v2 (same arches / lr /
 d_h=32). Writes ``configs/tu_errica/sigma_grids_native_fair_v2_l4/``.
 
+``--mode native_fair_v2_reddit_reg``: REDDIT-only regularize refine around L12
+``native_fair_v2`` winners (3 GCN-centric arches × lr∈{1e-3,5e-4} ×
+drop∈{0.5,0.75} → 12 configs × 10 folds = 120 select). Writes
+``configs/tu_errica/sigma_grids_native_fair_v2_reddit_reg/``. UNION with
+``native_fair_v2`` select when picking fold winners.
+
 ``--mode a0g_pnr``: MP-only (drop global attention) on PROTEINS / NCI1 /
 REDDIT-BINARY. Wider train than native_fair; a0g4 full + a0g2 specialists.
 Writes ``configs/tu_errica/sigma_grids_a0g_pnr/``.
@@ -73,6 +79,7 @@ SigmaGridMode = Literal[
     "native_fair",
     "native_fair_v2",
     "native_fair_v2_l4",
+    "native_fair_v2_reddit_reg",
     "a0g_pnr",
     "tiny_pnr",
     "specialist_tiny",
@@ -110,6 +117,8 @@ NATIVE_FAIR_V2_DS_TAGS = _hp.NATIVE_FAIR_V2_DS_TAGS
 NATIVE_FAIR_V2_DS_ORDER = _hp.NATIVE_FAIR_V2_DS_ORDER
 NATIVE_FAIR_V2_L4_DS_TAGS = _hp.NATIVE_FAIR_V2_L4_DS_TAGS
 NATIVE_FAIR_V2_L4_DS_ORDER = _hp.NATIVE_FAIR_V2_L4_DS_ORDER
+NATIVE_FAIR_V2_REDDIT_REG_DS_TAGS = _hp.NATIVE_FAIR_V2_REDDIT_REG_DS_TAGS
+NATIVE_FAIR_V2_REDDIT_REG_DS_ORDER = _hp.NATIVE_FAIR_V2_REDDIT_REG_DS_ORDER
 BIO_DS_TAGS = _hp.BIO_DS_TAGS
 DS_TAG_TO_NAME = _hp.DS_TAG_TO_NAME
 SOCIAL_DS_TAGS = _hp.SOCIAL_DS_TAGS
@@ -121,6 +130,9 @@ nci1_refine_sigma_grid_entries = _hp.nci1_refine_sigma_grid_entries
 native_fair_sigma_grid_entries = _hp.native_fair_sigma_grid_entries
 native_fair_v2_sigma_grid_entries = _hp.native_fair_v2_sigma_grid_entries
 native_fair_v2_l4_sigma_grid_entries = _hp.native_fair_v2_l4_sigma_grid_entries
+native_fair_v2_reddit_reg_sigma_grid_entries = (
+    _hp.native_fair_v2_reddit_reg_sigma_grid_entries
+)
 a0g_pnr_sigma_grid_entries = _hp.a0g_pnr_sigma_grid_entries
 tiny_pnr_sigma_grid_entries = _hp.tiny_pnr_sigma_grid_entries
 specialist_tiny_sigma_grid_entries = _hp.specialist_tiny_sigma_grid_entries
@@ -149,6 +161,8 @@ def grids_dir_for_mode(mode: SigmaGridMode) -> Path:
         return _REPO_ROOT / "configs/tu_errica/sigma_grids_native_fair_v2"
     if mode == "native_fair_v2_l4":
         return _REPO_ROOT / "configs/tu_errica/sigma_grids_native_fair_v2_l4"
+    if mode == "native_fair_v2_reddit_reg":
+        return _REPO_ROOT / "configs/tu_errica/sigma_grids_native_fair_v2_reddit_reg"
     if mode == "a0g_pnr":
         return _REPO_ROOT / "configs/tu_errica/sigma_grids_a0g_pnr"
     if mode == "tiny_pnr":
@@ -193,6 +207,9 @@ def _dataset_items_for_mode(mode: SigmaGridMode) -> list[tuple[str, str]]:
     elif mode == "native_fair_v2_l4":
         tags = NATIVE_FAIR_V2_L4_DS_TAGS
         order = NATIVE_FAIR_V2_L4_DS_ORDER
+    elif mode == "native_fair_v2_reddit_reg":
+        tags = NATIVE_FAIR_V2_REDDIT_REG_DS_TAGS
+        order = NATIVE_FAIR_V2_REDDIT_REG_DS_ORDER
     else:
         return list(DS_TAG_TO_NAME.items())
     return [(tag, DS_TAG_TO_NAME[tag]) for tag in order if tag in tags]
@@ -326,6 +343,15 @@ def _grid_for_fold(
             raise KeyError(f"native_fair_v2_l4 skips dataset {ds_tag}")
         return _annotate_grid(
             native_fair_v2_l4_sigma_grid_entries(),
+            dataset_name=ds_name,
+            gin_params=None,
+            with_params=False,
+        )
+    if mode == "native_fair_v2_reddit_reg":
+        if ds_tag not in NATIVE_FAIR_V2_REDDIT_REG_DS_TAGS:
+            raise KeyError(f"native_fair_v2_reddit_reg skips dataset {ds_tag}")
+        return _annotate_grid(
+            native_fair_v2_reddit_reg_sigma_grid_entries(),
             dataset_name=ds_name,
             gin_params=None,
             with_params=False,
@@ -657,6 +683,30 @@ def write_grids(
             ),
             encoding="utf-8",
         )
+    if mode == "native_fair_v2_reddit_reg" and written:
+        sample = next(iter(written))
+        sample_grid = json.loads((grids_sub / sample).read_text(encoding="utf-8"))
+        vendored = (
+            _REPO_ROOT / "configs/tu_errica/sigma_hetero_native_fair_v2_reddit_reg_hp_grid.json"
+        )
+        vendored.write_text(
+            json.dumps(
+                {
+                    "model": "sigma_hetero",
+                    "mode": "native_fair_v2_reddit_reg",
+                    "note": (
+                        "REDDIT-only regularize refine around L12 native_fair_v2 "
+                        "winners (a0g2_gcn_unigcn / a0g2_gcn_gin / a1g2_gcn_gin) × "
+                        "lr∈{1e-3,5e-4} × dropout∈{0.5,0.75}. "
+                        "→ 12 configs × 10 folds = 120 select / 30 eval. "
+                        "UNION with native_fair_v2 select for fold winners."
+                    ),
+                    "grid": sample_grid["grid"],
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
     if mode == "a0g_pnr" and written:
         sample = next(iter(written))
         sample_grid = json.loads((grids_sub / sample).read_text(encoding="utf-8"))
@@ -743,6 +793,7 @@ def main() -> None:
             "native_fair",
             "native_fair_v2",
             "native_fair_v2_l4",
+            "native_fair_v2_reddit_reg",
             "a0g_pnr",
             "tiny_pnr",
             "specialist_tiny",
@@ -753,6 +804,7 @@ def main() -> None:
         "native_fair: a0g2+a1g2 on P/NCI1/REDDIT, lr×L only (480 select). "
         "native_fair_v2: UniGCN mixes on P/NCI1/REDDIT, lr=1e-3 L=12 d_h=32 (180 select). "
         "native_fair_v2_l4: L=4 add-on for v2 (180 select; merge with L=12). "
+        "native_fair_v2_reddit_reg: REDDIT lr×dropout refine (120 select; UNION L12). "
         "a0g_pnr: MP-only a0g* on PROTEINS/NCI1/REDDIT (1440 select). "
         "tiny_pnr: ultra-tiny sensible a2g4 on P/NCI1/REDDIT (120 select). "
         "specialist_tiny: GCN (P/REDDIT) / SAGE (NCI1) a0g1+a1g1 × lr (120 select). "

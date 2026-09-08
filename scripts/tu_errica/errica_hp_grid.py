@@ -325,6 +325,48 @@ SIGMA_NATIVE_FAIR_V2_L4_TRAIN_GRID: dict[str, list[Any]] = {
 }
 
 # ---------------------------------------------------------------------------
+# native_fair_v2_reddit_reg — REDDIT-only regularize refine.
+#
+# Centered on L12 native_fair_v2 winners (a0g2_gcn_* / a1g2_gcn_gin). Goal:
+# shrink eval val≫test via lower lr + stronger dropout, then UNION with the
+# existing native_fair_v2 select when picking fold winners.
+#
+# Count: 3 arches × lr∈{1e-3,5e-4} × drop∈{0.5,0.75} = 12 → 12 × 10 = 120
+# select / 30 eval (REDDIT only).
+# ---------------------------------------------------------------------------
+SIGMA_NATIVE_FAIR_V2_REDDIT_REG_MP_FAMILIES: list[dict[str, Any]] = [
+    {
+        "mp_family": "a0g2_gcn_unigcn",
+        "num_attn_heads": 0,
+        "num_gnn_heads": 2,
+        "gnn_types": "GCN,UNIGCN",
+    },
+    {
+        "mp_family": "a0g2_gcn_gin",
+        "num_attn_heads": 0,
+        "num_gnn_heads": 2,
+        "gnn_types": "GCN,GIN",
+    },
+    {
+        "mp_family": "a1g2_gcn_gin",
+        "num_attn_heads": 1,
+        "num_gnn_heads": 2,
+        "gnn_types": "GCN,GIN",
+    },
+]
+
+SIGMA_NATIVE_FAIR_V2_REDDIT_REG_TRAIN_GRID: dict[str, list[Any]] = {
+    "batch_size": [32],
+    "base_lr": [0.001, 0.0005],
+    "layers_mp": [12],
+    "dim_inner": [64],
+    "d_h": [32],
+    "dropout": [0.5, 0.75],
+    "graph_pooling": ["add"],
+    "early_stop_use_loss": [False],
+}
+
+# ---------------------------------------------------------------------------
 # a0g_pnr — MP-only (drop global attention) on PROTEINS / NCI1 / REDDIT.
 #
 # Same specialist MP mixes as native_fair (a0g*), wider train (bs×d_h).
@@ -447,6 +489,9 @@ NATIVE_FAIR_V2_DS_TAGS: frozenset[str] = NATIVE_FAIR_DS_TAGS
 NATIVE_FAIR_V2_DS_ORDER: tuple[str, ...] = NATIVE_FAIR_DS_ORDER
 NATIVE_FAIR_V2_L4_DS_TAGS: frozenset[str] = NATIVE_FAIR_DS_TAGS
 NATIVE_FAIR_V2_L4_DS_ORDER: tuple[str, ...] = NATIVE_FAIR_DS_ORDER
+# REDDIT-only regularize refine around L12 native_fair_v2 winners.
+NATIVE_FAIR_V2_REDDIT_REG_DS_TAGS: frozenset[str] = frozenset({"reddit-b"})
+NATIVE_FAIR_V2_REDDIT_REG_DS_ORDER: tuple[str, ...] = ("reddit-b",)
 A0G_PNR_DS_TAGS: frozenset[str] = NATIVE_FAIR_DS_TAGS
 A0G_PNR_DS_ORDER: tuple[str, ...] = NATIVE_FAIR_DS_ORDER
 TINY_PNR_DS_TAGS: frozenset[str] = NATIVE_FAIR_DS_TAGS
@@ -585,6 +630,26 @@ def native_fair_v2_l4_sigma_grid_entries() -> list[dict[str, Any]]:
     train = expand_grid(SIGMA_NATIVE_FAIR_V2_L4_TRAIN_GRID)
     combos: list[dict[str, Any]] = []
     for family in SIGMA_NATIVE_FAIR_V2_MP_FAMILIES:
+        for train_hp in train:
+            row = dict(train_hp)
+            row.update(family)
+            combos.append(row)
+    return combos
+
+
+def native_fair_v2_reddit_reg_sigma_grid_entries() -> list[dict[str, Any]]:
+    """REDDIT regularize refine around L12 ``native_fair_v2`` winners.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        12 configs: winning GCN-centric MP families × lr∈{1e-3,5e-4} ×
+        dropout∈{0.5,0.75}. Intended to UNION with ``native_fair_v2`` select
+        when choosing fold winners (does not overwrite L12-only JSON).
+    """
+    train = expand_grid(SIGMA_NATIVE_FAIR_V2_REDDIT_REG_TRAIN_GRID)
+    combos: list[dict[str, Any]] = []
+    for family in SIGMA_NATIVE_FAIR_V2_REDDIT_REG_MP_FAMILIES:
         for train_hp in train:
             row = dict(train_hp)
             row.update(family)

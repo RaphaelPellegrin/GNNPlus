@@ -85,6 +85,8 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 | **3a-NFv2L4** | `sigma_grid_select` **native_fair_v2_l4** | **45423514** | 🚀 running | L=4 add-on · **180** |
 | **3a-NFv2L4e** | L4-only agg→eval | — | ⏳ submit after select | `sigma_native_fair_v2_l4_per_fold.json` → 90 eval |
 | **3a-NFv2j** | joint merge→eval L∈{4,12} | **45423667** | ⏳ `afterok` | waits on **45423514** |
+| **3a-NFv2Rr** | `sigma_grid_select` **native_fair_v2_reddit_reg** | — | ⏳ submit | REDDIT lr×drop · **120** · **gpu_h200** `%15` |
+| **3a-NFv2Rre** | UNION L12+reg → REDDIT eval | — | ⏳ after select | `sigma_native_fair_v2_reddit_reg_joint_per_fold.json` → **30** |
 | **3a-ST** | `sigma_grid_select` **specialist_tiny** | **45303391** | ✅ **120/120** | GCN (P/REDDIT) / SAGE (NCI1) · a0g1+a1g1 × lr |
 | **3a-STe** | agg→eval | **45423513** | 🚀 resubmit | SLURM_SUBMIT_DIR fix |
 | **3a-A0** | `sigma_grid_select` **a0g_pnr** | — | ⏳ ready later | MP-only **a0g4/a0g2** on P/NCI1/REDDIT · **1440** select |
@@ -155,25 +157,46 @@ python scripts/tu_errica/aggregate_sigma_hp_selection.py
 bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval
 ```
 
-### Final `grid_eval` (3 seeds) — fixed8 SiGMA (2026-09-06)
+### Final `grid_eval` table — mixed best-so-far (2026-09-08)
 
 Mean±std over **10 folds** after averaging 3 seeds per fold.
-LaTeX: [`results/tu_errica/analysis/tab_tu_errica_grid_eval.tex`](results/tu_errica/analysis/tab_tu_errica_grid_eval.tex).
-SiGMA-only dump: [`tab_tu_errica_sigma_fixed8.tex`](results/tu_errica/analysis/tab_tu_errica_sigma_fixed8.tex).
+LaTeX: [`results/tu_errica/analysis/tab_tu_errica_grid_eval.tex`](results/tu_errica/analysis/tab_tu_errica_grid_eval.tex)
+(includes JOBID + select-grid provenance comments below the float).
+SiGMA-only fixed8 dump (older): [`tab_tu_errica_sigma_fixed8.tex`](results/tu_errica/analysis/tab_tu_errica_sigma_fixed8.tex).
 
 | Dataset | GCN | GIN | GraphSAGE | GAT | SiGMA (hetero) | Errica GIN [1] |
 |---------|-----|-----|-----------|-----|----------------|----------------|
-| ENZYMES | 50.4±5.2 | 45.4±5.2 | 51.0±4.7 | 42.1±7.0 | **52.4±4.6** | 59.6±4.5 |
-| PROTEINS | **73.9±4.0** | 73.4±4.4 | 73.0±3.2 | 72.7±3.1 | 73.7±3.1† | 73.3±4.0 |
-| NCI1 | 80.7±1.5 | 80.4±1.5 | **81.6±2.3** | 75.4±2.4 | 80.7±1.9 | 80.0±1.4 |
-| DD | 71.9±4.2 | 73.7±5.2 | 72.8±3.0 | 72.9±9.2 | **73.9±2.3** | 75.3±2.9 |
-| IMDB-BINARY | 65.7±3.5 | **71.1±4.5** | 50.5±1.1 | 50.4±2.0 | 70.9±5.4 | 71.2±3.9 |
-| REDDIT-BINARY | **92.6±1.0** | 92.5±1.1 | 73.4±4.0 | 74.7±2.3 | 88.0±3.3 | 89.9±1.9 |
-| COLLAB | 77.0±2.1 | 76.5±2.5 | 52.5±3.2 | 47.6±7.9 | **78.2±1.2** | 75.6±2.3 |
+| ENZYMES | 50.4±5.2 | 45.4±5.2 | 51.0±4.7 | 42.1±7.0 | **52.4±3.6**ᵇ | 59.6±4.5 |
+| PROTEINS | **73.9±4.0** | 73.4±4.4 | 73.0±3.2 | 72.7±3.1 | 73.7±3.1ᵃ | 73.3±4.0 |
+| NCI1 | 80.7±1.5 | 80.4±1.5 | **81.6±2.3** | 75.4±2.4 | 80.7±1.9ᶠ | 80.0±1.4 |
+| DD | 71.9±4.2 | 73.7±5.2 | 72.8±3.0 | 72.9±9.2 | **74.7±3.4**ᵇ | 75.3±2.9 |
+| IMDB-BINARY | 65.7±3.5 | 71.1±4.5 | 50.5±1.1 | 50.4±2.0 | **72.3±4.3**ᵇ | 71.2±3.9 |
+| REDDIT-BINARY | **92.6±1.0** | 92.5±1.1 | 73.4±4.0 | 74.7±2.3 | 91.2±1.7ⁿ | 89.9±1.9 |
+| COLLAB | 77.0±2.1 | 76.5±2.5 | 52.5±3.2 | 47.6±7.9 | **78.2±1.2**ᶠ | 75.6±2.3 |
 
-\*Classical columns frozen. SiGMA = fixed8 eval **44621846**+**44748166**, except †PROTEINS = `anchor_boost` eval **44938699** (was 72.6±4.1 fixed8). full64 via **44509970**.
+**Classical columns (frozen)** — Errica published HP grids → `*_per_fold.json` → `grid_eval`:
 
-Delta vs obsolete budget-bio: PROTEINS/NCI1 up; DD/IMDB/REDDIT slightly down; COLLAB complete (was 5/10).
+| Model | Select (grid) | Eval JOBID |
+|-------|---------------|------------|
+| GIN | Errica GIN grid → `gin_per_fold.json` | **44100531** |
+| GraphSAGE | Errica SAGE grid → `graphsage_per_fold.json` | **44100566** |
+| GCN | Errica GCN grid → `gcn_per_fold.json` | **44100596** |
+| GAT | Errica GAT grid → `gat_per_fold.json` | **44165919** |
+
+**SiGMA (hetero) provenance** — superscripts in the table:
+
+| Tag | Dataset(s) | Select grid / campaign | Select JOBID(s) | Selection JSON | Eval JOBID |
+|-----|------------|------------------------|-----------------|----------------|------------|
+| ᵇ | ENZYMES, DD, IMDB | `budget_bio` (obsolete GIN-budgeted) | **43741550** | (budget_bio HP; not final protocol) | **44165958** |
+| ᵃ | PROTEINS | `anchor_boost` (`sigma_grids_anchor_boost/`) | **44840486** | `sigma_anchor_boost_per_fold.json` | **44938699** |
+| ᶠ | NCI1, COLLAB | `fixed8` (`sigma_grids/` / `SIGMA_GRID`) | **44217420** + **44266489** + fill **44507757** | `sigma_fixed8_per_fold.json` | **44621846** (+ fill **44748166** for COLLAB f0) |
+| ⁿ | REDDIT-BINARY | `native_fair_v2` L12 (`sigma_grids_native_fair_v2/`) | **45263051** | `sigma_native_fair_v2_per_fold.json` | **45423867** |
+
+Notes:
+- This is **not** one Errica-fair SiGMA column; paper text must say mixed / provisional until a single protocol is chosen.
+- fixed8 REDDIT was **88.0±3.3**; replaced by native_fair_v2 L12 **91.15±1.71**.
+- native_fair_v2 L12 PROTEINS/NCI1 (**73.34±3.86** / **80.31±1.39**) did **not** beat ᵃ/ᶠ above.
+- Pending REDDIT refine: `native_fair_v2_reddit_reg` UNION (may replace ⁿ only).
 
 ### Push PROTEINS + REDDIT (`anchor_boost`, 2026-09-06)
 
@@ -337,6 +360,22 @@ TU_ERRICA_DEPENDENCY_JOBID=45423514 \
 # Joint merge→eval (90; does not overwrite L12-only or L4-only):
 TU_ERRICA_DEPENDENCY_JOBID=45423514 \
   bash bash_interface/cluster/submit_tu_errica_native_fair_v2_joint_agg_eval.sh
+```
+
+### SiGMA native_fair_v2_reddit_reg — REDDIT lr×dropout refine (2026-09-08)
+
+Centered on L12 winners (`a0g2_gcn_unigcn`, `a0g2_gcn_gin`, `a1g2_gcn_gin`).
+Sweep: `lr∈{1e-3,5e-4}` × `dropout∈{0.5,0.75}` (fixed L=12 / d_h=32 / bs=32).
+→ **12** × 10 = **120** select · UNION with L12 select · **REDDIT-only** eval = **30**.
+
+Does **not** overwrite `sigma_native_fair_v2_per_fold.json` / L12 eval.
+
+```bash
+python scripts/tu_errica/generate_sigma_errica_grids.py --mode native_fair_v2_reddit_reg
+bash bash_interface/cluster/submit_tu_errica_native_fair_v2_reddit_reg_select.sh
+# after select JOBID prints:
+TU_ERRICA_DEPENDENCY_JOBID=<reddit_reg_select_JOBID> \
+  bash bash_interface/cluster/submit_tu_errica_native_fair_v2_reddit_reg_agg_eval.sh
 ```
 
 ### SiGMA specialist_tiny — classical single-MP (2026-09-07)
