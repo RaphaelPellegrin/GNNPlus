@@ -92,8 +92,8 @@
 # specialist_tiny (GCN on P/REDDIT, SAGE on NCI1; a0g1+a1g1 × lr∈{1e-3,1e-4}):
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh generate_sigma_grids_specialist_tiny
 #   bash bash_interface/cluster/submit_tu_errica_specialist_tiny_select.sh
-#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_specialist_tiny
-#   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_specialist_tiny
+#   TU_ERRICA_DEPENDENCY_JOBID=<select_jobid> \
+#     bash bash_interface/cluster/submit_tu_errica_specialist_tiny_agg_eval.sh
 #
 # SiGMA ungated (same fixed8 grid, gate=none):
 #   bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_select_fixed8_ungated

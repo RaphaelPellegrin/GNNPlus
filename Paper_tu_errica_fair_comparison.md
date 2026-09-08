@@ -79,7 +79,8 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 | **3a-NFv2e** | agg→eval (depends on select) | **45265929** | ⏳ `afterok` | waits on **45263051** → aggregate + **90** eval |
 | **3a-NFv2L4** | `sigma_grid_select` **native_fair_v2_l4** | **45268464** | ⏳ `afterok` | L=4 add-on · **180** · waits on **45265929** · merge L12+L4 later |
 | **3a-NFv2j** | joint merge→eval L∈{4,12} | **45299758** | ⏳ `afterok` | waits on **45268464** · **separate** `*_joint_*` paths (L12-only untouched) |
-| **3a-ST** | `sigma_grid_select` **specialist_tiny** | — | ⏳ ready | GCN (P/REDDIT) / SAGE (NCI1) · a0g1+a1g1 × lr · **120** |
+| **3a-ST** | `sigma_grid_select` **specialist_tiny** | **45303391** | 🚀 running | GCN (P/REDDIT) / SAGE (NCI1) · a0g1+a1g1 × lr · **120** · **mweber** `%20` |
+| **3a-STe** | agg→eval (depends on select) | — | ⏳ queue | `afterok:45303391` → aggregate + **90** eval |
 | **3a-A0** | `sigma_grid_select` **a0g_pnr** | — | ⏳ ready later | MP-only **a0g4/a0g2** on P/NCI1/REDDIT · **1440** select |
 | **3a-TP** | `sigma_grid_select` **tiny_pnr** | — | ⏳ ready | Ultra-tiny sensible a2g4 · **4** HPs × 3 ds = **120** select |
 | **3a-U** | `sigma_grid_select` **fixed8 ungated** | **44869251** | ⏸️ **HELD** | `scontrol hold` 2026-09-06 — **must `scontrol release 44869251` later** · leftover `R` finish OK |
@@ -337,9 +338,9 @@ Train: `lr ∈ {1e-3, 1e-4}`; fixed L=12 / d_h=16 / bs=32 / drop0.5 / pool add.
 ```bash
 python scripts/tu_errica/generate_sigma_errica_grids.py --mode specialist_tiny
 bash bash_interface/cluster/submit_tu_errica_specialist_tiny_select.sh
-# after select:
-bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh aggregate_sigma_specialist_tiny
-bash bash_interface/cluster/run_tu_errica_hybrid_pipeline.sh sigma_grid_eval_specialist_tiny
+# after select (or queue dependent):
+TU_ERRICA_DEPENDENCY_JOBID=45303391 \
+  bash bash_interface/cluster/submit_tu_errica_specialist_tiny_agg_eval.sh
 ```
 
 ### SiGMA a0g_pnr — drop global attention (ready later, 2026-09-07)
