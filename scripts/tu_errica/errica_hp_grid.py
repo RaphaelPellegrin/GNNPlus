@@ -199,6 +199,27 @@ SIGMA_NCI1_REFINE_GRID: dict[str, list[Any]] = {
 }
 
 # ---------------------------------------------------------------------------
+# proteins_reg — PROTEINS-only L×d_h refine around modal ``anchor_boost``.
+#
+# Lock a2g4 + modal winners (bs=16, lr=1e-3) and force dropout=0.5 (boost used
+# yaml default 0.1). Search only L∈{8,12} × d_h∈{8,16}. Then UNION with
+# ``anchor_boost`` select when picking fold winners (does not overwrite
+# ``sigma_anchor_boost_per_fold.json``).
+#
+# Count: 4 → 4 × 10 = 40 select / 30 eval.
+# ---------------------------------------------------------------------------
+SIGMA_PROTEINS_REG_GRID: dict[str, list[Any]] = {
+    "batch_size": [16],
+    "base_lr": [0.001],
+    "layers_mp": [8, 12],
+    "dim_inner": [64],
+    "d_h": [8, 16],
+    "dropout": [0.5],
+    "graph_pooling": ["add"],
+    "early_stop_use_loss": [False],
+}
+
+# ---------------------------------------------------------------------------
 # native_fair — compact SiGMA fair search on PROTEINS / NCI1 / REDDIT.
 #
 # Why not full64? full64 locked GIN's L=4 + lr=0.01 and never varied MP heads.
@@ -480,6 +501,9 @@ A1G2_MICRO_DS_TAGS: frozenset[str] = frozenset({"proteins", "reddit-b"})
 A1G2_NCI1_MICRO_DS_TAGS: frozenset[str] = frozenset({"nci1"})
 # Local refine around PROTEINS anchor_boost mode (a2g4 + dropout/pool).
 ANCHOR_REFINE_DS_TAGS: frozenset[str] = frozenset({"proteins"})
+# PROTEINS-only L×d_h refine at drop=0.5 (UNION with anchor_boost).
+PROTEINS_REG_DS_TAGS: frozenset[str] = frozenset({"proteins"})
+PROTEINS_REG_DS_ORDER: tuple[str, ...] = ("proteins",)
 # Local refine around NCI1 fixed8/a2g4 deep center + dropout/pool.
 NCI1_REFINE_DS_TAGS: frozenset[str] = frozenset({"nci1"})
 # native_fair / native_fair_v2 / a0g_pnr / tiny_pnr: PROTEINS + NCI1 + REDDIT.
@@ -577,6 +601,18 @@ def anchor_refine_sigma_grid_entries() -> list[dict[str, Any]]:
 def nci1_refine_sigma_grid_entries() -> list[dict[str, Any]]:
     """Tiny NCI1 refine grid around fixed8/a2g4 deep center (``nci1_refine``)."""
     return expand_grid(SIGMA_NCI1_REFINE_GRID)
+
+
+def proteins_reg_sigma_grid_entries() -> list[dict[str, Any]]:
+    """PROTEINS L×d_h refine at drop=0.5 around ``anchor_boost`` mode.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        4 configs: ``L∈{8,12} × d_h∈{8,16}`` at bs=16, lr=1e-3, dropout=0.5.
+        Intended to UNION with ``anchor_boost`` select when choosing fold winners.
+    """
+    return expand_grid(SIGMA_PROTEINS_REG_GRID)
 
 
 def native_fair_sigma_grid_entries() -> list[dict[str, Any]]:

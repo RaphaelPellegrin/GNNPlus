@@ -1,0 +1,47 @@
+{
+  "model": "sigma_hetero",
+  "mode": "proteins_reg",
+  "note": "PROTEINS-only L\u00d7d_h refine around modal anchor_boost (a2g4, bs=16, lr=1e-3, dropout=0.5): L\u2208{8,12} \u00d7 d_h\u2208{8,16}. \u2192 4 configs \u00d7 10 folds = 40 select / 30 eval. UNION with anchor_boost select for fold winners.",
+  "grid": [
+    {
+      "batch_size": 16,
+      "base_lr": 0.001,
+      "layers_mp": 8,
+      "dim_inner": 64,
+      "d_h": 8,
+      "dropout": 0.5,
+      "graph_pooling": "add",
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 16,
+      "base_lr": 0.001,
+      "layers_mp": 8,
+      "dim_inner": 64,
+      "d_h": 16,
+      "dropout": 0.5,
+      "graph_pooling": "add",
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 16,
+      "base_lr": 0.001,
+      "layers_mp": 12,
+      "dim_inner": 64,
+      "d_h": 8,
+      "dropout": 0.5,
+      "graph_pooling": "add",
+      "early_stop_use_loss": false
+    },
+    {
+      "batch_size": 16,
+      "base_lr": 0.001,
+      "layers_mp": 12,
+      "dim_inner": 64,
+      "d_h": 16,
+      "dropout": 0.5,
+      "graph_pooling": "add",
+      "early_stop_use_loss": false
+    }
+  ]
+}

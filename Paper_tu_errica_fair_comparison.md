@@ -77,18 +77,20 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 | **3a-NRe** | nci1_refine agg→eval | — | ⏳ submit now | 30 eval |
 | **3a-AB-Rf** | anchor_boost **REDDIT fill** | — | ⏳ submit now | 120 missing bs=64 HPs |
 | **3a-AB-Re** | AB re-agg + REDDIT eval 31–60 | — | ⏳ after fill | |
-| **3a-TP** | `sigma_grid_select` **tiny_pnr** | — | ⏳ submit now | a2g4 bs×d_h · **120** select |
-| **3a-NF** | `sigma_grid_select` **native_fair** | **45235956** | 🚀 rerun | a0g2+a1g2 · P/NCI1/REDDIT · **480** · **gpu_h200** `%40` (prev **45215941** died on `mp_family`) |
-| **3a-NFe** | agg→eval native_fair | — | ⏳ submit `afterok:45235956` | → `sigma_native_fair_per_fold.json` · eval **gpu_h200** 90 |
+| **3a-TP** | `sigma_grid_select` **tiny_pnr** | — | ❌ not started | 0 W&B groups |
+| **3a-NF** | `sigma_grid_select` **native_fair** | **45235956** | ✅ select (W&B spot) | a0g2+a1g2 · P/NCI1/REDDIT · **480** |
+| **3a-NFe** | agg→eval native_fair | **45429478** | 🔄 ~83/90 | REDDIT eval still running |
 | **3a-NFv2** | `sigma_grid_select` **native_fair_v2** | **45263051** | ✅ **180/180** | UniGCN mixes · lr=1e-3 L=12 d_h=32 · **mweber** |
-| **3a-NFv2e** | agg→eval | **45423512** | 🚀 resubmit | SLURM_SUBMIT_DIR fix |
-| **3a-NFv2L4** | `sigma_grid_select` **native_fair_v2_l4** | **45423514** | 🚀 running | L=4 add-on · **180** |
-| **3a-NFv2L4e** | L4-only agg→eval | — | ⏳ submit after select | `sigma_native_fair_v2_l4_per_fold.json` → 90 eval |
-| **3a-NFv2j** | joint merge→eval L∈{4,12} | **45423667** | ⏳ `afterok` | waits on **45423514** |
-| **3a-NFv2Rr** | `sigma_grid_select` **native_fair_v2_reddit_reg** | — | ⏳ submit | REDDIT lr×drop · **120** · **gpu_h200** `%15` |
-| **3a-NFv2Rre** | UNION L12+reg → REDDIT eval | — | ⏳ after select | `sigma_native_fair_v2_reddit_reg_joint_per_fold.json` → **30** |
+| **3a-NFv2e** | L12 eval | **45423867** | ✅ | |
+| **3a-NFv2L4** | `sigma_grid_select` **native_fair_v2_l4** | **45423514** | ✅ **180/180** | L=4 add-on |
+| **3a-NFv2L4e** | L4-only eval | **45428829** | ✅ **90/90** | |
+| **3a-NFv2j** | joint L∈{4,12} eval | **45463308** | ✅ **90/90** | |
+| **3a-NFv2Rr** | `sigma_grid_select` **native_fair_v2_reddit_reg** | **45515660** | 🔄 ~10/120 | still early |
+| **3a-NFv2Rre** | UNION L12+reg → REDDIT eval | **45516145** | ⏳ `afterok:45515660` | waits on select |
+| **3a-PReg** | `sigma_grid_select` **proteins_reg** | — | ⏳ launch | L∈{8,12}×d_h∈{8,16} · bs=16 · lr=1e-3 · drop=0.5 · **40** |
+| **3a-PRege** | UNION boost+reg → PROTEINS eval | — | ⏳ after select | `sigma_proteins_reg_joint_per_fold.json` · 30 eval |
 | **3a-ST** | `sigma_grid_select` **specialist_tiny** | **45303391** | ✅ **120/120** | GCN (P/REDDIT) / SAGE (NCI1) · a0g1+a1g1 × lr |
-| **3a-STe** | agg→eval | **45423513** | 🚀 resubmit | SLURM_SUBMIT_DIR fix |
+| **3a-STe** | agg→eval | **45423695** | 🔄 | check `SiGMA_spec_tiny` tag |
 | **3a-A0** | `sigma_grid_select` **a0g_pnr** | — | ⏳ ready later | MP-only **a0g4/a0g2** on P/NCI1/REDDIT · **1440** select |
 | **3a-U** | `sigma_grid_select` **fixed8 ungated** | **44869251** | ⏸️ **HELD** | `scontrol hold` 2026-09-06 — **must `scontrol release 44869251` later** · leftover `R` finish OK |
 | **3a-fill** | fixed8 **COLLAB f9 hp7** fill | **44507757** | ✅ **COMPLETED** | task **560** · netscratch logs |
@@ -197,6 +199,11 @@ Notes:
 - fixed8 REDDIT was **88.0±3.3**; replaced by native_fair_v2 L12 **91.15±1.71**.
 - native_fair_v2 L12 PROTEINS/NCI1 (**73.34±3.86** / **80.31±1.39**) did **not** beat ᵃ/ᶠ above.
 - Pending REDDIT refine: `native_fair_v2_reddit_reg` UNION (may replace ⁿ only).
+- **W&B run IDs** (30 per SiGMA cell; fold×seed):
+  [`tab_tu_errica_grid_eval_sigma_wandb_ids.json`](results/tu_errica/analysis/tab_tu_errica_grid_eval_sigma_wandb_ids.json) /
+  [`.csv`](results/tu_errica/analysis/tab_tu_errica_grid_eval_sigma_wandb_ids.csv);
+  classical: [`tab_tu_errica_grid_eval_classical_wandb_ids.csv`](results/tu_errica/analysis/tab_tu_errica_grid_eval_classical_wandb_ids.csv).
+  Also listed under the float in `tab_tu_errica_grid_eval.tex`.
 
 ### Push PROTEINS + REDDIT (`anchor_boost`, 2026-09-06)
 
@@ -365,17 +372,33 @@ TU_ERRICA_DEPENDENCY_JOBID=45423514 \
 ### SiGMA native_fair_v2_reddit_reg — REDDIT lr×dropout refine (2026-09-08)
 
 Centered on L12 winners (`a0g2_gcn_unigcn`, `a0g2_gcn_gin`, `a1g2_gcn_gin`).
-Sweep: `lr∈{1e-3,5e-4}` × `dropout∈{0.5,0.75}` (fixed L=12 / d_h=32 / bs=32).
-→ **12** × 10 = **120** select · UNION with L12 select · **REDDIT-only** eval = **30**.
-
-Does **not** overwrite `sigma_native_fair_v2_per_fold.json` / L12 eval.
+Sweep: lr∈{1e-3,5e-4} × dropout∈{0.5,0.75} → 12 × 10 = **120** select.
+UNION with L12 select → REDDIT-only 30 eval.
 
 ```bash
 python scripts/tu_errica/generate_sigma_errica_grids.py --mode native_fair_v2_reddit_reg
 bash bash_interface/cluster/submit_tu_errica_native_fair_v2_reddit_reg_select.sh
-# after select JOBID prints:
+# after select JOBID known:
 TU_ERRICA_DEPENDENCY_JOBID=<reddit_reg_select_JOBID> \
   bash bash_interface/cluster/submit_tu_errica_native_fair_v2_reddit_reg_agg_eval.sh
+```
+
+### SiGMA proteins_reg — PROTEINS L×d_h at drop=0.5 (2026-09-09)
+
+Chase GCN **73.9** from SiGMA **73.68** (`anchor_boost`). Keep **a2g4**;
+lock modal winners **bs=16**, **lr=1e-3**; force **dropout=0.5** (boost used yaml
+0.1). Search only `L∈{8,12} × d_h∈{8,16}` → **4 × 10 = 40** select. UNION with
+`anchor_boost` (does not overwrite `sigma_anchor_boost_per_fold.json`) →
+PROTEINS-only **30** eval.
+
+```bash
+python scripts/tu_errica/generate_sigma_errica_grids.py --mode proteins_reg
+bash bash_interface/cluster/submit_tu_errica_proteins_reg_select.sh
+# after select JOBID known:
+TU_ERRICA_DEPENDENCY_JOBID=<proteins_reg_select_JOBID> \
+  bash bash_interface/cluster/submit_tu_errica_proteins_reg_agg_eval.sh
+# → selections/sigma_proteins_reg_joint_per_fold.json
+# → campaign sigma_grid_eval_proteins_reg_joint
 ```
 
 ### SiGMA specialist_tiny — classical single-MP (2026-09-07)

@@ -65,6 +65,8 @@ elif [ "${MODE}" = "native_fair_v2_l4" ]; then
     log_message "Generating SiGMA grids (native_fair_v2_l4: L=4 add-on, 180 select)"
 elif [ "${MODE}" = "native_fair_v2_reddit_reg" ]; then
     log_message "Generating SiGMA grids (native_fair_v2_reddit_reg: REDDIT lr×drop, 120 select)"
+elif [ "${MODE}" = "proteins_reg" ]; then
+    log_message "Generating SiGMA grids (proteins_reg: PROTEINS L×d_h drop0.5, 40 select)"
 elif [ "${MODE}" = "a0g_pnr" ]; then
     log_message "Generating SiGMA grids (a0g_pnr: MP-only P/NCI1/REDDIT, 1440 select)"
 elif [ "${MODE}" = "tiny_pnr" ]; then
@@ -107,6 +109,9 @@ elif [ "${MODE}" = "native_fair_v2_l4" ]; then
 elif [ "${MODE}" = "native_fair_v2_reddit_reg" ]; then
     manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids_native_fair_v2_reddit_reg/manifest.json"
     next_phase="sigma_grid_select_native_fair_v2_reddit_reg"
+elif [ "${MODE}" = "proteins_reg" ]; then
+    manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids_proteins_reg/manifest.json"
+    next_phase="sigma_grid_select_proteins_reg"
 elif [ "${MODE}" = "a0g_pnr" ]; then
     manifest="${REPO_ROOT}/configs/tu_errica/sigma_grids_a0g_pnr/manifest.json"
     next_phase="sigma_grid_select_a0g_pnr"
