@@ -1,15 +1,18 @@
 """Periodic attention-sink diagnostics for W&B (Fesser-style panels).
 
-During training, every ``cfg.gnn.hybrid.attention_sink_every`` epochs (plus
-epoch 0 and the final epoch), grab one small train batch, dump dense
-within-graph attention, and log:
+During training (when enabled), grab one small train batch and log sink panels.
+Default schedule is **final epoch only** (``attention_sink_epochs=last_only``).
+Legacy sparse mode logs epoch 0, every ``attention_sink_every``, and the last epoch.
+``quarters`` logs epoch 0, every ``max_epoch // 4``, and the last epoch.
 
 * per-(layer, head) attention heatmap (first graph, degree-sorted)
 * per-layer mean-over-heads heatmap
 * L×H sink-rate / max-α / sink value-norm heatmaps
 * scalar summaries under ``attn_sinks/*``
 
-PNG files are also written under ``<run_dir>/attention_sinks/epXXXX/``.
+When ``attention_sink_save_disk`` is True, PNG / ``.pt`` files are written under
+``<run_dir>/attention_sinks/epXXXX/``. Otherwise panels are built in a temp dir
+for W&B only (deleted after logging).
 """
 
 from __future__ import annotations
@@ -17,6 +20,7 @@ from __future__ import annotations
 import logging
 import math
 import re
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple
 
@@ -30,6 +34,7 @@ import torch.nn as nn
 from torch_geometric.graphgym.config import cfg
 
 from GNNPlus.hybrid_gate_tracking import _is_graph_batch, _unwrap_model
+from GNNPlus.plotting.attention_sink_markers import annotate_sink_receiver_column
 
 _AS_DIAG_LOGGED = False
 
@@ -49,13 +54,33 @@ def attention_sink_logging_enabled() -> bool:
 
 
 def should_log_attention_sinks(epoch: int, max_epoch: int) -> bool:
-    """Sparse epoch schedule: 0, every ``every``, and last epoch."""
+    """Return whether to log sink panels at ``epoch``.
+
+    Controlled by ``cfg.gnn.hybrid.attention_sink_epochs``:
+
+    * ``last_only`` (default): final epoch only
+    * ``last_and_first``: epoch 0 and final
+    * ``sparse``: epoch 0, every ``attention_sink_every``, and final (legacy)
+    * ``quarters``: epoch 0, every ``max_epoch // 4``, and final
+      (e.g. max_epoch=1000 → epochs 0, 250, 500, 750, 999)
+    """
     if not attention_sink_logging_enabled():
         return False
+    mode = str(getattr(cfg.gnn.hybrid, "attention_sink_epochs", "last_only")).lower()
+    last_ep = max_epoch - 1
+    if mode in {"last", "last_only", "final"}:
+        return epoch == last_ep
+    if mode in {"last_and_first", "first_and_last"}:
+        return epoch <= 0 or epoch == last_ep
+    if mode in {"quarters", "quarter", "every_quarter"}:
+        every = max(1, int(max_epoch) // 4)
+        if epoch <= 0 or epoch == last_ep:
+            return True
+        return epoch % every == 0
     every = max(1, int(getattr(cfg.gnn.hybrid, "attention_sink_every", 50)))
     if epoch <= 0:
         return True
-    if epoch == max_epoch - 1:
+    if epoch == last_ep:
         return True
     return epoch % every == 0
 
@@ -300,7 +325,9 @@ def _build_panels_for_batch(
             }[label]
             vis = _stride_imshow(A)
             ax.imshow(vis, cmap="viridis", aspect="auto", interpolation="nearest")
-            ax.axvline(sink_j / max(A.shape[1] / vis.shape[1], 1e-6), color="r", ls="--", lw=0.8)
+            if A.shape[1] > 0 and vis.shape[1] > 0:
+                display_j = sink_j * (vis.shape[1] / A.shape[1])
+                annotate_sink_receiver_column(ax, display_j)
             ax.set_xticks([])
             ax.set_yticks([])
             if li == 0:
@@ -308,7 +335,7 @@ def _build_panels_for_batch(
             if head == 0:
                 ax.set_ylabel(f"L{layer}", fontsize=8)
     fig_h.suptitle(
-        f"Attn maps (graph0, deg↓) · ep={epoch} · red=argmax α",
+        f"Attn maps (graph0, deg↓) · ep={epoch} · arrow → argmax α receiver",
         fontsize=10,
     )
     fig_h.tight_layout()
@@ -334,7 +361,8 @@ def _build_panels_for_batch(
         vis = _stride_imshow(mean_A)
         ax.imshow(vis, cmap="viridis", aspect="auto", interpolation="nearest")
         if mean_A.shape[1] > 0 and vis.shape[1] > 0:
-            ax.axvline(sink_j * (vis.shape[1] / mean_A.shape[1]), color="r", ls="--", lw=0.8)
+            display_j = sink_j * (vis.shape[1] / mean_A.shape[1])
+            annotate_sink_receiver_column(ax, display_j)
         ax.set_title(f"L{layer} mean_h", fontsize=8)
         ax.set_xticks([])
         ax.set_yticks([])
@@ -530,77 +558,95 @@ def maybe_log_attention_sinks_to_wandb(
                 logging.warning("Attention sinks: empty attention dict; skip.")
                 return
 
-            out_dir = Path(cfg.run_dir) / "attention_sinks" / f"ep{epoch:05d}"
-            images, scalars = _build_panels_for_batch(
-                payload["attention"],
-                payload.get("value_norms", {}),
-                payload["edge_index"],
-                payload["batch"],
-                tau=tau,
-                epsilon=epsilon,
-                out_dir=out_dir,
-                epoch=epoch,
-                head_outputs=payload.get("head_outputs", {}),
-                attn_gates=payload.get("attn_gates", {}),
-            )
+            save_disk = bool(getattr(hybrid, "attention_sink_save_disk", False))
+            save_pt = save_disk and bool(getattr(hybrid, "attention_sink_save_pt", False))
 
-            # Persist the raw batch bundle for offline aggregate / mechanism plots.
-            if bool(getattr(hybrid, "attention_sink_save_pt", True)):
-                torch.save(
-                    {
-                        "epoch": epoch,
-                        "attention": payload["attention"],
-                        "value_norms": payload.get("value_norms", {}),
-                        "head_outputs": payload.get("head_outputs", {}),
-                        "attn_gates": payload.get("attn_gates", {}),
-                        "gate_means": payload.get("gate_means", {}),
-                        "edge_index": payload["edge_index"],
-                        "batch": payload["batch"],
-                        "num_nodes": payload["num_nodes"],
-                        "meta": {
-                            "tau": tau,
-                            "epsilon": epsilon,
-                            "dataset": str(cfg.dataset.name),
-                            "gate": str(getattr(hybrid, "gate", "")),
-                            "mp_gate": str(getattr(hybrid, "mp_gate", "") or ""),
-                            "diagnostics": (
-                                "vnorm_ratio (NOP≪1); stable_rank(AV)~1 + "
-                                "high row-cosine ⇒ broadcast"
-                            ),
+            def _log_panels(out_dir: Path) -> None:
+                images, scalars = _build_panels_for_batch(
+                    payload["attention"],
+                    payload.get("value_norms", {}),
+                    payload["edge_index"],
+                    payload["batch"],
+                    tau=tau,
+                    epsilon=epsilon,
+                    out_dir=out_dir,
+                    epoch=epoch,
+                    head_outputs=payload.get("head_outputs", {}),
+                    attn_gates=payload.get("attn_gates", {}),
+                )
+
+                if save_pt:
+                    torch.save(
+                        {
+                            "epoch": epoch,
+                            "attention": payload["attention"],
+                            "value_norms": payload.get("value_norms", {}),
+                            "head_outputs": payload.get("head_outputs", {}),
+                            "attn_gates": payload.get("attn_gates", {}),
+                            "gate_means": payload.get("gate_means", {}),
+                            "edge_index": payload["edge_index"],
+                            "batch": payload["batch"],
+                            "num_nodes": payload["num_nodes"],
+                            "meta": {
+                                "tau": tau,
+                                "epsilon": epsilon,
+                                "dataset": str(cfg.dataset.name),
+                                "gate": str(getattr(hybrid, "gate", "")),
+                                "mp_gate": str(getattr(hybrid, "mp_gate", "") or ""),
+                                "diagnostics": (
+                                    "vnorm_ratio (NOP≪1); stable_rank(AV)~1 + "
+                                    "high row-cosine ⇒ broadcast"
+                                ),
+                            },
                         },
-                    },
-                    out_dir / f"attention_batch_ep{epoch:05d}.pt",
-                )
+                        out_dir / f"attention_batch_ep{epoch:05d}.pt",
+                    )
 
-            try:
-                import wandb
-            except ImportError:
-                logging.warning("Attention sinks: wandb not installed; PNGs only.")
-                return
+                try:
+                    import wandb
+                except ImportError:
+                    logging.warning("Attention sinks: wandb not installed; skip W&B log.")
+                    return
 
-            log_payload: Dict[str, Any] = dict(scalars)
-            log_payload["train/epoch"] = float(epoch)
-            for key, path in images.items():
-                log_payload[key] = wandb.Image(path)
-            run.log(log_payload, step=epoch)
-            run.summary.update(scalars)
+                log_payload: Dict[str, Any] = dict(scalars)
+                log_payload["train/epoch"] = float(epoch)
+                for key, path in images.items():
+                    log_payload[key] = wandb.Image(path)
+                run.log(log_payload, step=epoch)
+                run.summary.update(scalars)
 
-            if not _AS_DIAG_LOGGED:
-                logging.info(
-                    "Attention sinks: logging W&B panels every %d epochs "
-                    "(tau=%.2f, eps=%.2f) → %s",
-                    int(getattr(hybrid, "attention_sink_every", 50)),
-                    tau,
-                    epsilon,
-                    out_dir.parent,
-                )
-                _AS_DIAG_LOGGED = True
-            logging.info(
-                "Attention sinks: epoch %d → %d PNGs under %s",
-                epoch,
-                len(images),
-                out_dir,
-            )
+                global _AS_DIAG_LOGGED
+                if not _AS_DIAG_LOGGED:
+                    dest = (
+                        out_dir.parent
+                        if save_disk
+                        else "temp (not persisted; save_disk=False)"
+                    )
+                    logging.info(
+                        "Attention sinks: logging W&B panels every %d epochs "
+                        "(tau=%.2f, eps=%.2f, save_disk=%s) → %s",
+                        int(getattr(hybrid, "attention_sink_every", 50)),
+                        tau,
+                        epsilon,
+                        save_disk,
+                        dest,
+                    )
+                    _AS_DIAG_LOGGED = True
+                if save_disk:
+                    logging.info(
+                        "Attention sinks: epoch %d → %d PNGs under %s",
+                        epoch,
+                        len(images),
+                        out_dir,
+                    )
+
+            if save_disk:
+                out_dir = Path(cfg.run_dir) / "attention_sinks" / f"ep{epoch:05d}"
+                out_dir.mkdir(parents=True, exist_ok=True)
+                _log_panels(out_dir)
+            else:
+                with tempfile.TemporaryDirectory() as tmp:
+                    _log_panels(Path(tmp))
     except StopIteration:
         logging.warning("Attention sinks: empty train loader; skip.")
     except Exception:

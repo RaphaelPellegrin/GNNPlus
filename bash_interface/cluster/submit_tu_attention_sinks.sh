@@ -57,6 +57,9 @@ export_list+=",AS_NUM_TASKS=${NUM_TASKS}"
 export_list+=",AS_DUMP_ATTN=${AS_DUMP_ATTN:-0}"
 export_list+=",AS_DUMP_REDDIT=${AS_DUMP_REDDIT:-0}"
 export_list+=",AS_SEED=${AS_SEED:-2}"
+export_list+=",AS_LOG_SINKS=${AS_LOG_SINKS:-0}"
+export_list+=",AS_SINK_SAVE_DISK=${AS_SINK_SAVE_DISK:-0}"
+export_list+=",AS_SINK_EPOCHS=${AS_SINK_EPOCHS:-last_only}"
 export_list+=",AS_SINK_EVERY=${AS_SINK_EVERY:-50}"
 export_list+=",AS_SINK_MAX_NODES=${AS_SINK_MAX_NODES:-512}"
 export_list+=",GNNPLUS_DATASET_DIR=${GNNPLUS_DATASET_DIR:-}"
@@ -98,7 +101,8 @@ cat <<EOF
   Parallel:      ${PARALLEL} GPUs max
   Datasets:      MUTAG ENZYMES PROTEINS COLLAB IMDB-BINARY REDDIT-BINARY
   Outs:          \$GNNPLUS_OUT_DIR/tu_attention_sinks/
-  W&B sinks:     log_attention_sinks=True · every AS_SINK_EVERY=${AS_SINK_EVERY:-50} epochs
+  W&B sinks:     AS_LOG_SINKS=${AS_LOG_SINKS:-0} · AS_SINK_EPOCHS=${AS_SINK_EPOCHS:-last_only}
+  Disk PNG/.pt:  AS_SINK_SAVE_DISK=${AS_SINK_SAVE_DISK:-0} (needs AS_LOG_SINKS=1)
   Dump attn:     AS_DUMP_ATTN=${AS_DUMP_ATTN:-0}  (REDDIT needs AS_DUMP_REDDIT=1)
   Logs:          logs_gnnplus/tu_attn_sinks_${job_id}_<TASK>.log
   Tracker:       Paper_attention_sinks.md

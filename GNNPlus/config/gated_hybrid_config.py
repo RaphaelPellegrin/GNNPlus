@@ -4,22 +4,22 @@ from torch_geometric.graphgym.register import register_config
 from yacs.config import CfgNode as CN
 
 
-@register_config('gated_hybrid')
+@register_config("gated_hybrid")
 def gated_hybrid_cfg(cfg: CN) -> None:
     """Register ``cfg.gnn.hybrid`` for :class:`HybridGNN`."""
     cfg.gnn.hybrid = CN(new_allowed=True)
     cfg.gnn.hybrid.num_attn_heads = 2
     cfg.gnn.hybrid.num_gnn_heads = 2
     cfg.gnn.hybrid.d_h = 16
-    cfg.gnn.hybrid.attn_mask = 'full'  # full | graph_restricted
-    cfg.gnn.hybrid.gate = 'headwise'  # elementwise | headwise | none (ungated)
+    cfg.gnn.hybrid.attn_mask = "full"  # full | graph_restricted
+    cfg.gnn.hybrid.gate = "headwise"  # elementwise | headwise | none (ungated)
     # Optional override for MP heads only. Empty ⇒ same as ``gate``.
     # Set ``none`` for attention-gated / MP-ungated (paper Table 6 ``SiGMA_attn_gate``).
     # For MP-gated / attention-ungated (``SiGMA_ungated_attn``): ``gate=none`` and
     # ``mp_gate`` = the original yaml style (``headwise`` / ``elementwise``).
-    cfg.gnn.hybrid.mp_gate = ''
-    cfg.gnn.hybrid.norm = 'layernorm'  # layernorm | rmsnorm | none
-    cfg.gnn.hybrid.gnn_types = ''  # e.g. "GCN,GIN,GCNE,GATEDGCN" — see configs/gated_hybrid/README.md (GATEDGCN semantics)
+    cfg.gnn.hybrid.mp_gate = ""
+    cfg.gnn.hybrid.norm = "layernorm"  # layernorm | rmsnorm | none
+    cfg.gnn.hybrid.gnn_types = ""  # e.g. "GCN,GIN,GCNE,GATEDGCN" — see configs/gated_hybrid/README.md (GATEDGCN semantics)
     cfg.gnn.hybrid.attn_dropout = 0.1
     cfg.gnn.hybrid.mp_dropout = 0.0  # 0 => use cfg.gnn.dropout
     cfg.gnn.hybrid.block_bn = False
@@ -28,20 +28,30 @@ def gated_hybrid_cfg(cfg: CN) -> None:
     # When True (a0g1 + d_h == d), skip in/out Linear maps so MP runs on full-width x.
     # Gate uses a separate Linear (Level-1 style), not split(W_hg · x).
     cfg.gnn.hybrid.identity_proj = False
-    cfg.gnn.hybrid.log_gate_stats = True  # W&B gates/layer*/attn_* (headwise + elementwise)
-    # Attention-sink panels (Fesser-style): sparse epochs → PNG + W&B Images.
+    cfg.gnn.hybrid.log_gate_stats = (
+        True  # W&B gates/layer*/attn_* (headwise + elementwise)
+    )
+    # Attention-sink panels (Fesser-style): optional PNG / W&B.
+    # Off by default (disk-heavy). Enable per-run via log_attention_sinks / AS_LOG_SINKS.
     cfg.gnn.hybrid.log_attention_sinks = False
-    cfg.gnn.hybrid.attention_sink_every = 50  # also logs epoch 0 and last
+    # ``last_only`` | ``sparse`` (ep0 + every N + last) | ``last_and_first`` | ``quarters``
+    cfg.gnn.hybrid.attention_sink_epochs = "last_only"
+    cfg.gnn.hybrid.attention_sink_every = 50  # used when attention_sink_epochs=sparse
     cfg.gnn.hybrid.attention_sink_tau = 1.5
     cfg.gnn.hybrid.attention_sink_epsilon = 0.3
     cfg.gnn.hybrid.attention_sink_max_nodes = 512  # dense N×N safety
-    cfg.gnn.hybrid.attention_sink_save_pt = True  # keep batch .pt next to PNGs
+    cfg.gnn.hybrid.attention_sink_save_disk = (
+        False  # PNG + .pt under run_dir/attention_sinks/
+    )
+    cfg.gnn.hybrid.attention_sink_save_pt = (
+        False  # batch .pt next to PNGs (needs save_disk)
+    )
     # Attention head backend: dense QK (vanilla), sparse GRIT, or Transolver++ physics.
-    cfg.gnn.hybrid.attn_type = 'vanilla'  # vanilla | grit | physics
+    cfg.gnn.hybrid.attn_type = "vanilla"  # vanilla | grit | physics
     cfg.gnn.hybrid.grit = CN()
     cfg.gnn.hybrid.grit.clamp = 5.0
     cfg.gnn.hybrid.grit.edge_enhance = True
-    cfg.gnn.hybrid.grit.act = 'relu'
+    cfg.gnn.hybrid.grit.act = "relu"
     cfg.gnn.hybrid.grit.use_bias = False
     # When True, RRWP edge encoder pads to the full graph (GRIT full_attn).
     cfg.gnn.hybrid.grit.pad_to_full_graph = True

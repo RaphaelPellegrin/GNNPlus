@@ -28,6 +28,22 @@ Offline: HP figures `17`–`25` from `plot_attention_sinks_aggregate.py`.
 
 ---
 
+## Storage policy (2026-09)
+
+**Default: no mid-train sink artifacts on scratch.**
+
+| Knob | Default | What it saves |
+|------|---------|----------------|
+| `AS_LOG_SINKS` | `0` | Mid-train W&B `attn_sinks/*` panels (temp PNGs unless save_disk) |
+| `AS_SINK_EPOCHS` | `last_only` | `last_only` · `sparse` (ep0/50/…) · `last_and_first` |
+| `AS_SINK_SAVE_DISK` | `0` | `run_dir/attention_sinks/ep*/` PNG + `.pt` (only if `AS_LOG_SINKS=1`) |
+| `AS_DUMP_ATTN` | `0` | Post-train `attention_matrices/` full dump (heavy; opt-in) |
+
+Train jobs still save **checkpoints** + scalar W&B metrics. Mechanism CSVs come from
+**offline** `submit_dump_tu_attention_sinks.sh` when you need them.
+
+---
+
 ## Status
 
 | Step | Status | Notes |
@@ -77,9 +93,13 @@ Out: `results/tu_attention_sinks/paper_figures/` (PNG + PDF)
 | Clear AS on bio GPS ungated | [fig_bio_gps_ratio_heatmaps.png](results/tu_attention_sinks/paper_figures/fig_bio_gps_ratio_heatmaps.png) · [fig_bio_gps_sinkrate_heatmaps.png](results/tu_attention_sinks/paper_figures/fig_bio_gps_sinkrate_heatmaps.png) |
 | Bio AS vs flat social GPS | [fig_bio_as_vs_flat_gps_bars.png](results/tu_attention_sinks/paper_figures/fig_bio_as_vs_flat_gps_bars.png) |
 | SiGMA AS on IMDB/COLLAB where GPS flat | [fig_sigma_vs_gps_imdb_collab.png](results/tu_attention_sinks/paper_figures/fig_sigma_vs_gps_imdb_collab.png) · [fig_sigma_vs_gps_social_heatmaps.png](results/tu_attention_sinks/paper_figures/fig_sigma_vs_gps_social_heatmaps.png) |
-| Vertical sink band + Fesser diagnostics | [fig_vertical_band_mutag_gps_l0.png](results/tu_attention_sinks/paper_figures/fig_vertical_band_mutag_gps_l0.png) · [fig_vertical_band_proteins_gps_l4.png](results/tu_attention_sinks/paper_figures/fig_vertical_band_proteins_gps_l4.png) · [fig_vertical_band_collab_sigma_l7.png](results/tu_attention_sinks/paper_figures/fig_vertical_band_collab_sigma_l7.png) |
+| Vertical sink band + Lukas's diagnostics | [fig_vertical_band_mutag_gps_l0.png](results/tu_attention_sinks/paper_figures/fig_vertical_band_mutag_gps_l0.png) · [fig_vertical_band_proteins_gps_l4.png](results/tu_attention_sinks/paper_figures/fig_vertical_band_proteins_gps_l4.png) · [fig_vertical_band_collab_sigma_l7.png](results/tu_attention_sinks/paper_figures/fig_vertical_band_collab_sigma_l7.png) |
+| Many graphs, not one cherry-pick | [fig_sink_matrix_grid_mutag_proteins.png](results/tu_attention_sinks/paper_figures/fig_sink_matrix_grid_mutag_proteins.png) |
+| When AS forms (ckpt trajectory) | [fig_as_over_training_enzymes_gps.png](results/tu_attention_sinks/paper_figures/fig_as_over_training_enzymes_gps.png) · [fig_as_over_training_collab_sigma.png](results/tu_attention_sinks/paper_figures/fig_as_over_training_collab_sigma.png) |
+| Per-graph size / density / correctness | [fig_sink_vs_size.png](results/tu_attention_sinks/paper_figures/fig_sink_vs_size.png) · [fig_sink_vs_density.png](results/tu_attention_sinks/paper_figures/fig_sink_vs_density.png) · [fig_sink_vs_correctness.png](results/tu_attention_sinks/paper_figures/fig_sink_vs_correctness.png) |
+| Sink identity vs layer (Lukas's Fig. 9 analogue) | [fig_sink_identity_by_layer.png](results/tu_attention_sinks/paper_figures/fig_sink_identity_by_layer.png) |
 
-Each vertical-band figure now includes: sink vs flat attention matrices, graph with AS node, ‖v‖ bars (vnr), centrality ranks (deg/PR/…), and Fesser mech text (stable_rank(AV), row-cos). MUTAG dump lacks `head_outputs` → AV stats n/a there.
+Each vertical-band figure now includes: sink vs flat attention matrices, graph with AS node, ‖v‖ bars (vnr), centrality ranks (deg/PR/…), and Lukas's mech text (stable_rank(AV), row-cos). MUTAG dump lacks `head_outputs` → AV stats n/a there.
 
 **Head-specificity:** AS claims are per-(layer, head). Many heads stay near-uniform; report sink-rate / ×uniform on the heads that sink (as above), not mean-over-heads. Same convention as LLM AS papers.
 
@@ -87,7 +107,43 @@ Regen:
 
 ```bash
 python scripts/attention_sinks/plot_paper_as_existence.py
+python scripts/attention_sinks/plot_paper_sink_matrix_grid.py
+python scripts/attention_sinks/plot_sink_vs_graph_stats.py
 ```
+
+### Per-graph: size, density, correctness (no retrain)
+
+Scripts: `eval_as_graph_preds.py` (ckpt → `{run}_graph_preds.csv`) + `plot_sink_vs_graph_stats.py`.  
+CSV: `paper_figures/sink_vs_graph_stats_summary.csv`. GPS = **test**; SiGMA dumps were train-only so correctness is **train**. COLLAB GPS lr001 has no local dumps/ckpt → size only (`n_g` from mech CSV).
+
+**Size.** ×uniform \(= n\cdot\max\alpha\), so \(\rho(\times\mathrm{unif}, n)>0\) is partly mechanical. Raw \(\max\alpha\) **falls** with \(n\) on GPS social (\(\rho(\alpha,n)\approx -1\): stays uniform). COLLAB SiGMA is the exception: \(\max\alpha\) stays high (\(\sim 0.75\), \(\rho(\alpha,n)\approx +0.09\)) so concentration is real, not just \(1/n\).
+
+**Density.** ×uniform anti-correlates with \(2|E|/(n(n-1))\) everywhere we have dumps (\(\rho \approx -0.4\) to \(-0.57\)). COLLAB SiGMA also has \(\rho(\alpha,\mathrm{density})\approx -0.71\): sparser graphs get more concentrated attention.
+
+**Does AS help?** No clean causal answer from this split.
+
+| Run | Split | τ-sink acc | no-sink acc | Δ | note |
+|-----|-------|------------|-------------|---|------|
+| MUTAG GPS L0 | test | 68% | — | — | 47/47 graphs sink |
+| ENZYMES GPS L5 | test | 54% | 67% | −12pp | only **3** non-sinks |
+| PROTEINS GPS L4 | test | 75% | 84% | −9pp | 25 non-sinks |
+| IMDB GPS | test | — | 49% | — | 0% sinks; chance-level model |
+| PROTEINS SiGMA L2H1 | train | 74% | 64% | **+11pp** | |
+| IMDB SiGMA L5H0 | train | 75% | 72% | +3pp | |
+| COLLAB SiGMA L7H1 | train | 86% | 76% | **+10pp** | \(\rho(\times\mathrm{unif},\mathrm{correct})=+0.19\) |
+
+GPS bio: almost every graph already sinks, so “no-sink” is a tiny leftover (likely easier graphs), not an intervention. SiGMA social/PROTEINS: graphs with a τ-sink are somewhat more often correct — still **correlation**, train-split for SiGMA.
+
+### When AS form (no retrain — dump saved ckpts)
+
+Same recipe as Gu et al. (LLMs) / Darcet (ViTs): sinks are **not at init**.
+
+| Run | Graphs / ckpt | When the sink head turns on | L0 |
+|-----|---------------|-----------------------------|----|
+| ENZYMES GPS ungated L5 | 150 test | ep0–4 ~uniform; **ep6 ~79% / 2.1×**; by ep25 already ~84%; locked ~98% / ~8× from ep92 | stays ~1.2×, 0% |
+| COLLAB SiGMA ungated L7H1 | 24 test (cap) | ep0 weak (2.4×); **ep1 already ~79% / 37×**; stays ~79% / 15–54× | exactly ~1×, 0% |
+
+Scripts: `dump_as_over_epochs.py` + `plot_as_over_training.py`. COLLAB is a 24-graph sample (full test dump is heavy).
 
 ### Cross-dataset GPS dumps (2026-08-10) — AS existence + mechanism
 
@@ -165,6 +221,22 @@ HP outs: `Heterogeneity_Profile/visualizations/attention_sinks/{enzymes,proteins
 
 **Verdict:** SiGMA bio sinks ≈ mid-degree / mild anti-hub (like GPS ENZYMES/PROTEINS). **IMDB SiGMA sinks are hub-leaning** (dense social graphs; deg≤2 ≈ 0). L0 rarely the story.
 
+### Lukas's Fig. 9 analogue — sink identity vs layer (2026-08-12)
+
+ViT Fig. 9: early layers sink on `[CLS]`, later on patches. Graphs have no CLS; we plot **hub / mid / periphery** fractions of the argmax-α sink among τ-sink graphs (Phase-B `records.csv`).
+
+Script: `scripts/attention_sinks/plot_sink_identity_by_layer.py`  
+Figure: [fig_sink_identity_by_layer.png](results/tu_attention_sinks/paper_figures/fig_sink_identity_by_layer.png)
+
+| Setting | Layer-wise handoff |
+|---------|-------------------|
+| MUTAG GPS | **Periphery lock-in** early + late; mid layers briefly mid-degree (deg-rank dips ~L4) |
+| ENZYMES / PROTEINS GPS | **Stable mid-degree** across depth (no CLS-style transition) |
+| COLLAB SiGMA | Clear **hub handoff** with depth (hub ~1% early → ~54% at Lmax; mean deg-rank → 0) |
+| IMDB SiGMA | Mild hub rise; already hub-heavy early |
+
+**Useful re-runs (not needed for this figure):** VN / register trains unlock a *literal* CLS analogue — stack sink mass on **VN vs real nodes** vs layer. Existing dumps suffice for hub/mid/leaf.
+
 Root cause of train-only first dump: Slurm `--export` splits on commas — fixed to `AS_DUMP_SPLITS=val+test`. **Commit/push locally** (agent does not `git add`/`push`):
 
 ```bash
@@ -196,6 +268,16 @@ EOF
 ### Vanilla full-attn launch (cluster)
 
 ```bash
+# After git pull — all 6 datasets on gpu_h200, ≤5 GPUs, PNG every max_epoch/4:
+bash bash_interface/cluster/submit_tu_attention_sinks_vanilla_h200.sh
+```
+
+Sink schedule ``quarters``: with ``max_epoch=1000`` → PNG/W&B at epochs **0, 250, 500, 750, 999**
+under ``$GNNPLUS_OUT_DIR/tu_attention_sinks/<ds>_vanilla_full_attn_*/attention_sinks/``.
+
+Legacy (mweber, no quarters):
+
+```bash
 # After git pull on cluster — MUTAG smoke first (task 5 with 5 variants):
 AS_NUM_VARIANTS=5 AS_NUM_TASKS=30 AS_ARRAY=5 AS_PARALLEL=1 AS_DUMP_ATTN=1 \
   bash bash_interface/cluster/submit_tu_attention_sinks.sh
@@ -206,6 +288,59 @@ AS_NUM_VARIANTS=5 AS_NUM_TASKS=30 AS_ARRAY=5,10,15,20,25,30 AS_PARALLEL=6 AS_DUM
 ```
 
 Config: `configs/tu_sigma_homo_hetero/vanilla-full-attn-a4g0-anchor.yaml`
+
+### Vanilla dump + mech (after JOB `38262799`, no retrain)
+
+`gpu_h200`, `wandb.use False`. Skip REDDIT. Copy scripts to the cluster (this agent does not `git add`/`push`).
+
+```bash
+source ~/.gnnplus_env
+export GNNPLUS_DATASET_DIR=/n/netscratch/mweber_lab/Lab/gnnplus_datasets
+export GNNPLUS_OUT_DIR=/n/netscratch/mweber_lab/Lab/rpellegrin/gnnplus_results
+cd /n/holylabs/LABS/mweber_lab/Everyone/rpellegrin/GNNPlus
+
+# If 38262799 is still running:
+AS_DUMP_DEPENDENCY=afterok:38262799 \
+  bash bash_interface/cluster/submit_vanilla_a4g0_dump_mech.sh
+
+# If it already finished:
+bash bash_interface/cluster/submit_vanilla_a4g0_dump_mech.sh
+```
+
+Tasks `5,10,15,20,25` = MUTAG / ENZYMES / PROTEINS / COLLAB / IMDB vanilla a4g0.  
+Mech CSV chained `afterok` on the dump array (CPU `shared`).
+
+Read-out: bio sink + social flat → same as GPS; COLLAB also sinks → “more attn”; flat everywhere → hybrid composition is special.
+
+### ENZYMES GPS ungated + 1 virtual node (broadcast intervention)
+
+One run, does **not** overwrite the no-VN control. `gpu_h200`, `wandb.use False`.
+
+```bash
+bash bash_interface/cluster/submit_enzymes_gps_ungated_vn1.sh
+```
+
+Config: `configs/tu_sigma_homo_hetero/gps-a1g1-ungated-vn1.yaml`  
+Out: `enzymes_GPS_ungated_attn_vn1_lr001_seed2/`  
+After rsync:
+
+```bash
+python scripts/attention_sinks/summarize_vn_intervention.py
+```
+
+Ask: does argmax-α sit on the VN, and does τ-sink rate on **real** nodes drop?
+
+**Local result (2026-08-12):** train finished (~1.2h CPU); best@**ep297** (val/test acc ≈0.553). Dump + mech + `summarize_vn_intervention.py` on test:
+
+| | Control (no VN) | +1 VN |
+|--|-----------------|-------|
+| Strongest head | L5 | **L0** |
+| ×uniform | 8.0× | **16.0×** |
+| τ-sink (all) | 98% | 100% |
+| argmax-α is VN | — | **100%** |
+| τ-sink on real keys | — | **0%** |
+
+**Verdict:** broadcast intervention worked — sink moved onto the VN; real-node τ-sinks gone on the strongest head. CSV: `analysis/enzymes_GPS_ungated_attn_vn1_lr001_seed2_mech.csv`.
 
 ### MUTAG GPS re-dump with AV (`head_outputs`)
 
@@ -219,12 +354,12 @@ Old MUTAG dumps predated AV logging. Re-dumped locally (ep65) so
 
 Enabled via `gnn.hybrid.log_attention_sinks True`.
 
-**When:** epoch `0`, every `attention_sink_every` (default **50**), and **last** epoch.  
-Not every epoch (too heavy).
+**When:** default **`last_only`** (final epoch). Legacy sparse: `AS_SINK_EPOCHS=sparse`
+(epoch 0, every `attention_sink_every` default 50, and last).
 
 | W&B key | Content |
 |---------|---------|
-| `attn_sinks/panel_by_layer_head` | Grid L×H attention heatmaps (graph 0, **degree-sorted**); red line = argmax α |
+| `attn_sinks/panel_by_layer_head` | Grid L×H attention heatmaps (graph 0, **degree-sorted**); red arrow → argmax α receiver column |
 | `attn_sinks/panel_mean_over_heads` | Per-layer mean over heads |
 | `attn_sinks/panel_sink_rate_LxH` | τ·μ sink present (0/1) heatmap |
 | `attn_sinks/panel_max_alpha_LxH` | max column-mean α |
@@ -359,11 +494,12 @@ Done locally for all 4 MUTAG variants → `visualizations/attention_sinks/mutag_
 - [x] Ungated SiGMA: vertical stripes (degree-sorted exemplars) — fig 16 in HP outs
 - [x] Sink-rate L×H heatmap — HP figs 01–03 family
 - [x] Sink centrality (hub vs leaf) — offline aggregate figs **17–25** (MUTAG full)
+- [x] Lukas's Fig. 9 analogue — hub/mid/periphery vs layer (`fig_sink_identity_by_layer`)
 - [x] ‖v_sink‖ / mean‖v‖ + stable_rank(AV) + row-cosine (NOP vs broadcast) — logged + dumped
 - [x] Gated contrast (same arch)
 - [x] GPS ungated (+ gated)
 - [ ] Epoch evolution panels from W&B (ep0 / ep50 / … / last)
-- [ ] ENZYMES / COLLAB / paper-TU GPS ungated + α vs \(n\) across datasets
+- [x] ENZYMES / COLLAB / paper-TU GPS ungated + α vs \(n\) across datasets
 - [x] ENZYMES / PROTEINS full dump + Phase-B aggregate (GPS ungated; ENZYMES gated too)
 - [x] Full SiGMA dumps ENZYMES…IMDB (train+val+test) + mech CSVs (`38074178`/`38074330`)
 - [x] Phase-B COLLAB SiGMA gated (local; figs 17–25)
