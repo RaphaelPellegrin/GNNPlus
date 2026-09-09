@@ -35,6 +35,8 @@ ARRAY_TASKS="${SWEEP_ARRAY_TASKS:-24}"
 ARRAY_PARALLEL="${SWEEP_ARRAY_PARALLEL:-8}"
 RUNS_PER_AGENT="${RUNS_PER_AGENT:-4}"
 SLURM_TIME="${SWEEP_SLURM_TIME:-96:00:00}"
+# Override with SWEEP_PARTITION (e.g. h200_gpu for zinc/mal gatedgcn+gine val sweeps).
+PARTITION="${SWEEP_PARTITION:-mweber_gpu}"
 
 sweep_mem() {
     case "$1" in
@@ -78,12 +80,13 @@ relaunch_one() {
     mem="$(sweep_mem "${slug}")"
     time_budget="$(sweep_time "${slug}")"
 
-    echo "=== Relaunch agents: ${slug} sweep=${sweep_id} tasks=${ARRAY_TASKS} runs/agent=${RUNS_PER_AGENT} mem=${mem} ==="
+    echo "=== Relaunch agents: ${slug} sweep=${sweep_id} partition=${PARTITION} tasks=${ARRAY_TASKS}%${ARRAY_PARALLEL} runs/agent=${RUNS_PER_AGENT} mem=${mem} ==="
     SWEEP_ID="${sweep_id}" \
     SWEEP_DATASET="${slug}" \
     RUNS_PER_AGENT="${RUNS_PER_AGENT}" \
     sbatch \
         --job-name="gnnplus_sweep_${slug}" \
+        --partition="${PARTITION}" \
         --array="1-${ARRAY_TASKS}%${ARRAY_PARALLEL}" \
         --mem="${mem}" \
         --time="${time_budget}" \
