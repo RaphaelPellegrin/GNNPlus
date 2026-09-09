@@ -62,6 +62,17 @@ _set_opt() {
     OPTS["${key}"]="${value}"
 }
 
+# YACS keeps the type of the registered default. W&B often serializes 0.0 as ``0``
+# (int), which then fails: Type mismatch float vs int for attn/mp_dropout.
+_as_yacs_float() {
+    local val="$1"
+    if [[ "${val}" =~ ^-?[0-9]+$ ]]; then
+        printf '%s.0' "${val}"
+    else
+        printf '%s' "${val}"
+    fi
+}
+
 while [ "$#" -gt 0 ]; do
     tok="$1"
     shift
@@ -102,11 +113,11 @@ while [ "$#" -gt 0 ]; do
                 hybrid_num_attn_heads) _set_opt "gnn.hybrid.num_attn_heads" "${val}" ;;
                 hybrid_num_gnn_heads) _set_opt "gnn.hybrid.num_gnn_heads" "${val}" ;;
                 hybrid_d_h) _set_opt "gnn.hybrid.d_h" "${val}" ;;
-                hybrid_attn_dropout) _set_opt "gnn.hybrid.attn_dropout" "${val}" ;;
+                hybrid_attn_dropout) _set_opt "gnn.hybrid.attn_dropout" "$(_as_yacs_float "${val}")" ;;
                 hybrid_attn_mask) _set_opt "gnn.hybrid.attn_mask" "${val}" ;;
                 hybrid_gate) _set_opt "gnn.hybrid.gate" "${val}" ;;
                 hybrid_norm) _set_opt "gnn.hybrid.norm" "${val}" ;;
-                hybrid_mp_dropout) _set_opt "gnn.hybrid.mp_dropout" "${val}" ;;
+                hybrid_mp_dropout) _set_opt "gnn.hybrid.mp_dropout" "$(_as_yacs_float "${val}")" ;;
                 hybrid_gnn_types) _set_opt "gnn.hybrid.gnn_types" "${val}" ;;
                 hybrid_identity_proj|gnn.hybrid.identity_proj)
                     _set_opt "gnn.hybrid.identity_proj" "${val}" ;;
@@ -125,7 +136,7 @@ while [ "$#" -gt 0 ]; do
                 hybrid_max_epoch) _set_opt "optim.max_epoch" "${val}" ;;
                 add_virtual_nodes|dataset.add_virtual_nodes) _set_opt "dataset.add_virtual_nodes" "${val}" ;;
                 num_virtual_nodes|dataset.num_virtual_nodes) _set_opt "dataset.num_virtual_nodes" "${val}" ;;
-                base_lr|optim.base_lr) _set_opt "optim.base_lr" "${val}" ;;
+                base_lr|optim.base_lr) _set_opt "optim.base_lr" "$(_as_yacs_float "${val}")" ;;
                 batch_size) _set_opt "train.batch_size" "${val}" ;;
                 unitary_taylor_order|gnn.unitary_taylor_order)
                     _set_opt "gnn.unitary_taylor_order" "${val}" ;;
@@ -148,11 +159,11 @@ while [ "$#" -gt 0 ]; do
                 hybrid_num_attn_heads) _set_opt "gnn.hybrid.num_attn_heads" "${val}" ;;
                 hybrid_num_gnn_heads) _set_opt "gnn.hybrid.num_gnn_heads" "${val}" ;;
                 hybrid_d_h) _set_opt "gnn.hybrid.d_h" "${val}" ;;
-                hybrid_attn_dropout) _set_opt "gnn.hybrid.attn_dropout" "${val}" ;;
+                hybrid_attn_dropout) _set_opt "gnn.hybrid.attn_dropout" "$(_as_yacs_float "${val}")" ;;
                 hybrid_attn_mask) _set_opt "gnn.hybrid.attn_mask" "${val}" ;;
                 hybrid_gate) _set_opt "gnn.hybrid.gate" "${val}" ;;
                 hybrid_norm) _set_opt "gnn.hybrid.norm" "${val}" ;;
-                hybrid_mp_dropout) _set_opt "gnn.hybrid.mp_dropout" "${val}" ;;
+                hybrid_mp_dropout) _set_opt "gnn.hybrid.mp_dropout" "$(_as_yacs_float "${val}")" ;;
                 hybrid_gnn_types) _set_opt "gnn.hybrid.gnn_types" "${val}" ;;
                 hybrid_identity_proj|gnn.hybrid.identity_proj)
                     _set_opt "gnn.hybrid.identity_proj" "${val}" ;;
@@ -171,7 +182,7 @@ while [ "$#" -gt 0 ]; do
                 hybrid_max_epoch) _set_opt "optim.max_epoch" "${val}" ;;
                 add_virtual_nodes|dataset.add_virtual_nodes) _set_opt "dataset.add_virtual_nodes" "${val}" ;;
                 num_virtual_nodes|dataset.num_virtual_nodes) _set_opt "dataset.num_virtual_nodes" "${val}" ;;
-                base_lr|optim.base_lr) _set_opt "optim.base_lr" "${val}" ;;
+                base_lr|optim.base_lr) _set_opt "optim.base_lr" "$(_as_yacs_float "${val}")" ;;
                 batch_size) _set_opt "train.batch_size" "${val}" ;;
                 unitary_taylor_order|gnn.unitary_taylor_order)
                     _set_opt "gnn.unitary_taylor_order" "${val}" ;;
