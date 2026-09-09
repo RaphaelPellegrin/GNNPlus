@@ -83,6 +83,7 @@ ARRAY_SPEC="1-8%4"
 JOB_PREFIX="gnnplus_sweep"
 TIME_LIMIT="96:00:00"
 MEM_LIMIT="64GB"
+PARTITION="mweber_gpu"
 
 if [[ "${_yaml_stem}" == *_repro_baseline_vs_attn_sweep ]]; then
     DATASET_SLUG="${_yaml_stem%%_repro_baseline_vs_attn_sweep}"
@@ -121,6 +122,18 @@ elif [[ "${_yaml_stem}" == peptides_struct_hybrid_tfeksgbl_sweep_* ]]; then
     RUNS_PER_AGENT=3
     ARRAY_SPEC="1-16%4"
     TIME_LIMIT="240:00:00"
+elif [[ "${_yaml_stem}" == zinc_hybrid_gatedgcn_gine_val_sweep ]]; then
+    DATASET_SLUG="zinc"
+    RUNS_PER_AGENT=3
+    ARRAY_SPEC="1-16%6"
+    TIME_LIMIT="192:00:00"
+    PARTITION="h200_gpu"
+elif [[ "${_yaml_stem}" == mal_hybrid_gatedgcn_gine_val_sweep ]]; then
+    DATASET_SLUG="mal"
+    RUNS_PER_AGENT=3
+    ARRAY_SPEC="1-16%6"
+    TIME_LIMIT="96:00:00"
+    PARTITION="h200_gpu"
 elif [[ "${_yaml_stem}" == *_best_hybrid_sweep ]]; then
     DATASET_SLUG="${_yaml_stem%%_best_hybrid_sweep}"
 elif [[ "${_yaml_stem}" == enzymes_ogpkubk9_centered_sweep ]]; then
@@ -145,7 +158,7 @@ echo "Sweep created: ${SWEEP_PATH}"
 echo "Launch agents (copy as one block; do not paste wandb log lines into shell):"
 cat <<EOF
   SWEEP_ID=${SWEEP_PATH} SWEEP_DATASET=${DATASET_SLUG} RUNS_PER_AGENT=${RUNS_PER_AGENT} \\
-  sbatch --job-name=${JOB_PREFIX}_${DATASET_SLUG} --array=${ARRAY_SPEC} --mem=${MEM_LIMIT} --time=${TIME_LIMIT} \\
+  sbatch --job-name=${JOB_PREFIX}_${DATASET_SLUG} --partition=${PARTITION} --array=${ARRAY_SPEC} --mem=${MEM_LIMIT} --time=${TIME_LIMIT} \\
     --export=ALL,SWEEP_ID=${SWEEP_PATH},SWEEP_DATASET=${DATASET_SLUG},RUNS_PER_AGENT=${RUNS_PER_AGENT},WANDB_PROJECT=${WANDB_PROJECT},ENV_NAME=${ENV_NAME:-gnnplus},GNNPLUS_DATASET_DIR=\${GNNPLUS_DATASET_DIR:-},GNNPLUS_OUT_DIR=\${GNNPLUS_OUT_DIR:-} \\
     bash_interface/sweeps/run_wandb_sweep_agent.sh
 EOF

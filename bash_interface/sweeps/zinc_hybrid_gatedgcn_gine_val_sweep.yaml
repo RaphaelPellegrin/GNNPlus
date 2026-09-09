@@ -1,0 +1,81 @@
+# ZINC: GATEDGCN + GINE hybrid sweep (Lukas plan).
+#
+# Goal: minimize best/val_mae (selection metric).
+# Ablate: (a) attention on/off  (b) gating on/off
+# MP pool: GATEDGCN / GINE only — no UniGCN, no GCNE.
+#
+# Do NOT resume paused sweep gveuibxi (GINE/GCNE, test/mae, mostly crashed).
+# Create new + optional warmstart:
+#   PRIOR_RUNS="f75lgqfb m4vvradc l0vliltx" \
+#     bash bash_interface/sweeps/create_sweep.sh \
+#       bash_interface/sweeps/zinc_hybrid_gatedgcn_gine_val_sweep.yaml
+#   SWEEP_SLURM_TIME=192:00:00 SWEEP_ARRAY_TASKS=16 SWEEP_ARRAY_PARALLEL=6 \
+#   SWEEP_PARTITION=h200_gpu RUNS_PER_AGENT=3 \
+#     bash bash_interface/sweeps/relaunch_sweep_agents.sh \
+#       zinc weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
+# Partition: h200_gpu, max 6 concurrent GPUs (%6).
+
+program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
+method: bayes
+metric:
+  goal: minimize
+  name: best/val_mae
+
+entity: weber-geoml-harvard-university
+project: GNNPlus
+name: GNNplus_hybrid_gatedgcn_gine-zinc-val_mae
+
+early_terminate:
+  type: hyperband
+  min_iter: 100
+  eta: 3
+  s: 2
+
+command:
+  - ${env}
+  - bash
+  - ${program}
+  - --cfg=configs/gated_hybrid/zinc-gatedgcn-gine-sweep-anchor.yaml
+  - --molecular=true
+  - --seed=0
+  - ${args}
+
+parameters:
+  # (a) attention on/off (+ light depth)
+  hybrid_num_attn_heads:
+    values: [0, 1, 2, 4]
+  hybrid_attn_mask:
+    values: [full, graph_restricted]
+  hybrid_attn_dropout:
+    values: [0.0, 0.1, 0.2]
+
+  # (b) gating on/off
+  hybrid_gate:
+    values: [none, headwise, elementwise]
+
+  # MP: GATEDGCN + GINE only
+  hybrid_num_gnn_heads:
+    values: [1, 2, 4]
+  hybrid_gnn_types:
+    values:
+      - "GINE"
+      - "GATEDGCN"
+      - "GINE,GINE"
+      - "GATEDGCN,GATEDGCN"
+      - "GATEDGCN,GINE"
+      - "GINE,GATEDGCN"
+      - "GATEDGCN,GINE,GATEDGCN,GINE"
+      - "GINE,GINE,GATEDGCN,GATEDGCN"
+
+  hybrid_d_h:
+    values: [48, 64, 80, 96]
+  hybrid_layers_mp:
+    values: [10, 12, 14]
+  hybrid_mp_dropout:
+    values: [0.0, 0.1, 0.15]
+  hybrid_norm:
+    values: [layernorm, rmsnorm]
+  optim.base_lr:
+    distribution: log_uniform_values
+    min: 0.0003
+    max: 0.003
