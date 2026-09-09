@@ -34,7 +34,13 @@ import torch.nn as nn
 from torch_geometric.graphgym.config import cfg
 
 from GNNPlus.hybrid_gate_tracking import _is_graph_batch, _unwrap_model
-from GNNPlus.plotting.attention_sink_markers import annotate_sink_receiver_column
+
+try:
+    from GNNPlus.plotting.attention_sink_markers import annotate_sink_receiver_column
+except ImportError:  # pragma: no cover - optional plot helper; training must still start
+    def annotate_sink_receiver_column(*_args: Any, **_kwargs: Any) -> None:
+        """No-op when ``GNNPlus.plotting`` is unavailable on the cluster checkout."""
+        return None
 
 _AS_DIAG_LOGGED = False
 
