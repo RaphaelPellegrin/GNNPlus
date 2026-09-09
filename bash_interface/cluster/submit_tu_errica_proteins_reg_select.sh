@@ -5,12 +5,13 @@
 # dropout=0.5, pool=add. Search: L∈{8,12} × d_h∈{8,16} → 4 × 10 = 40 select.
 # After select: UNION with anchor_boost via joint agg→eval (PROTEINS-only).
 #
-# Typical:
+# Typical (gpu_h200, max 6 concurrent GPUs):
 #   bash bash_interface/cluster/submit_tu_errica_proteins_reg_select.sh
 #
 # Env knobs:
 #   TU_ERRICA_PARALLEL / PARTITION / MEM / TIME / NICE / DRY_RUN / ARRAY
 #   TU_ERRICA_DEPENDENCY_JOBID / TU_ERRICA_DEPENDENCY_TYPE
+# Defaults: PARTITION=gpu_h200 PARALLEL=6 TIME=72:00:00
 
 set -euo pipefail
 
@@ -27,10 +28,15 @@ fi
 
 NUM_TASKS="$(python3 -c "import json; print(json.load(open('${MANIFEST}'))['num_tasks'])")"
 ARRAY_SPEC="${TU_ERRICA_ARRAY:-1-${NUM_TASKS}}"
-PARTITION="${TU_ERRICA_PARTITION:-mweber_gpu}"
-PARALLEL="${TU_ERRICA_PARALLEL:-20}"
+# gpu_h200 MaxTime is typically 3 days — 96h fails with "time limit is invalid".
+PARTITION="${TU_ERRICA_PARTITION:-gpu_h200}"
+PARALLEL="${TU_ERRICA_PARALLEL:-6}"
 MEM="${TU_ERRICA_MEM:-128GB}"
-TIME="${TU_ERRICA_TIME:-96:00:00}"
+if [ "${PARTITION}" = "gpu_h200" ]; then
+  TIME="${TU_ERRICA_TIME:-72:00:00}"
+else
+  TIME="${TU_ERRICA_TIME:-96:00:00}"
+fi
 NICE="${TU_ERRICA_NICE:-0}"
 DRY_RUN="${TU_ERRICA_DRY_RUN:-0}"
 DEPENDENCY_JOBID="${TU_ERRICA_DEPENDENCY_JOBID:-}"

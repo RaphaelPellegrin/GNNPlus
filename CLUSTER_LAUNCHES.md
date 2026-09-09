@@ -1282,8 +1282,8 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **`native_fair_v2_joint` agg→eval** | **45423667** | 1 → 90 eval | ⏳ `afterok:45423514` |
 | **`native_fair_v2_reddit_reg` select** | **45515660** | **120** | 🚀 `gpu_h200` `%15` · 72h · REDDIT lr×drop |
 | **`native_fair_v2_reddit_reg` UNION→eval** | **45516145** | 1 → **30** | ⏳ `afterok:45515660` |
-| **`proteins_reg` select** | — | **40** | ⏳ L∈{8,12}×d_h∈{8,16} · bs=16 · lr=1e-3 · drop=0.5 |
-| **`proteins_reg` UNION→eval** | — | 1 → **30** | ⏳ after select · PROTEINS only |
+| **`proteins_reg` select** | — | **40** | ⏳ `gpu_h200` `%6` · 72h · L∈{8,12}×d_h∈{8,16} · bs=16 · drop=0.5 |
+| **`proteins_reg` UNION→eval** | — | 1 → **30** | ⏳ after select · PROTEINS · `gpu_h200` `%6` |
 | **`specialist_tiny` select** | **45303391** | **120** | ✅ COMPLETED |
 | **`specialist_tiny` eval** | **45423695** | 90 | 🚀 P/NCI1 done-ish · REDDIT running |
 | **`a0g_pnr` select** | — | **1440** | ⏳ ready later · a0g4/a0g2 · P/NCI1/REDDIT |

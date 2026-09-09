@@ -87,8 +87,8 @@ GIN-isomorphic grid (batch, lr, width, pool, dropout, early-stop criterion).
 | **3a-NFv2j** | joint L∈{4,12} eval | **45463308** | ✅ **90/90** | |
 | **3a-NFv2Rr** | `sigma_grid_select` **native_fair_v2_reddit_reg** | **45515660** | 🔄 ~10/120 | still early |
 | **3a-NFv2Rre** | UNION L12+reg → REDDIT eval | **45516145** | ⏳ `afterok:45515660` | waits on select |
-| **3a-PReg** | `sigma_grid_select` **proteins_reg** | — | ⏳ launch | L∈{8,12}×d_h∈{8,16} · bs=16 · lr=1e-3 · drop=0.5 · **40** |
-| **3a-PRege** | UNION boost+reg → PROTEINS eval | — | ⏳ after select | `sigma_proteins_reg_joint_per_fold.json` · 30 eval |
+| **3a-PReg** | `sigma_grid_select` **proteins_reg** | — | ⏳ launch | `gpu_h200` `%6` · L∈{8,12}×d_h∈{8,16} · bs=16 · lr=1e-3 · drop=0.5 · **40** |
+| **3a-PRege** | UNION boost+reg → PROTEINS eval | — | ⏳ after select | `sigma_proteins_reg_joint_per_fold.json` · 30 eval · `gpu_h200` `%6` |
 | **3a-ST** | `sigma_grid_select` **specialist_tiny** | **45303391** | ✅ **120/120** | GCN (P/REDDIT) / SAGE (NCI1) · a0g1+a1g1 × lr |
 | **3a-STe** | agg→eval | **45423695** | 🔄 | check `SiGMA_spec_tiny` tag |
 | **3a-A0** | `sigma_grid_select` **a0g_pnr** | — | ⏳ ready later | MP-only **a0g4/a0g2** on P/NCI1/REDDIT · **1440** select |
