@@ -1,0 +1,74 @@
+# MalNet-Tiny seed-repro anchor — W&B 5sx7r420 (9h3jqzkm a0g2, lr=0.0023, ep=250).
+# Source: https://wandb.ai/weber-geoml-harvard-university/GNNPlus/runs/5sx7r420
+# Lineage: malnet-hybrid-9h3jqzkm-anchor + optim.base_lr 0.0023 / min_lr 1e-6 / max_epoch 250.
+out_dir: results
+metric_best: accuracy
+wandb:
+  use: False
+  project: GNNPlus
+  tags:
+    - gnnplus
+    - hybrid_gnn
+    - malnet
+    - seed_repro
+    - 5sx7r420
+    - anchor_9h3jqzkm
+    - lr_ablation
+dataset:
+  format: PyG-MalNetTiny
+  name: LocalDegreeProfile
+  task: graph
+  task_type: classification
+  transductive: False
+  split_mode: standard
+  node_encoder: False
+  node_encoder_name: Atom
+  node_encoder_bn: True
+  edge_encoder: True
+  edge_encoder_name: DummyEdge
+  edge_encoder_bn: False
+  add_virtual_nodes: False
+  num_virtual_nodes: 0
+train:
+  mode: custom
+  batch_size: 16
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: hybrid_gnn
+  loss_fun: cross_entropy
+  edge_decoding: dot
+  graph_pooling: max
+gnn:
+  head: graph
+  layers_mp: 8
+  layers_pre_mp: 1
+  layers_post_mp: 1
+  dim_inner: 110
+  act: relu
+  dropout: 0.0
+  agg: mean
+  ffn: False
+  residual: True
+  batchnorm: True
+  hybrid:
+    num_attn_heads: 0
+    num_gnn_heads: 2
+    d_h: 110
+    attn_mask: graph_restricted
+    gate: elementwise
+    norm: rmsnorm
+    gnn_types: "GCNE"
+    attn_dropout: 0.1
+    mp_dropout: 0.05
+    block_bn: false
+    log_gate_stats: True
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 1.0e-5
+  base_lr: 0.0023
+  min_lr: 1.0e-6
+  max_epoch: 250
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 10
