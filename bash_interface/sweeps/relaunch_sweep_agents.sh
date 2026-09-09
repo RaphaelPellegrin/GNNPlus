@@ -35,7 +35,7 @@ ARRAY_TASKS="${SWEEP_ARRAY_TASKS:-24}"
 ARRAY_PARALLEL="${SWEEP_ARRAY_PARALLEL:-8}"
 RUNS_PER_AGENT="${RUNS_PER_AGENT:-4}"
 SLURM_TIME="${SWEEP_SLURM_TIME:-96:00:00}"
-# Override with SWEEP_PARTITION (e.g. h200_gpu for zinc/mal gatedgcn+gine val sweeps).
+# Override with SWEEP_PARTITION (e.g. gpu_h200 for zinc/mal gatedgcn+gine val sweeps).
 PARTITION="${SWEEP_PARTITION:-mweber_gpu}"
 
 sweep_mem() {

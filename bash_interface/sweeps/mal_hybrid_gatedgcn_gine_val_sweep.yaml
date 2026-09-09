@@ -9,11 +9,11 @@
 #   PRIOR_RUNS="v4cytwe0 zk6ihqi8 dy4ce9nr" \
 #     bash bash_interface/sweeps/create_sweep.sh \
 #       bash_interface/sweeps/mal_hybrid_gatedgcn_gine_val_sweep.yaml
-#   SWEEP_SLURM_TIME=96:00:00 SWEEP_ARRAY_TASKS=16 SWEEP_ARRAY_PARALLEL=6 \
-#   SWEEP_PARTITION=h200_gpu RUNS_PER_AGENT=3 \
+#   SWEEP_SLURM_TIME=72:00:00 SWEEP_ARRAY_TASKS=16 SWEEP_ARRAY_PARALLEL=6 \
+#   SWEEP_PARTITION=gpu_h200 RUNS_PER_AGENT=3 \
 #     bash bash_interface/sweeps/relaunch_sweep_agents.sh \
 #       mal weber-geoml-harvard-university/GNNPlus/<SWEEP_ID>
-# Partition: h200_gpu, max 6 concurrent GPUs (%6).
+# Partition: gpu_h200, max 6 concurrent GPUs (%6). MaxTime 72h.
 
 program: bash_interface/sweeps/sweep_wrapper_gnnplus.sh
 method: bayes

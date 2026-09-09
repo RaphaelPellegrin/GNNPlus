@@ -126,14 +126,15 @@ elif [[ "${_yaml_stem}" == zinc_hybrid_gatedgcn_gine_val_sweep ]]; then
     DATASET_SLUG="zinc"
     RUNS_PER_AGENT=3
     ARRAY_SPEC="1-16%6"
-    TIME_LIMIT="192:00:00"
-    PARTITION="h200_gpu"
+    # gpu_h200 MaxTime is typically 3 days — 192h is rejected.
+    TIME_LIMIT="72:00:00"
+    PARTITION="gpu_h200"
 elif [[ "${_yaml_stem}" == mal_hybrid_gatedgcn_gine_val_sweep ]]; then
     DATASET_SLUG="mal"
     RUNS_PER_AGENT=3
     ARRAY_SPEC="1-16%6"
-    TIME_LIMIT="96:00:00"
-    PARTITION="h200_gpu"
+    TIME_LIMIT="72:00:00"
+    PARTITION="gpu_h200"
 elif [[ "${_yaml_stem}" == *_best_hybrid_sweep ]]; then
     DATASET_SLUG="${_yaml_stem%%_best_hybrid_sweep}"
 elif [[ "${_yaml_stem}" == enzymes_ogpkubk9_centered_sweep ]]; then
