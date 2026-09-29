@@ -104,8 +104,8 @@ exec python main.py \
     --repeat 1 \
     seed "${seed}" \
     wandb.use True \
-    wandb.entity weber-geoml-harvard-university \
-    wandb.project GNNPlus \
+    wandb.entity "${WANDB_ENTITY}" \
+    wandb.project "${WANDB_PROJECT}" \
     wandb.group "${wandb_group}" \
     wandb.name "${wandb_name}" \
     "${extra_args[@]}"
