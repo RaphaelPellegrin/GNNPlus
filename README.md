@@ -1,89 +1,139 @@
-# 🔍 Research Series on Classic GNNs
+# SiGMA: Learning under Graph-Level Heterogeneity with Gated Message-Passing and Attention (LoG 2026)
 
-| Benchmarking Series: Reassessing Classic GNNs | Paper |
-| - | - |
-| [Classic GNNs are Strong Baselines: Reassessing GNNs for Node Classification](https://github.com/LUOyk1999/tunedGNN) (NeurIPS 2024) | [Link](https://openreview.net/forum?id=xkljKdGe4E) |
-| **_[Can Classic GNNs Be Strong Baselines for Graph-level Tasks?](https://github.com/LUOyk1999/GNNPlus) (ICML 2025)_** | [Link](https://arxiv.org/abs/2502.09263) |
+**Lukas Fesser\*, Raphael Pellegrin\*, Melanie Weber** (\*equal contribution)
+— *Proceedings of the Fifth Learning on Graphs Conference (LoG 2026)*
 
-# GNN+ (ModernGNN): Can Classic GNNs Be Strong Baselines for Graph-level Tasks? (ICML 2025)
-[![OpenReview](https://img.shields.io/badge/OpenReview-ZH7YgIZ3DF-b31b1b.svg)](https://openreview.net/forum?id=ZH7YgIZ3DF) [![arXiv](https://img.shields.io/badge/arXiv-2502.09263-b31b1b.svg)](https://arxiv.org/abs/2502.09263) 
+This is the official code for **SiGMA** (**Si**gmoid **G**ated **M**essage-Passing and **A**ttention).
+It is built on top of the [GNN+](https://github.com/LUOyk1999/GNNPlus) codebase (ICML 2025), which is
+itself based on [GraphGPS](https://github.com/rampasek/GraphGPS); see [Acknowledgements](#acknowledgements).
 
-[![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/unlocking-the-potential-of-classic-gnns-for/graph-property-prediction-on-ogbg-ppa)](https://paperswithcode.com/sota/graph-property-prediction-on-ogbg-ppa?p=unlocking-the-potential-of-classic-gnns-for) [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/unlocking-the-potential-of-classic-gnns-for/graph-classification-on-malnet-tiny)](https://paperswithcode.com/sota/graph-classification-on-malnet-tiny?p=unlocking-the-potential-of-classic-gnns-for) [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/unlocking-the-potential-of-classic-gnns-for/graph-classification-on-cifar10-100k)](https://paperswithcode.com/sota/graph-classification-on-cifar10-100k?p=unlocking-the-potential-of-classic-gnns-for) [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/unlocking-the-potential-of-classic-gnns-for/graph-regression-on-peptides-struct)](https://paperswithcode.com/sota/graph-regression-on-peptides-struct?p=unlocking-the-potential-of-classic-gnns-for) [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/unlocking-the-potential-of-classic-gnns-for/node-classification-on-cluster)](https://paperswithcode.com/sota/node-classification-on-cluster?p=unlocking-the-potential-of-classic-gnns-for) [![PWC](https://img.shields.io/endpoint.svg?url=https://paperswithcode.com/badge/unlocking-the-potential-of-classic-gnns-for/node-classification-on-coco-sp)](https://paperswithcode.com/sota/node-classification-on-coco-sp?p=unlocking-the-potential-of-classic-gnns-for)
+## What is SiGMA?
 
-Based on the GPS codebase: https://github.com/rampasek/GraphGPS
+Graphs within the same dataset can differ widely in how hard they are to predict and in how much local
+versus non-local computation they need (*graph-level heterogeneity*). SiGMA is a gated hybrid GNN: each
+layer runs one or more **message-passing (MP) heads** and **attention heads in parallel**, multiplies every
+head by a **learned node-wise sigmoid gate**, then concatenates, projects, and adds a residual update. The
+gates let the model switch individual heads, or whole layers, on and off per node and per input graph.
 
-### Python environment setup with Conda
+We write **`aNgM`** for a layer with `N` attention heads and `M` MP heads (e.g. `a1g2`).
 
-Tested with Python 3.9/3.10, PyTorch 2.2.0, and PyTorch Geometric 2.3.1.
+### SiGMA vs. MMA
 
-To set up the environment, run the following commands:
+**MMA** (Mixture of Message-Passing and Attention) is the same architecture **without gates**. Both are
+the `hybrid_gnn` model; only one config field differs:
+
+| Model | `gnn.hybrid.gate` | Description |
+| - | - | - |
+| **SiGMA** | `headwise` or `elementwise` | One sigmoid gate per head (`headwise`) or per channel (`elementwise`) |
+| **MMA** | `none` | Heads are concatenated without gating |
+
+`gnn.hybrid.mp_gate` optionally overrides the gate for the MP heads only (e.g. gated attention with
+ungated message passing: `gate: headwise`, `mp_gate: none`).
+
+## Installation
+
+Tested with Python 3.10, PyTorch 2.2.0 and PyTorch Geometric 2.3.1.
+
 ```bash
-conda create -n GNNPlus python=3.10
-conda activate GNNPlus
+conda create -n sigma python=3.10
+conda activate sigma
 
-pip install torch==2.2.0 torchvision==0.17.0 torchaudio==2.2.0 --index-url https://download.pytorch.org/whl/cu118
+pip install torch==2.2.0 torchvision==0.17.0 torchaudio==2.2.0 --index-url https://download.pytorch.org/whl/cu121
 pip install torch_geometric==2.3.1
-pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.2.0+cu118.html
+pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -f https://data.pyg.org/whl/torch-2.2.0+cu121.html
 
-pip install scikit-learn==1.4.0
-pip install fsspec rdkit
-pip install pytorch-lightning yacs torchmetrics
-pip install networkx
-pip install tensorboardX
-pip install ogb
-pip install wandb
+pip install -r requirements-cluster.txt
+pip install -e .
 ```
 
+Use the CUDA tag (`cu118`, `cu121`, ...) that matches your driver.
 
-### Running Training
+## Quick start: SiGMA and MMA on ZINC
 
-To execute training, activate the environment and run the following commands:
+Two example scripts train on ZINC with the hyperparameters from Tables 11 and 14 of the paper
+(`a1g1`: one vanilla attention head + one UniConv MP head, 12 layers, hidden width 64, `d_h = 32`):
 
 ```bash
-conda activate GNNPlus
-
-sh run.sh 0 cifar10 2 > cifar10.txt 2>&1 &
-sh run.sh 1 cluster 2 > cluster.txt 2>&1 &
-sh run.sh 2 coco 2 > coco.txt 2>&1 &
-sh run.sh 3 code2 1 > code2.txt 2>&1 &
-sh run.sh 4 hiv 2 > hiv.txt 2>&1 &
-sh run.sh 5 mal 5 > mal.txt 2>&1 &
-sh run.sh 6 zinc 2 > zinc.txt 2>&1 &
-sh run.sh 7 pattern 4 > pattern.txt 2>&1 &
-
-sh run.sh 2 pcba 2 > pcba.txt 2>&1 &
-sh run.sh 3 peptides-func 4 > peptides-func.txt 2>&1 &
-sh run.sh 4 peptides-struct 4 > peptides-struct.txt 2>&1 &
-sh run.sh 5 voc 2 > voc.txt 2>&1 &
-sh run.sh 6 ppa 2 > ppa.txt 2>&1 &
-sh run.sh 7 mnist 2 > mnist.txt 2>&1 &
+bash bash_interface/run_sigma_zinc.sh   # SiGMA (headwise gates)  -> configs/sigma/zinc-sigma.yaml
+bash bash_interface/run_mma_zinc.sh     # MMA (no gates)          -> configs/sigma/zinc-mma.yaml
 ```
 
-Alternatively, use the following format for executing training runs:
+Both scripts accept `SEED`, `DATASET_DIR` (default `./datasets`; ZINC downloads automatically) and
+`WANDB=True`, and forward any extra arguments as YACS overrides:
 
 ```bash
-conda activate GNNPlus
-
-python main.py --cfg configs/gcn/peptides-func.yaml --repeat 2 seed 0
-
-python main.py --cfg configs/gatedgcn/ppa.yaml --repeat 2 seed 0 
+SEED=1 WANDB=True bash bash_interface/run_sigma_zinc.sh optim.max_epoch 100
 ```
 
-## Reference
+They also work as SLURM jobs (`sbatch bash_interface/run_sigma_zinc.sh`, submitted from the repo root).
+Any config can be run directly with `python main.py --cfg <config.yaml> [key value ...]`.
 
-If you find our codes useful, please consider citing our work
+## Configuring a SiGMA model
 
+Set `model.type: hybrid_gnn` and configure the hybrid block under `gnn.hybrid`:
+
+| Field | Values | Meaning |
+| - | - | - |
+| `num_attn_heads`, `num_gnn_heads` | int | `N` and `M` in `aNgM` |
+| `d_h` | int | Per-head width |
+| `gnn_types` | comma list, one per MP head | `GCN`, `GCNE`, `GIN`, `GINE`, `GAT`, `SAGE`, `GATEDGCN`, `GGNN`, `UNIGCN`, ... |
+| `attn_type` | `vanilla`, `grit`, `physics` | Dense attention, GRIT attention, or Transolver++ physics attention |
+| `attn_mask` | `full`, `graph_restricted` | Attend to all nodes of the same graph, or only along graph edges |
+| `gate` / `mp_gate` | `headwise`, `elementwise`, `none` | Gating mode (see above) |
+| `norm` | `layernorm`, `rmsnorm`, `none` | Pre-head normalisation |
+
+`GATEDGCN` and `GCNE` wrap the full edge-aware GNN+ layers (including their FFN); `RESGATEDGCN` and
+`GCNE_CONV` are the raw-convolution variants. `UNIGCN` is the unitary (complex-valued Taylor) graph
+convolution; see `gnn.use_hermitian`, `gnn.unitary_taylor_order` and `gnn.unitary_return_real`.
+
+## Additional features
+
+- **Datasets.** Transolver PDE benchmarks (`dataset.format: PyG-TransolverPDE`, `PyG-AirfRANS`,
+  `PyG-ShapeNetCar`; see [`scripts/pde/download_transolver_data.md`](scripts/pde/download_transolver_data.md))
+  and synthetic routing tasks (`PyG-GcnGinRouting`, `PyG-GinDepthRouting`).
+- **Fair TU evaluation.** The fixed 10-fold splits of Errica et al. (ICLR 2020) are vendored under
+  `splits/errica/`; enable with `dataset.split_mode: errica-cv-10` and `dataset.split_index: <fold>`.
+- **Gate diagnostics.** `gnn.hybrid.log_gate_stats` logs per-layer gate statistics to W&B, including
+  per-difficulty gates on the synthetic routing tasks. `HybridGNN.forward(batch, gate_override=...)`
+  replaces the learned gates at evaluation time (`ones` or per-graph `mean`).
+- **Activation dumps.** `GNNPlus/experiments/last_layer_activations.py` writes per-graph, per-layer
+  activation norms as CSVs and plots.
+- **Training.** Early stopping (`train.early_stop_patience`, `train.early_stop_use_loss`) and extra W&B
+  tags via the `WANDB_EXTRA_TAGS` environment variable (comma-separated).
+
+## Tests
+
+```bash
+python -m pytest unittests
 ```
-@inproceedings{
-luo2025can,
-title={Can Classic {GNN}s Be Strong Baselines for Graph-level Tasks? Simple Architectures Meet Excellence},
-author={Yuankai Luo and Lei Shi and Xiao-Ming Wu},
-booktitle={Forty-second International Conference on Machine Learning},
-year={2025},
-url={https://openreview.net/forum?id=ZH7YgIZ3DF}
+
+## Citation
+
+If you use this code, please cite SiGMA:
+
+```bibtex
+@inproceedings{fesser2026sigma,
+  title     = {{SiGMA}: Learning under Graph-Level Heterogeneity with Gated Message-Passing and Attention},
+  author    = {Lukas Fesser and Raphael Pellegrin and Melanie Weber},
+  booktitle = {Proceedings of the Fifth Learning on Graphs Conference (LoG 2026)},
+  year      = {2026}
 }
 ```
 
-## Poster
+## Acknowledgements
 
-![icml_poster.png](https://raw.githubusercontent.com/LUOyk1999/images/refs/heads/main/images/icml_poster.jpg)
+This repository is a fork of **GNN+** by Yuankai Luo, Lei Shi and Xiao-Ming Wu; the GNN+ baselines
+(`configs/gcn`, `configs/gine`, `configs/gatedgcn`, `run.sh`) are unchanged and still runnable, e.g.
+`python main.py --cfg configs/gcn/peptides-func.yaml --repeat 2 seed 0`. Please also cite their work:
+
+```bibtex
+@inproceedings{luo2025can,
+  title     = {Can Classic {GNN}s Be Strong Baselines for Graph-level Tasks? Simple Architectures Meet Excellence},
+  author    = {Yuankai Luo and Lei Shi and Xiao-Ming Wu},
+  booktitle = {Forty-second International Conference on Machine Learning},
+  year      = {2025},
+  url       = {https://openreview.net/forum?id=ZH7YgIZ3DF}
+}
+```
+
+GNN+ is in turn based on the [GraphGPS](https://github.com/rampasek/GraphGPS) codebase.
