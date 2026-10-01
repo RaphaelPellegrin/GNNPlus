@@ -1,5 +1,8 @@
 """Gated hybrid graph layer for GNNPlus (attention + message-passing heads).
 
+This is the SiGMA layer itself (Fig. 1 of the SiGMA paper, LoG 2026); with
+``gate: none`` it becomes MMA.
+
 Ported from Heterogeneity_Profile ``graph_moes.architectures.layers.gated_hybrid_layer``.
 """
 
