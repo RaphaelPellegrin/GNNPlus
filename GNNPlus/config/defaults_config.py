@@ -36,3 +36,7 @@ def extended_cfg(cfg):
     cfg.train.ckpt_best = False
     
     cfg.train.eval_smoothing_metrics = False
+
+    # Errica-style early stopping (0 = disabled). Patience counts eval epochs.
+    cfg.train.early_stop_patience = 0
+    cfg.train.early_stop_use_loss = False

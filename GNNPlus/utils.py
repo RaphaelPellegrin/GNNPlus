@@ -105,6 +105,14 @@ def cfg_to_dict(cfg_node, key_list=[]):
         return cfg_dict
 
 
+def _posenc_enabled(cfg: CfgNode, name: str) -> bool:
+    """Return whether positional encoding ``name`` is enabled on ``cfg``."""
+    if not hasattr(cfg, name):
+        return False
+    pecfg = getattr(cfg, name)
+    return bool(getattr(pecfg, 'enable', False))
+
+
 def make_wandb_name(cfg):
     # Format dataset name.
     dataset_name = cfg.dataset.format
@@ -127,17 +135,27 @@ def make_wandb_name(cfg):
     
     # Format model name.
     model_name = cfg.model.type
-    if cfg.model.type in ['gnn', 'custom_gnn']:
+    if cfg.model.type in ['gnn', 'custom_gnn', 'custom_gnn_gated']:
         model_name += f".{cfg.gnn.layer_type}"
+    elif cfg.model.type == 'hybrid_gnn':
+        ha = cfg.gnn.hybrid.num_attn_heads
+        hg = cfg.gnn.hybrid.num_gnn_heads
+        model_name += f".hybrid_a{ha}g{hg}"
+        attn_type = str(getattr(cfg.gnn.hybrid, 'attn_type', 'vanilla')).strip().lower()
+        if attn_type and attn_type != 'vanilla':
+            model_name += f".attn_{attn_type}"
     elif cfg.model.type == 'GPSModel':
         model_name = f"GPS.{cfg.gt.layer_type}"
     model_name += f".{cfg.name_tag}" if cfg.name_tag else ""
 
-    if cfg.posenc_LapPE.enable:
+    if _posenc_enabled(cfg, 'posenc_LapPE'):
         model_name += "+LapPE"
 
-    if cfg.posenc_RWSE.enable:
+    if _posenc_enabled(cfg, 'posenc_RWSE'):
         model_name += "+RWSE"
+
+    if _posenc_enabled(cfg, 'posenc_RRWP'):
+        model_name += "+RRWP"
 
     # Compose wandb run name.
     name = f"{dataset_name}.{model_name}.r{cfg.run_id}"

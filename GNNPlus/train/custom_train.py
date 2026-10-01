@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 
 import numpy as np
@@ -14,6 +15,53 @@ from torch_geometric.utils import to_dense_batch
 
 from GNNPlus.loss.subtoken_prediction_loss import subtoken_cross_entropy
 from GNNPlus.utils import cfg_to_dict, flatten_dict, make_wandb_name, dirichlet_energy, mean_average_distance, mean_norm
+from GNNPlus.hybrid_gate_tracking import (
+    build_hybrid_gate_wandb_log,
+    hybrid_gate_logging_enabled,
+    publish_gate_stats_to_wandb,
+)
+from GNNPlus.gcn_gin_routing_gate_tracking import (
+    build_per_tau_root_gate_wandb_log,
+    gcn_gin_routing_gate_logging_enabled,
+    publish_per_tau_gate_stats_to_wandb,
+)
+from GNNPlus.gin_depth_routing_gate_tracking import (
+    build_per_tau_depth_gate_wandb_log,
+    gin_depth_routing_gate_logging_enabled,
+    publish_per_tau_depth_gate_stats_to_wandb,
+)
+
+
+def _parse_wandb_tags() -> list[str]:
+    """Return W&B tags from ``cfg.wandb.tags`` plus optional ``WANDB_EXTRA_TAGS`` env."""
+    tags: list[str] = []
+    raw = getattr(cfg.wandb, 'tags', None)
+    if raw is not None and raw != '' and raw != []:
+        if isinstance(raw, (list, tuple)):
+            tags.extend(str(tag).strip() for tag in raw if str(tag).strip())
+        else:
+            tags.extend(
+                part.strip() for part in str(raw).split(',') if part.strip()
+            )
+    extra = os.environ.get('WANDB_EXTRA_TAGS', '').strip()
+    if extra:
+        tags.extend(part.strip() for part in extra.split(',') if part.strip())
+    return tags
+
+def _scheduler_lr(scheduler: object, optimizer: torch.optim.Optimizer) -> float:
+    """Return the current LR for logging.
+
+    ``ReduceLROnPlateau`` may lack ``_last_lr`` before the first ``step()``;
+    fall back to the optimizer param-group LR in that case.
+    """
+    get_last_lr = getattr(scheduler, "get_last_lr", None)
+    if callable(get_last_lr):
+        try:
+            return float(get_last_lr()[0])
+        except AttributeError:
+            pass
+    return float(optimizer.param_groups[0]["lr"])
+
 
 def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation):
     model.train()
@@ -49,7 +97,7 @@ def train_epoch(logger, loader, model, optimizer, scheduler, batch_accumulation)
         logger.update_stats(true=_true,
                             pred=_pred,
                             loss=loss.detach().cpu().item(),
-                            lr=scheduler.get_last_lr()[0],
+                            lr=_scheduler_lr(scheduler, optimizer),
                             time_used=time.time() - time_start,
                             params=cfg.params,
                             dataset_name=cfg.dataset.name,
@@ -125,14 +173,31 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
             wandb_name = make_wandb_name(cfg)
         else:
             wandb_name = cfg.wandb.name
-        run = wandb.init(entity=cfg.wandb.entity, project=cfg.wandb.project,
-                         name=wandb_name)
+        wandb_kwargs: dict[str, object] = {
+            'entity': cfg.wandb.entity,
+            'project': cfg.wandb.project,
+            'name': wandb_name,
+        }
+        wandb_group = getattr(cfg.wandb, 'group', '') or ''
+        if wandb_group:
+            wandb_kwargs['group'] = wandb_group
+        wandb_tags = _parse_wandb_tags()
+        if wandb_tags:
+            wandb_kwargs['tags'] = wandb_tags
+        run = wandb.init(**wandb_kwargs)
         run.config.update(cfg_to_dict(cfg))
+        if hybrid_gate_logging_enabled():
+            wandb.define_metric('train/epoch')
+            wandb.define_metric('gates/*', step_metric='train/epoch')
 
     num_splits = len(loggers)
     split_names = ['val', 'test']
     full_epoch_times = []
     perf = [[] for _ in range(num_splits)]
+    early_stop_patience = int(getattr(cfg.train, 'early_stop_patience', 0) or 0)
+    early_stop_use_loss = bool(getattr(cfg.train, 'early_stop_use_loss', False))
+    epochs_without_improvement = 0
+    best_monitor_value: float | None = None
     for cur_epoch in range(start_epoch, cfg.optim.max_epoch):
         start_time = time.perf_counter()
         train_epoch(loggers[0], loaders[0], model, optimizer, scheduler,
@@ -160,7 +225,48 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
             save_ckpt(model, optimizer, scheduler, cur_epoch)
 
         if cfg.wandb.use:
-            run.log(flatten_dict(perf), step=cur_epoch)
+            wandb_log: dict[str, object] = flatten_dict(perf)
+            gate_log = build_hybrid_gate_wandb_log(model, loaders[0])
+            run.log(wandb_log, step=cur_epoch)
+            publish_gate_stats_to_wandb(run, gate_log, cur_epoch)
+            if gcn_gin_routing_gate_logging_enabled():
+                if len(loaders) > 1:
+                    tau_val_log = build_per_tau_root_gate_wandb_log(
+                        model,
+                        loaders[1],
+                        split_name="val",
+                    )
+                    publish_per_tau_gate_stats_to_wandb(
+                        run, tau_val_log, cur_epoch
+                    )
+                if is_eval_epoch(cur_epoch) and len(loaders) > 2:
+                    tau_test_log = build_per_tau_root_gate_wandb_log(
+                        model,
+                        loaders[2],
+                        split_name="test",
+                    )
+                    publish_per_tau_gate_stats_to_wandb(
+                        run, tau_test_log, cur_epoch
+                    )
+            if gin_depth_routing_gate_logging_enabled():
+                if len(loaders) > 1:
+                    depth_val_log = build_per_tau_depth_gate_wandb_log(
+                        model,
+                        loaders[1],
+                        split_name="val",
+                    )
+                    publish_per_tau_depth_gate_stats_to_wandb(
+                        run, depth_val_log, cur_epoch
+                    )
+                if is_eval_epoch(cur_epoch) and len(loaders) > 2:
+                    depth_test_log = build_per_tau_depth_gate_wandb_log(
+                        model,
+                        loaders[2],
+                        split_name="test",
+                    )
+                    publish_per_tau_depth_gate_stats_to_wandb(
+                        run, depth_test_log, cur_epoch
+                    )
 
         # Log current best stats on eval epoch.
         if is_eval_epoch(cur_epoch):
@@ -218,6 +324,37 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
                             gtl.attention.gamma.requires_grad:
                         logging.info(f"    {gtl.__class__.__name__} {li}: "
                                      f"gamma={gtl.attention.gamma.item()}")
+
+            if early_stop_patience > 0 and len(val_perf) > 0:
+                if early_stop_use_loss:
+                    monitor = float(val_perf[-1]['loss'])
+                    improved = (
+                        best_monitor_value is None or monitor < best_monitor_value
+                    )
+                else:
+                    metric_name = (
+                        cfg.metric_best
+                        if cfg.metric_best != 'auto'
+                        else 'accuracy'
+                    )
+                    monitor = float(val_perf[-1].get(metric_name, 0.0))
+                    improved = (
+                        best_monitor_value is None or monitor > best_monitor_value
+                    )
+                if improved:
+                    best_monitor_value = monitor
+                    epochs_without_improvement = 0
+                else:
+                    epochs_without_improvement += 1
+                if epochs_without_improvement >= early_stop_patience:
+                    logging.info(
+                        "Early stopping at epoch %d (patience=%d, monitor=%.6f)",
+                        cur_epoch,
+                        early_stop_patience,
+                        monitor,
+                    )
+                    break
+    os.makedirs('results', exist_ok=True)
     with open(f'results/{cfg.dataset.name}_result.txt','a') as f:
         f.write(f'{cfg.gnn.layer_type} '+f'residual_{cfg.gnn.residual} '+f'ffn_{cfg.gnn.ffn} '+f'{cfg.gnn.layers_mp} '+f'{cfg.gnn.dim_inner} '+f'{cfg.gnn.dropout} seed_{cfg.seed}: ')
         f.write(f'{best_test}\n')

@@ -16,10 +16,14 @@ from torch_geometric.graphgym.register import register_loader
 
 from GNNPlus.loader.dataset.aqsol_molecules import AQSOL
 from GNNPlus.loader.dataset.coco_superpixels import COCOSuperpixels
+from GNNPlus.loader.dataset.gcn_gin_routing import GcnGinRoutingDataset
+from GNNPlus.loader.dataset.gin_depth_routing import GinDepthRoutingDataset
 from GNNPlus.loader.dataset.malnet_tiny import MalNetTiny
 from GNNPlus.loader.dataset.voc_superpixels import VOCSuperpixels
+from GNNPlus.loader.errica_splits import errica_feature_mode
 from GNNPlus.loader.split_generator import (prepare_splits,
                                              set_dataset_splits)
+from GNNPlus.preprocessing.graph_augmentations import maybe_add_virtual_nodes, parse_cfg_bool
 from GNNPlus.transform.posenc_stats import compute_posenc_stats
 from GNNPlus.transform.task_preprocessing import task_specific_preprocessing
 from GNNPlus.transform.transforms import (pre_transform_in_memory,
@@ -127,6 +131,12 @@ def load_dataset_master(format, name, dataset_dir):
             dataset = WikipediaNetwork(dataset_dir, name,
                                        geom_gcn_preprocess=True)
 
+        elif pyg_dataset_id == 'GcnGinRouting':
+            dataset = preformat_GcnGinRouting(dataset_dir, name)
+
+        elif pyg_dataset_id == 'GinDepthRouting':
+            dataset = preformat_GinDepthRouting(dataset_dir, name)
+
         elif pyg_dataset_id == 'ZINC':
             dataset = preformat_ZINC(dataset_dir, name)
             
@@ -140,6 +150,26 @@ def load_dataset_master(format, name, dataset_dir):
         elif pyg_dataset_id == 'COCOSuperpixels':
             dataset = preformat_COCOSuperpixels(dataset_dir, name,
                                                 cfg.dataset.slic_compactness)
+
+        elif pyg_dataset_id == 'TransolverPDE':
+            from GNNPlus.loader.dataset.transolver_pde import (
+                preformat_transolver_pde,
+            )
+            dataset = preformat_transolver_pde(dataset_dir, name)
+            splits = dataset.get_idx_split()
+            dataset.split_idxs = [splits['train'], splits['val'], splits['test']]
+
+        elif pyg_dataset_id in ('AirfRANS', 'ShapeNetCar'):
+            from GNNPlus.loader.dataset.pde_industrial import (
+                preformat_industrial_pde,
+            )
+            ind_name = 'airfrans' if pyg_dataset_id == 'AirfRANS' else 'shapenet_car'
+            # Allow format-level override via name.
+            dataset = preformat_industrial_pde(
+                dataset_dir, name if name not in ('none', '') else ind_name
+            )
+            splits = dataset.get_idx_split()
+            dataset.split_idxs = [splits['train'], splits['val'], splits['test']]
 
         else:
             raise ValueError(f"Unexpected PyG Dataset identifier: {format}")
@@ -184,11 +214,33 @@ def load_dataset_master(format, name, dataset_dir):
 
     log_loaded_dataset(dataset, format, name)
 
+    # GatedGCN / LinearEdge need edge_attr. Some TU sets (e.g. ENZYMES) have none.
+    if bool(getattr(cfg.dataset, "edge_encoder", False)) and int(
+        getattr(dataset, "num_edge_features", 0) or 0
+    ) == 0:
+        logging.info(
+            "edge_encoder=True but dataset has 0 edge features — "
+            "adding constant ones edge_attr (dim=1)"
+        )
+
+        def _add_ones_edge_attr(data: object) -> object:
+            edge_index = getattr(data, "edge_index", None)
+            if edge_index is None:
+                return data
+            n_edges = int(edge_index.size(1))
+            data.edge_attr = torch.ones((n_edges, 1), dtype=torch.float)
+            return data
+
+        pre_transform_in_memory(dataset, _add_ones_edge_attr)
+
     # Precompute necessary statistics for positional encodings.
     pe_enabled_list = []
     for key, pecfg in cfg.items():
         if key.startswith('posenc_') and pecfg.enable:
             pe_name = key.split('_', 1)[1]
+            # RRWP uses AddFullRRWPTransform (below), not compute_posenc_stats.
+            if pe_name == 'RRWP':
+                continue
             pe_enabled_list.append(pe_name)
             if hasattr(pecfg, 'kernel'):
                 # Generate kernel times if functional snippet is set.
@@ -214,6 +266,34 @@ def load_dataset_master(format, name, dataset_dir):
         timestr = time.strftime('%H:%M:%S', time.gmtime(elapsed)) \
                   + f'{elapsed:.2f}'[-3:]
         logging.info(f"Done! Took {timestr}")
+
+    if cfg.posenc_RRWP.enable:
+        from GNNPlus.transform.rrwp import AddFullRRWPTransform
+
+        ksteps = int(cfg.posenc_RRWP.ksteps)
+        add_identity = bool(cfg.posenc_RRWP.add_identity)
+        logging.info(
+            f"Precomputing RRWP (ksteps={ksteps}, add_identity={add_identity})..."
+        )
+        start = time.perf_counter()
+        pre_transform_in_memory(
+            dataset,
+            AddFullRRWPTransform(walk_length=ksteps, add_identity=add_identity),
+            show_progress=True,
+        )
+        elapsed = time.perf_counter() - start
+        timestr = time.strftime("%H:%M:%S", time.gmtime(elapsed)) + f"{elapsed:.2f}"[-3:]
+        logging.info(f"RRWP done! Took {timestr}")
+
+    add_vn = parse_cfg_bool(getattr(cfg.dataset, "add_virtual_nodes", False))
+    num_vn = int(getattr(cfg.dataset, "num_virtual_nodes", 0) or 0)
+    if add_vn and num_vn > 0:
+        logging.info(f"Adding {num_vn} virtual node(s) per graph (all splits)...")
+        pre_transform_in_memory(
+            dataset,
+            partial(maybe_add_virtual_nodes, cfg=cfg),
+            show_progress=True,
+        )
 
     # Set standard dataset train/val/test splits
     if hasattr(dataset, 'split_idxs'):
@@ -523,6 +603,37 @@ def preformat_Peptides(dataset_dir, name):
     return dataset
 
 
+def _errica_scalar_degree_transform(data: object) -> object:
+    """Set node features to scalar degree (Errica COLLABORATIVE_DEGREE protocol)."""
+    from torch_geometric.utils import degree
+
+    deg = degree(data.edge_index[0], num_nodes=data.num_nodes)
+    data.x = deg.view(-1, 1).to(torch.float32)
+    return data
+
+
+def _tu_pre_transform(name: str) -> object | None:
+    """Return PyG pre_transform for TU datasets (Errica-aware)."""
+    if cfg.dataset.split_mode == "errica-cv-10":
+        mode = errica_feature_mode(name)
+        if mode == "social_constant":
+            return T.Constant(1)
+        if mode == "social_degree":
+            return _errica_scalar_degree_transform
+        return None
+
+    if name in ['DD', 'MUTAG', 'NCI1', 'ENZYMES', 'PROTEINS', 'TRIANGLES']:
+        return None
+    if name.startswith('IMDB-') or name in (
+        'COLLAB',
+        'REDDIT-BINARY',
+        'REDDIT-MULTI-5K',
+        'REDDIT-MULTI-12K',
+    ):
+        return T.Constant()
+    return None
+
+
 def preformat_TUDataset(dataset_dir, name):
     """Load and preformat datasets from PyG's TUDataset.
 
@@ -533,14 +644,39 @@ def preformat_TUDataset(dataset_dir, name):
     Returns:
         PyG dataset object
     """
-    if name in ['DD', 'NCI1', 'ENZYMES', 'PROTEINS', 'TRIANGLES']:
-        func = None
-    elif name.startswith('IMDB-') or name == "COLLAB":
-        func = T.Constant()
-    else:
+    func = _tu_pre_transform(name)
+    if func is None and name not in [
+        'DD', 'MUTAG', 'NCI1', 'ENZYMES', 'PROTEINS', 'TRIANGLES',
+        'IMDB-BINARY', 'IMDB-MULTI', 'COLLAB', 'REDDIT-BINARY',
+        'REDDIT-MULTI-5K', 'REDDIT-MULTI-12K',
+    ]:
         raise ValueError(f"Loading dataset '{name}' from "
                          f"TUDataset is not supported.")
     dataset = TUDataset(dataset_dir, name, pre_transform=func)
+    return dataset
+
+
+def preformat_GcnGinRouting(dataset_dir: str, name: str):
+    """Load synthetic GCN/GIN routing stars (train+val+test joined)."""
+    del name  # reserved for future variants (v1, etc.)
+    dataset = join_dataset_splits(
+        [
+            GcnGinRoutingDataset(dataset_dir, split=split)  # type: ignore[arg-type]
+            for split in ['train', 'val', 'test']
+        ]
+    )
+    return dataset
+
+
+def preformat_GinDepthRouting(dataset_dir: str, name: str):
+    """Load synthetic GIN depth-routing trees (train+val+test joined)."""
+    del name  # reserved for future variants (v1, etc.)
+    dataset = join_dataset_splits(
+        [
+            GinDepthRoutingDataset(dataset_dir, split=split)  # type: ignore[arg-type]
+            for split in ['train', 'val', 'test']
+        ]
+    )
     return dataset
 
 

@@ -7,6 +7,8 @@ from sklearn.model_selection import KFold, StratifiedKFold, ShuffleSplit
 from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.loader import index2mask, set_dataset_attr
 
+from GNNPlus.loader.errica_splits import load_errica_fold
+
 
 def prepare_splits(dataset):
     """Ready train/val/test splits.
@@ -27,6 +29,8 @@ def prepare_splits(dataset):
         setup_fixed_split(dataset)
     elif split_mode == "sliced":
         setup_sliced_split(dataset)
+    elif split_mode == "errica-cv-10":
+        setup_errica_cv_split(dataset)
     else:
         raise ValueError(f"Unknown split mode: {split_mode}")
 
@@ -244,6 +248,32 @@ def setup_cv_split(dataset, cv_type, k):
             train_ids.extend(cv[str(i)])
 
     set_dataset_splits(dataset, [train_ids, val_ids, test_ids])
+
+
+def setup_errica_cv_split(dataset) -> None:
+    """Apply Errica et al. fixed 10-fold train/val/test indices.
+
+    Uses vendored JSON from diningphil/gnn-comparison (see ``errica_splits.py``).
+    ``cfg.dataset.split_index`` selects the outer fold in ``[0, 9]``.
+    """
+    split_index = cfg.dataset.split_index
+    if split_index < 0 or split_index > 9:
+        raise IndexError(
+            f"Errica split_index must be in [0, 9], got {split_index}"
+        )
+
+    fold = load_errica_fold(cfg.dataset.name, split_index)
+    set_dataset_splits(
+        dataset,
+        [fold.train, fold.val, fold.test],
+    )
+    logging.info(
+        "[*] Errica fold %d: train=%d val=%d test=%d",
+        split_index,
+        len(fold.train),
+        len(fold.val),
+        len(fold.test),
+    )
 
 
 def create_cv_splits(dataset, cv_type, k, file_name):

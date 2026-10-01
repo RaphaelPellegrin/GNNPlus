@@ -10,3 +10,16 @@ def custom_gnn_cfg(cfg):
     # Use residual connections between the GNN layers.
     cfg.gnn.residual = True
     cfg.gnn.ffn = True
+
+    # Graph readout preset for ``mlp_graph`` head (MOE hybrid_readout_mlp).
+    # Empty / mlp_graph: legacy ``layers_post_mp`` same-width hidden stack.
+    # linear | narrow2 | pyramid | deep4
+    cfg.gnn.readout_mlp = ''
+
+    # Optional output gating on ``gcne`` / ``gcn`` layers (Level-1 fairness repro).
+    # Values: '' (none) | headwise | elementwise
+    cfg.gnn.gate = ''
+    cfg.gnn.log_gate_stats = False
+
+    # GIN-specific (Errica grid searches train_eps true/false).
+    cfg.gnn.gin_train_eps = False
