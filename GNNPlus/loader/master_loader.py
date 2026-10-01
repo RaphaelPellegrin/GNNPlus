@@ -151,26 +151,6 @@ def load_dataset_master(format, name, dataset_dir):
             dataset = preformat_COCOSuperpixels(dataset_dir, name,
                                                 cfg.dataset.slic_compactness)
 
-        elif pyg_dataset_id == 'TransolverPDE':
-            from GNNPlus.loader.dataset.transolver_pde import (
-                preformat_transolver_pde,
-            )
-            dataset = preformat_transolver_pde(dataset_dir, name)
-            splits = dataset.get_idx_split()
-            dataset.split_idxs = [splits['train'], splits['val'], splits['test']]
-
-        elif pyg_dataset_id in ('AirfRANS', 'ShapeNetCar'):
-            from GNNPlus.loader.dataset.pde_industrial import (
-                preformat_industrial_pde,
-            )
-            ind_name = 'airfrans' if pyg_dataset_id == 'AirfRANS' else 'shapenet_car'
-            # Allow format-level override via name.
-            dataset = preformat_industrial_pde(
-                dataset_dir, name if name not in ('none', '') else ind_name
-            )
-            splits = dataset.get_idx_split()
-            dataset.split_idxs = [splits['train'], splits['val'], splits['test']]
-
         else:
             raise ValueError(f"Unexpected PyG Dataset identifier: {format}")
 

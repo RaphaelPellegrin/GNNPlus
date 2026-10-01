@@ -206,7 +206,7 @@ class CustomLogger(Logger):
     def regression(self):
         true, pred = torch.cat(self._true), torch.cat(self._pred)
         reformat = lambda x: round(float(x), cfg.round)
-        # Relative L2 over the full concatenation (Transolver-style).
+        # Relative L2 error over the full concatenation of targets.
         pred_f = pred.reshape(1, -1).float()
         true_f = true.reshape(1, -1).float()
         diff = torch.norm(pred_f - true_f, p=2)
