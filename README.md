@@ -88,9 +88,7 @@ convolution; see `gnn.use_hermitian`, `gnn.unitary_taylor_order` and `gnn.unitar
 
 ## Additional features
 
-- **Datasets.** Transolver PDE benchmarks (`dataset.format: PyG-TransolverPDE`, `PyG-AirfRANS`,
-  `PyG-ShapeNetCar`; see [`scripts/pde/download_transolver_data.md`](scripts/pde/download_transolver_data.md))
-  and synthetic routing tasks (`PyG-GcnGinRouting`, `PyG-GinDepthRouting`).
+- **Datasets.** Synthetic routing tasks (`dataset.format: PyG-GcnGinRouting`, `PyG-GinDepthRouting`).
 - **Fair TU evaluation.** The fixed 10-fold splits of Errica et al. (ICLR 2020) are vendored under
   `splits/errica/`; enable with `dataset.split_mode: errica-cv-10` and `dataset.split_index: <fold>`.
 - **Gate diagnostics.** `gnn.hybrid.log_gate_stats` logs per-layer gate statistics to W&B, including
