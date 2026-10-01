@@ -77,7 +77,7 @@ Set `model.type: hybrid_gnn` and configure the hybrid block under `gnn.hybrid`:
 | `num_attn_heads`, `num_gnn_heads` | int | `N` and `M` in `aNgM` |
 | `d_h` | int | Per-head width |
 | `gnn_types` | comma list, one per MP head | `GCN`, `GCNE`, `GIN`, `GINE`, `GAT`, `SAGE`, `GATEDGCN`, `GGNN`, `UNIGCN`, ... |
-| `attn_type` | `vanilla`, `grit`, `physics` | Dense attention, GRIT attention, or Transolver++ physics attention |
+| `attn_type` | `vanilla`, `grit` | Dense attention or GRIT attention |
 | `attn_mask` | `full`, `graph_restricted` | Attend to all nodes of the same graph, or only along graph edges |
 | `gate` / `mp_gate` | `headwise`, `elementwise`, `none` | Gating mode (see above) |
 | `norm` | `layernorm`, `rmsnorm`, `none` | Pre-head normalisation |
