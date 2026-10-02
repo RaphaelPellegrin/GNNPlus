@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import time
 
@@ -16,6 +18,19 @@ from torchmetrics.functional import auroc
 
 import GNNPlus.metrics_ogb as metrics_ogb
 from GNNPlus.metric_wrapper import MetricWrapper
+from GNNPlus.preprocessing.graph_augmentations import VIRTUAL_NODE_LABEL_IGNORE
+
+
+def _drop_virtual_node_targets(
+    true: torch.Tensor,
+    pred_score: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Exclude virtual-node ignore rows from classification metrics."""
+    flat = true.view(-1)
+    valid = flat != VIRTUAL_NODE_LABEL_IGNORE
+    if bool(valid.all()):
+        return true, pred_score
+    return flat[valid], pred_score[valid]
 
 
 def accuracy_SBM(targets, pred_int):
@@ -64,6 +79,7 @@ class CustomLogger(Logger):
     def classification_binary(self):
         true = torch.cat(self._true).squeeze(-1)
         pred_score = torch.cat(self._pred)
+        true, pred_score = _drop_virtual_node_targets(true, pred_score)
         pred_int = self._get_pred_int(pred_score)
 
         if true.shape[0] < 1e7:  # AUROC computation for very large datasets is too slow.
@@ -96,6 +112,7 @@ class CustomLogger(Logger):
 
     def classification_multi(self):
         true, pred_score = torch.cat(self._true), torch.cat(self._pred)
+        true, pred_score = _drop_virtual_node_targets(true, pred_score)
         pred_int = self._get_pred_int(pred_score)
         reformat = lambda x: round(float(x), cfg.round)
 
@@ -189,13 +206,24 @@ class CustomLogger(Logger):
     def regression(self):
         true, pred = torch.cat(self._true), torch.cat(self._pred)
         reformat = lambda x: round(float(x), cfg.round)
+        # Relative L2 error over the full concatenation of targets.
+        pred_f = pred.reshape(1, -1).float()
+        true_f = true.reshape(1, -1).float()
+        diff = torch.norm(pred_f - true_f, p=2)
+        denom = torch.norm(true_f, p=2).clamp_min(1e-8)
+        rel_l2 = float((diff / denom).item())
+        true_np = true.detach().cpu().numpy()
+        pred_np = pred.detach().cpu().numpy()
+        if true_np.ndim == 2 and true_np.shape[1] == 1:
+            true_np = true_np.reshape(-1)
+            pred_np = pred_np.reshape(-1)
         return {
             'mae': reformat(mean_absolute_error(true, pred)),
             'r2': reformat(r2_score(true, pred, multioutput='uniform_average')),
-            'spearmanr': reformat(eval_spearmanr(true.numpy(),
-                                                 pred.numpy())['spearmanr']),
+            'spearmanr': reformat(eval_spearmanr(true_np, pred_np)['spearmanr']),
             'mse': reformat(mean_squared_error(true, pred)),
             'rmse': reformat(mean_squared_error(true, pred, squared=False)),
+            'rel_l2': reformat(rel_l2),
         }
 
     def update_stats(self, true, pred, loss, lr, time_used, params,

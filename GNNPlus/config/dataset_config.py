@@ -17,3 +17,7 @@ def dataset_cfg(cfg):
 
     # infer-link parameters (e.g., edge prediction task)
     cfg.dataset.infer_link_label = "None"
+
+    # Optional virtual nodes (registers) connected to every node in a graph.
+    cfg.dataset.add_virtual_nodes = False
+    cfg.dataset.num_virtual_nodes = 0

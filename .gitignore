@@ -1,0 +1,13 @@
+# Local / cluster run outputs (never commit)
+results/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Datasets (use GNNPLUS_DATASET_DIR on cluster)
+datasets/

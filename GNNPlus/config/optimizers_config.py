@@ -26,3 +26,7 @@ def extended_optim_cfg(cfg):
     # Clip gradient norms while training
     cfg.optim.clip_grad_norm = False
     cfg.optim.clip_grad_norm_value = 1.0
+
+    # StepLR (Errica GIN recipe: step_size=50, gamma=0.5)
+    cfg.optim.step_size = 50
+    cfg.optim.step_gamma = 0.5
