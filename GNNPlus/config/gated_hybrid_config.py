@@ -1,4 +1,8 @@
-"""Configuration for gated hybrid (attention + MP) models in GNNPlus."""
+"""Configuration for gated hybrid (attention + MP) models in GNNPlus.
+
+These ``cfg.gnn.hybrid.*`` options configure SiGMA (``model.type: hybrid_gnn``);
+``gate: none`` gives MMA.
+"""
 
 from torch_geometric.graphgym.register import register_config
 from yacs.config import CfgNode as CN
