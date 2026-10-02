@@ -21,43 +21,43 @@ representation, so the model also learns an input-dependent effective depth.
 
 ## Model architecture
 
-At layer $\ell$, SiGMA normalises the node representations, $\hat h_i^\ell = \mathrm{Norm}(h_i^\ell)$,
-and runs a set of attention heads $\mathcal{H}^\ell_{\mathrm{att}}$ and a set of MP heads
-$\mathcal{H}^\ell_{\mathrm{mp}}$ in parallel (either set may be empty). Each head outputs a
-$d_h$-dimensional vector and is gated before the heads are combined.
+At layer $`\ell`$, SiGMA normalises the node representations, $`\hat h_i^\ell = \mathrm{Norm}(h_i^\ell)`$,
+and runs a set of attention heads $`\mathcal{H}^\ell_{\mathrm{att}}`$ and a set of MP heads
+$`\mathcal{H}^\ell_{\mathrm{mp}}`$ in parallel (either set may be empty). Each head outputs a
+$`d_h`$-dimensional vector and is gated before the heads are combined.
 
 **Gated attention heads.** The gate is computed jointly with the query (head-wise gating shown):
 
-$$
+```math
 W^a_{qg}\,\hat h_i^\ell = \big[\, q_i^a \,\Vert\, g_i^{\mathrm{att},a} \,\big] \in \mathbb{R}^{d_h+1},
 \qquad k_j^a = W^a_k \hat h_j^\ell, \qquad v_j^a = W^a_v \hat h_j^\ell,
-$$
+```
 
-$$
+```math
 \tilde a_i^{\mathrm{att},a} = \sigma\big(g_i^{\mathrm{att},a}\big) \sum_{j} \alpha^a_{ij}\, v_j^a,
 \qquad
-\alpha^a_{ij} = \operatorname{softmax}_j\!\Big( (q_i^a)^\top k_j^a / \sqrt{d_h} + B_{ij} \Big),
-$$
+\alpha^a_{ij} = \mathrm{softmax}_j\Big( (q_i^a)^\top k_j^a / \sqrt{d_h} + B_{ij} \Big),
+```
 
-where $B_{ij}$ masks disallowed pairs (e.g. nodes of different graphs in a batch).
+where $`B_{ij}`$ masks disallowed pairs (e.g. nodes of different graphs in a batch).
 
-**Gated message-passing heads.** Each MP head $p$ computes a head-specific representation and gate,
-then applies its graph operator $\Phi_p$ (GCN, GIN, GINE, GatedGCN, GraphSAGE, GAT, UniConv, ...):
+**Gated message-passing heads.** Each MP head $`p`$ computes a head-specific representation and gate,
+then applies its graph operator $`\Phi_p`$ (GCN, GIN, GINE, GatedGCN, GraphSAGE, GAT, UniConv, ...):
 
-$$
+```math
 W^p_{hg}\,\hat h_i^\ell = \big[\, u_i^p \,\Vert\, g_i^{\mathrm{mp},p} \,\big],
 \qquad
 \tilde a_i^{\mathrm{mp},p} = \sigma\big(g_i^{\mathrm{mp},p}\big)\, \Phi_p\big(\{u_j^p\}_j, \mathcal{E}\big)_i .
-$$
+```
 
 **Fusion.** The gated heads are concatenated, projected and added through a residual update,
 optionally followed by a feed-forward block:
 
-$$
-h_i^{\ell+1} = h_i^\ell + W^\ell_{\mathrm{out}}
-\Big[\, \Vert_{a \in \mathcal{H}^\ell_{\mathrm{att}}}\, \tilde a_i^{\mathrm{att},a}
-\;\Big\Vert\; \Vert_{p \in \mathcal{H}^\ell_{\mathrm{mp}}}\, \tilde a_i^{\mathrm{mp},p} \,\Big].
-$$
+```math
+h_i^{\ell+1} = h_i^\ell + W^\ell_{\mathrm{out}}\,
+\mathrm{Concat}\Big( \{\tilde a_i^{\mathrm{att},a}\}_{a \in \mathcal{H}^\ell_{\mathrm{att}}},\;
+\{\tilde a_i^{\mathrm{mp},p}\}_{p \in \mathcal{H}^\ell_{\mathrm{mp}}} \Big).
+```
 
 We write `aNgM` for a layer with `N` attention heads and `M` MP heads (e.g. `a1g2`). The design
 space ranges from purely local MPNN-like models (`a0gM`) to pure graph transformers (`aNg0`).
@@ -68,7 +68,7 @@ space ranges from purely local MPNN-like models (`a0gM`) to pure graph transform
 | Variant                                            | Config                         | Gate                                           |
 | -------------------------------------------------- | ------------------------------ | ---------------------------------------------- |
 | SiGMA, head-wise                                   | `gnn.hybrid.gate: headwise`    | One scalar gate per node and head              |
-| SiGMA, element-wise                                | `gnn.hybrid.gate: elementwise` | One gate per node and channel ($d_h$ per head) |
+| SiGMA, element-wise                                | `gnn.hybrid.gate: elementwise` | One gate per node and channel ($`d_h`$ per head) |
 | **MMA** (Mixture of Message-Passing and Attention) | `gnn.hybrid.gate: none`        | No gates: heads are concatenated at full scale |
 
 
@@ -100,7 +100,7 @@ pip install -e .
 ### Quick start: SiGMA and MMA on ZINC
 
 Two example scripts train on ZINC with the paper's settings (Tables 11 and 14): `a1g1` with one
-vanilla attention head and one UniConv MP head, 12 layers, hidden width 64, $d_h = 32$.
+vanilla attention head and one UniConv MP head, 12 layers, hidden width 64, $`d_h = 32`$.
 
 ```bash
 bash bash_interface/run_sigma_zinc.sh   # SiGMA (head-wise gates) -> configs/sigma/zinc-sigma.yaml
