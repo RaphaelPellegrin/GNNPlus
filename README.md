@@ -1,6 +1,6 @@
 # SiGMA: Learning under Graph-Level Heterogeneity with Gated Message-Passing and Attention
 
-**Lukas Fesser\*, Raphael Pellegrin\*, Melanie Weber** (\*equal contribution)
+**Lukas Fesser, Raphael Pellegrin, Melanie Weber** (equal contribution)
 
 *Proceedings of the Fifth Learning on Graphs Conference (LoG 2026)*
 
@@ -61,33 +61,21 @@ h_i^{\ell+1} = h_i^\ell + W^\ell_{\mathrm{out}}
 \;\Big\Vert\; \Vert_{p \in \mathcal{H}^\ell_{\mathrm{mp}}}\, \tilde a_i^{\mathrm{mp},p} \,\Big].
 $$
 
-We write **`aNgM`** for a layer with `N` attention heads and `M` MP heads (e.g. `a1g2`). The design
+We write `aNgM` for a layer with `N` attention heads and `M` MP heads (e.g. `a1g2`). The design
 space ranges from purely local MPNN-like models (`a0gM`) to pure graph transformers (`aNg0`).
 
 ### Gating variants and MMA
 
-| Variant | Config | Gate |
-| - | - | - |
-| SiGMA, head-wise | `gnn.hybrid.gate: headwise` | One scalar gate per node and head |
-| SiGMA, element-wise | `gnn.hybrid.gate: elementwise` | One gate per node and channel ($d_h$ per head) |
-| **MMA** (Mixture of Message-Passing and Attention) | `gnn.hybrid.gate: none` | No gates: heads are concatenated at full scale |
 
-`gnn.hybrid.mp_gate` overrides the gate for the MP heads only, e.g. gated attention with ungated
+| Variant                                            | Config                         | Gate                                           |
+| -------------------------------------------------- | ------------------------------ | ---------------------------------------------- |
+| SiGMA, head-wise                                   | `gnn.hybrid.gate: headwise`    | One scalar gate per node and head              |
+| SiGMA, element-wise                                | `gnn.hybrid.gate: elementwise` | One gate per node and channel ($d_h$ per head) |
+| **MMA** (Mixture of Message-Passing and Attention) | `gnn.hybrid.gate: none`        | No gates: heads are concatenated at full scale |
+
+
+`gnn.hybrid.mp_gate` overrides the gate for the MP heads only, e.g. gated attention with ungated  
 message passing (`gate: headwise`, `mp_gate: none`).
-
-## Results
-
-SiGMA test performance (mean ± s.d. over seeds) from Tables 3 and 4 of the paper:
-
-| ZINC (MAE ↓) | MNIST (Acc ↑) | CIFAR10 (Acc ↑) | PATTERN (Acc ↑) | CLUSTER (Acc ↑) |
-| - | - | - | - | - |
-| 0.054 ± 0.002 | 98.628 ± 0.105 | 79.528 ± 0.180 | 87.395 ± 0.194 | 79.087 ± 0.158 |
-
-| Peptides-func (AP ↑) | Peptides-struct (MAE ↓) | PascalVOC-SP (F1 ↑) | COCO-SP (F1 ↑) | MalNet-Tiny (Acc ↑) |
-| - | - | - | - | - |
-| 0.7080 ± 0.0063 | 0.2441 ± 0.0017 | 0.4687 ± 0.0070 | 0.4215 ± 0.0055 | 0.9422 ± 0.0031 |
-
-Per-dataset hyperparameters are listed in Tables 11–15 of the paper.
 
 ## Installation
 
@@ -105,9 +93,11 @@ pip install -r requirements-cluster.txt
 pip install -e .
 ```
 
-Use the CUDA tag (`cu118`, `cu121`, ...) that matches your driver.
+
 
 ## How to run
+
+
 
 ### Quick start: SiGMA and MMA on ZINC
 
@@ -141,15 +131,17 @@ Every field of the YAML can be overridden on the command line, e.g.
 
 Set `model.type: hybrid_gnn` and configure the hybrid block under `gnn.hybrid`:
 
-| Field | Values | Meaning |
-| - | - | - |
-| `num_attn_heads`, `num_gnn_heads` | int | `N` and `M` in `aNgM` |
-| `d_h` | int | Per-head width |
-| `gnn_types` | comma list, one entry per MP head | `GCN`, `GCNE`, `GIN`, `GINE`, `GAT`, `SAGE`, `GATEDGCN`, `GGNN`, `UNIGCN`, ... |
-| `attn_type` | `vanilla`, `grit` | Dense attention or GRIT attention |
-| `attn_mask` | `full`, `graph_restricted` | Attend to all nodes of the same graph, or only along graph edges |
-| `gate` / `mp_gate` | `headwise`, `elementwise`, `none` | Gating mode (see above) |
-| `norm` | `layernorm`, `rmsnorm`, `none` | Pre-head normalisation |
+
+| Field                             | Values                            | Meaning                                                                        |
+| --------------------------------- | --------------------------------- | ------------------------------------------------------------------------------ |
+| `num_attn_heads`, `num_gnn_heads` | int                               | `N` and `M` in `aNgM`                                                          |
+| `d_h`                             | int                               | Per-head width                                                                 |
+| `gnn_types`                       | comma list, one entry per MP head | `GCN`, `GCNE`, `GIN`, `GINE`, `GAT`, `SAGE`, `GATEDGCN`, `GGNN`, `UNIGCN`, ... |
+| `attn_type`                       | `vanilla`, `grit`                 | Dense attention or GRIT attention                                              |
+| `attn_mask`                       | `full`, `graph_restricted`        | Attend to all nodes of the same graph, or only along graph edges               |
+| `gate` / `mp_gate`                | `headwise`, `elementwise`, `none` | Gating mode (see above)                                                        |
+| `norm`                            | `layernorm`, `rmsnorm`, `none`    | Pre-head normalisation                                                         |
+
 
 `GATEDGCN` and `GCNE` wrap the full edge-aware GatedGCN+ / GCN+ layers (including their FFN);
 `RESGATEDGCN` and `GCNE_CONV` are the raw-convolution variants. `UNIGCN` is the unitary
@@ -158,27 +150,24 @@ Set `model.type: hybrid_gnn` and configure the hybrid block under `gnn.hybrid`:
 
 ### Additional features
 
-- **Fair TU evaluation.** The fixed 10-fold splits of Errica et al. (ICLR 2020) are vendored under
-  `splits/errica/`; enable with `dataset.split_mode: errica-cv-10` and `dataset.split_index: <fold>`.
 - **Synthetic routing tasks.** `dataset.format: PyG-GcnGinRouting` and `PyG-GinDepthRouting`.
-- **Gate diagnostics.** `gnn.hybrid.log_gate_stats` logs per-layer gate statistics to W&B, including
-  per-difficulty gates on the routing tasks. `HybridGNN.forward(batch, gate_override=...)` replaces
-  the learned gates at evaluation time (`ones` or per-graph `mean`).
-- **Activation dumps.** `GNNPlus/experiments/last_layer_activations.py` writes per-graph, per-layer
-  activation norms as CSVs and plots.
-- **Training.** Early stopping (`train.early_stop_patience`, `train.early_stop_use_loss`) and extra
-  W&B tags via the `WANDB_EXTRA_TAGS` environment variable (comma-separated).
+
+
 
 ## Code structure
 
-| Path | Contents |
-| - | - |
-| `GNNPlus/layer/gated_hybrid_layer.py` | The SiGMA layer (gated attention + MP heads, fusion) |
-| `GNNPlus/network/hybrid_gnn.py` | The full SiGMA model (`model.type: hybrid_gnn`) |
-| `GNNPlus/config/gated_hybrid_config.py` | All `gnn.hybrid.*` options and their defaults |
-| `configs/sigma/` | Example SiGMA and MMA configs |
-| `bash_interface/` | Example run scripts |
-| `unittests/` | Unit tests (`python -m pytest unittests`) |
+
+| Path                                    | Contents                                             |
+| --------------------------------------- | ---------------------------------------------------- |
+| `GNNPlus/layer/gated_hybrid_layer.py`   | The SiGMA layer (gated attention + MP heads, fusion) |
+| `GNNPlus/network/hybrid_gnn.py`         | The full SiGMA model (`model.type: hybrid_gnn`)      |
+| `GNNPlus/config/gated_hybrid_config.py` | All `gnn.hybrid.*` options and their defaults        |
+| `configs/sigma/`                        | Example SiGMA and MMA configs                        |
+| `bash_interface/`                       | Example run scripts                                  |
+| `unittests/`                            | Unit tests (`python -m pytest unittests`)            |
+
+
+
 
 ## Citation
 
@@ -192,6 +181,8 @@ If you use this code, please cite:
   year      = {2026}
 }
 ```
+
+
 
 ## Codebase
 
@@ -210,3 +201,4 @@ GNNs Be Strong Baselines for Graph-level Tasks?*, ICML 2025), which is itself ba
   url       = {https://openreview.net/forum?id=ZH7YgIZ3DF}
 }
 ```
+
