@@ -1,7 +1,7 @@
-"""Configuration for gated hybrid (attention + MP) models in GNNPlus.
+"""Configuration for SiGMA (Sigmoid Gated Message-Passing and Attention).
 
-These ``cfg.gnn.hybrid.*`` options configure SiGMA (``model.type: hybrid_gnn``);
-``gate: none`` gives MMA.
+Registers the ``cfg.gnn.hybrid.*`` options of the SiGMA model
+(``model.type: hybrid_gnn``); setting ``gate: none`` gives MMA.
 """
 
 from torch_geometric.graphgym.register import register_config
