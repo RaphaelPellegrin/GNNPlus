@@ -17,7 +17,7 @@ def hybrid_gate_logging_enabled() -> bool:
     if not bool(getattr(cfg.wandb, 'use', False)):
         return False
     model_type = str(getattr(cfg.model, 'type', ''))
-    if model_type == 'hybrid_gnn':
+    if model_type in ('hybrid_gnn', 'sigma_lite'):
         hybrid_cfg = getattr(cfg.gnn, 'hybrid', None)
         if hybrid_cfg is None:
             return False
