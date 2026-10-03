@@ -131,31 +131,31 @@ class HybridGNN(torch.nn.Module):
                 fill_value=0.0,
             )
 
+        layer_kwargs: Dict[str, Any] = dict(
+            d_model=cfg.gnn.dim_inner,
+            num_attn_heads=num_attn,
+            num_gnn_heads=num_gnn,
+            d_h=d_h,
+            attn_mask_type=attn_mask,
+            gate_mode=gate_mode,
+            mp_gate_mode=mp_gate_mode,
+            norm_type=norm_type,
+            gnn_types=gnn_types,
+            attn_dropout=float(hcfg.attn_dropout),
+            mp_gnn_dropout=mp_drop,
+            block_bn=bool(hcfg.block_bn),
+            block_dropout=mp_drop,
+            residual=hybrid_residual,
+            identity_proj=identity_proj,
+            attn_type=attn_type,
+            edge_dim=cfg.gnn.dim_inner,
+            grit_clamp=grit_clamp,
+            grit_edge_enhance=grit_edge_enhance,
+            grit_act=grit_act,
+            grit_use_bias=grit_use_bias,
+        )
         self.layers = nn.ModuleList([
-            GatedHybridGraphLayer(
-                d_model=cfg.gnn.dim_inner,
-                num_attn_heads=num_attn,
-                num_gnn_heads=num_gnn,
-                d_h=d_h,
-                attn_mask_type=attn_mask,
-                gate_mode=gate_mode,
-                mp_gate_mode=mp_gate_mode,
-                norm_type=norm_type,
-                gnn_types=gnn_types,
-                attn_dropout=float(hcfg.attn_dropout),
-                mp_gnn_dropout=mp_drop,
-                block_bn=bool(hcfg.block_bn),
-                block_dropout=mp_drop,
-                residual=hybrid_residual,
-                identity_proj=identity_proj,
-                attn_type=attn_type,
-                edge_dim=cfg.gnn.dim_inner,
-                grit_clamp=grit_clamp,
-                grit_edge_enhance=grit_edge_enhance,
-                grit_act=grit_act,
-                grit_use_bias=grit_use_bias,
-            )
-            for _ in range(cfg.gnn.layers_mp)
+            self._build_layer(layer_kwargs) for _ in range(cfg.gnn.layers_mp)
         ])
 
         self.ffn_blocks: Optional[nn.ModuleList] = None
@@ -167,6 +167,14 @@ class HybridGNN(torch.nn.Module):
 
         gnn_head = register.head_dict[cfg.gnn.head]
         self.post_mp = gnn_head(dim_in=cfg.gnn.dim_inner, dim_out=dim_out)
+
+    def _build_layer(self, layer_kwargs: Dict[str, Any]) -> nn.Module:
+        """Build one hybrid block from the kwargs parsed out of ``cfg.gnn.hybrid``.
+
+        Subclasses (e.g. SiGMA-lite) override this to swap the block type
+        while keeping encoders, FFN blocks, heads, and diagnostics.
+        """
+        return GatedHybridGraphLayer(**layer_kwargs)
 
     def _encode_batch(
         self, batch: Batch
