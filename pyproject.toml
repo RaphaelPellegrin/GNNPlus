@@ -16,6 +16,23 @@ dependencies = [
     "scipy>=1.10.0",
 ]
 
+[project.optional-dependencies]
+# Everything `main.py` imports, except torch itself (keep the preinstalled
+# CUDA build, e.g. on Google Colab). torch_scatter is optional: see
+# GNNPlus/scatter_compat.py.
+colab = [
+    "torch_geometric>=2.3",
+    "yacs",
+    "ogb",
+    "scikit-learn",
+    "torchmetrics",
+    "pandas",
+    "wandb",
+    "rdkit",
+    "joblib",
+    "tqdm",
+]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["GNNPlus*"]

@@ -3,7 +3,7 @@ import torch_geometric.nn as pyg_nn
 from torch_geometric.graphgym import cfg
 import torch_geometric.graphgym.register as register
 
-from torch_scatter import scatter
+from GNNPlus.scatter_compat import scatter
 import torch
 import torch.nn.functional as F
 

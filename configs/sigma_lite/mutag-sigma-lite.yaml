@@ -1,0 +1,65 @@
+# SiGMA-lite on MUTAG (188 graphs, smallest TU benchmark): a2g2 = 2 vanilla attention
+# heads + GCN and GIN MP heads, ungated, mixed by out_proj, then one sigmoid gate on
+# the mixed update (x <- x + W_1(out_proj([heads]) * sigmoid(W_g Norm(x)))).
+# gnn.sigma_lite.gate_act: gelu gives the Gated-GPS gate on the same heads.
+# Outer hyperparameters follow configs/gcn/mutag.yaml.
+out_dir: results
+metric_best: accuracy
+wandb:
+  use: False
+  project: GNNPlus
+dataset:
+  format: PyG-TUDataset
+  name: MUTAG
+  task: graph
+  task_type: classification
+  transductive: False
+  split_mode: cv-stratifiedkfold-10
+  node_encoder: True
+  node_encoder_name: LinearNode
+  node_encoder_bn: False
+  # GCN/GIN heads and vanilla attention ignore edge features.
+  edge_encoder: False
+  edge_encoder_bn: False
+train:
+  mode: custom
+  batch_size: 32
+  eval_period: 1
+  ckpt_period: 100
+model:
+  type: sigma_lite
+  loss_fun: cross_entropy
+  edge_decoding: dot
+  graph_pooling: mean
+gnn:
+  head: default
+  layers_mp: 4
+  layers_pre_mp: 0
+  layers_post_mp: 2
+  dim_inner: 64
+  act: relu
+  dropout: 0.1
+  agg: mean
+  ffn: True
+  residual: True
+  hybrid:
+    num_attn_heads: 2
+    num_gnn_heads: 2
+    d_h: 16
+    attn_type: vanilla
+    attn_mask: full
+    norm: layernorm
+    gnn_types: "GCN,GIN"
+    attn_dropout: 0.1
+    mp_dropout: 0.1
+    block_bn: False
+  sigma_lite:
+    gate_act: sigmoid
+optim:
+  clip_grad_norm: True
+  optimizer: adamW
+  weight_decay: 1e-5
+  base_lr: 0.001
+  max_epoch: 200
+  scheduler: cosine_with_warmup
+  num_warmup_epochs: 5

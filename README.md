@@ -75,6 +75,62 @@ space ranges from purely local MPNN-like models (`a0gM`) to pure graph transform
 `gnn.hybrid.mp_gate` overrides the gate for the MP heads only, e.g. gated attention with ungated  
 message passing (`gate: headwise`, `mp_gate: none`).
 
+### SiGMA-lite
+
+SiGMA-lite (`model.type: sigma_lite`) keeps the MMA heads ungated, mixes them with
+$`W^\ell_{\mathrm{out}}`$, and applies a single gate to the mixed update, in the style of
+[Gated-GPS](https://doi.org/10.1093/bib/bbaf248) but with any number of attention and MP heads:
+
+```math
+h_i^{\ell+1} = h_i^\ell + W^\ell_1\Big( m_i^\ell \odot \sigma\big(W^\ell_g\,\mathrm{Norm}(h_i^\ell)\big) \Big),
+\qquad
+m_i^\ell = W^\ell_{\mathrm{out}}\,\mathrm{Concat}\big(\{a_i^{\mathrm{att},a}\}_a,\; \{a_i^{\mathrm{mp},p}\}_p\big).
+```
+
+Heads are configured with the same `gnn.hybrid.*` keys; `gnn.sigma_lite.gate_act: gelu` uses the
+Gated-GPS gate instead of the sigmoid. Example on MUTAG (uses `./datasets/TUDataset/MUTAG`,
+downloaded if missing):
+
+```bash
+bash bash_interface/run_sigma_lite_mutag.sh                 # sigmoid gate
+GATE_ACT=gelu bash bash_interface/run_sigma_lite_mutag.sh   # Gated-GPS gate
+```
+
+To compare with the TU results of Tables 17 and 18 (`a2g4`, 12 layers, width 64, random 50/25/25
+split, 5 seeds, learning rate in {1e-3, 1e-2}), run every seed and learning rate in parallel and
+aggregate the best-validation test accuracy; MUTAG takes about 7 minutes per run on a laptop CPU:
+
+```bash
+bash bash_interface/run_sigma_lite_tu_table17.sh                  # MUTAG, d_h = 16 (Table 17)
+D_H=4 bash bash_interface/run_sigma_lite_tu_table17.sh            # d_h = 4 (Table 18)
+DATASET=ENZYMES bash bash_interface/run_sigma_lite_tu_table17.sh  # other TU datasets
+python scripts/aggregate_sigma_lite_tu.py results/sigma_lite_tu   # mean ± std, best LR
+```
+
+The same protocol is available from Python (`GNNPlus.sigma_lite_tu`), which is what the Colab
+notebook uses:
+
+```python
+from GNNPlus.sigma_lite_tu import run_sweep, summarize
+
+run_sweep(["MUTAG", "ENZYMES"], tables=(17, 18), out_root="results/sigma_lite_tu", jobs=2)
+print(summarize("results/sigma_lite_tu"))
+```
+
+**Google Colab.** Open
+[`notebooks/sigma_lite_colab.ipynb`](https://colab.research.google.com/github/RaphaelPellegrin/GNNPlus/blob/paper_sigma_lite/notebooks/sigma_lite_colab.ipynb)
+with a GPU runtime. It clones this branch, installs it with `pip install -e ".[colab]"` (keeping
+Colab's torch; `torch_scatter` is optional), runs a smoke test and then the Table 17/18 grid,
+optionally logging to W&B and saving results to Google Drive.
+
+**SLURM (FASRC).** All of Tables 17 and 18 (6 datasets × 2 learning rates × 5 seeds × 2 tables = 120
+array tasks, W&B groups `tu_hh_<ds>_SiGMA_lite_*` / `tu_1x_<ds>_SiGMA_lite_*`):
+
+```bash
+bash bash_interface/cluster/submit_sigma_lite_tu.sh                          # all 120 tasks
+SIGMA_LITE_ARRAY=1-60 bash bash_interface/cluster/submit_sigma_lite_tu.sh    # Table 17 only
+```
+
 ## Installation
 
 Tested with Python 3.10, PyTorch 2.2.0 and PyTorch Geometric 2.3.1.
@@ -90,6 +146,9 @@ pip install pyg_lib torch_scatter torch_sparse torch_cluster torch_spline_conv -
 pip install -r requirements-cluster.txt
 pip install -e .
 ```
+
+With torch already installed (e.g. on Google Colab), `pip install -e ".[colab]"` installs PyTorch
+Geometric and the remaining Python dependencies; `torch_scatter` is then optional.
 
 
 
@@ -160,7 +219,13 @@ Set `model.type: hybrid_gnn` and configure the hybrid block under `gnn.hybrid`:
 | `GNNPlus/layer/gated_hybrid_layer.py`   | The SiGMA layer (gated attention + MP heads, fusion) |
 | `GNNPlus/network/hybrid_gnn.py`         | The full SiGMA model (`model.type: hybrid_gnn`)      |
 | `GNNPlus/config/gated_hybrid_config.py` | All `gnn.hybrid.*` options and their defaults        |
+| `GNNPlus/layer/sigma_lite_layer.py`     | The SiGMA-lite layer (ungated heads, one block gate) |
+| `GNNPlus/network/sigma_lite_gnn.py`     | The SiGMA-lite model (`model.type: sigma_lite`)      |
 | `configs/sigma/`                        | Example SiGMA and MMA configs                        |
+| `configs/sigma_lite/`                   | SiGMA-lite configs (MUTAG, TU recipe of Tables 17/18) |
+| `GNNPlus/sigma_lite_tu.py`              | Python API to run / aggregate the TU Tables 17/18 grid |
+| `notebooks/sigma_lite_colab.ipynb`      | Google Colab notebook for the TU Tables 17/18 grid   |
+| `bash_interface/cluster/`               | SLURM array scripts (SiGMA-lite TU Tables 17/18)     |
 | `bash_interface/`                       | Example run scripts                                  |
 | `unittests/`                            | Unit tests (`python -m pytest unittests`)            |
 
