@@ -9,8 +9,15 @@ from torch_geometric.utils import to_scipy_sparse_matrix, get_laplacian, \
 from GNNPlus.transform.posenc_stats import (eigvec_normalizer,
                                              get_heat_kernels,
                                              get_heat_kernels_diag,
-                                             get_rw_landing_probs,
+                                             get_rw_landing_probs_and_edge_features,
                                              get_electrostatic_function_encoding)
+
+
+def get_rw_landing_probs(ksteps, edge_index, space_dim=0):
+    """Return only the node-level RW landing probabilities (drop edge features)."""
+    rw_landing, _ = get_rw_landing_probs_and_edge_features(
+        ksteps=ksteps, edge_index=edge_index, space_dim=space_dim)
+    return rw_landing
 
 
 def _get_linear_graph_edges(N):

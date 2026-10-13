@@ -1,5 +1,5 @@
 import torch
-import torch_geometric.graphgym.models.head  # noqa, register module
+import torch_geometric.graphgym.models.head  # noqa: F401  (registers module)
 import torch_geometric.graphgym.register as register
 from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.models.gnn import FeatureEncoder, GNNPreMP

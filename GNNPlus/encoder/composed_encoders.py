@@ -1,7 +1,7 @@
 import torch
 from torch_geometric.graphgym.config import cfg
-from torch_geometric.graphgym.models.encoder import AtomEncoder, BondEncoder
-from torch_geometric.graphgym.register import register_node_encoder, register_edge_encoder
+from torch_geometric.graphgym.models.encoder import AtomEncoder
+from torch_geometric.graphgym.register import register_node_encoder
 
 from GNNPlus.encoder.ast_encoder import ASTNodeEncoder
 from GNNPlus.encoder.kernel_pos_encoder import RWSENodeEncoder, \
@@ -10,7 +10,7 @@ from GNNPlus.encoder.laplace_pos_encoder import LapPENodeEncoder
 from GNNPlus.encoder.ppa_encoder import PPANodeEncoder
 from GNNPlus.encoder.signnet_pos_encoder import SignNetNodeEncoder
 from GNNPlus.encoder.voc_superpixels_encoder import VOCNodeEncoder, COCONodeEncoder
-from GNNPlus.encoder.type_dict_encoder import TypeDictNodeEncoder, TypeDictEdgeEncoder
+from GNNPlus.encoder.type_dict_encoder import TypeDictNodeEncoder
 from GNNPlus.encoder.linear_node_encoder import LinearNodeEncoder
 from GNNPlus.encoder.equivstable_laplace_pos_encoder import EquivStableLapPENodeEncoder
 from GNNPlus.encoder.graphormer_encoder import GraphormerEncoder

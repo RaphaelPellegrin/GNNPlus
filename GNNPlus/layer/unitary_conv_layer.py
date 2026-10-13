@@ -483,7 +483,7 @@ def gcn_norm(
 
 
 @torch.jit._overload
-def gcn_norm(
+def gcn_norm(  # noqa: F811
     edge_index: SparseTensor,
     edge_weight: OptTensor,
     num_nodes: Optional[int],
@@ -495,7 +495,7 @@ def gcn_norm(
     pass
 
 
-def gcn_norm(
+def gcn_norm(  # noqa: F811
     edge_index: Adj,
     edge_weight: OptTensor = None,
     num_nodes: Optional[int] = None,

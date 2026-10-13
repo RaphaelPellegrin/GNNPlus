@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch_geometric.graphgym.register as register
 from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.register import register_node_encoder
 

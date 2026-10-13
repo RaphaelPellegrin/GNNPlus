@@ -3,7 +3,6 @@ from copy import deepcopy
 import numpy as np
 import torch
 import torch.nn.functional as F
-from numpy.linalg import eigvals
 from torch_geometric.utils import (get_laplacian, to_scipy_sparse_matrix,
                                    to_undirected, to_dense_adj, scatter)
 from torch_geometric.utils.num_nodes import maybe_num_nodes
@@ -100,7 +99,7 @@ def compute_posenc_stats(data, pe_types, is_undirected, cfg):
         if cfg.dataset.name in ['peptides-structural', 'peptides-functional', 'ogbg-molpcba', 'ogbg-molhiv']:
             pass
         else:
-            if(data.edge_attr != None):
+            if data.edge_attr is not None:
                 if data.edge_attr.dim() == 1:
                     data.edge_attr = torch.cat([data.edge_attr.unsqueeze(dim=-1), edge_features], dim=1)
                 else:

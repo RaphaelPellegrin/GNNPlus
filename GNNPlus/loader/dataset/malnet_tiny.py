@@ -72,8 +72,9 @@ class MalNetTiny(InMemoryDataset):
         data_list = []
         split_dict = {'train': [], 'valid': [], 'test': []}
 
-        parse = lambda f: set([x.split('/')[-1]
-                               for x in f.read().split('\n')[:-1]])  # -1 for empty line at EOF
+        def parse(f):
+            # [:-1] drops the empty line at EOF.
+            return set([x.split('/')[-1] for x in f.read().split('\n')[:-1]])
         split_dir = osp.join(self.raw_dir, 'split_info_tiny', 'type')
         with open(osp.join(split_dir, 'train.txt'), 'r') as f:
             train_names = parse(f)

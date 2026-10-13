@@ -26,7 +26,7 @@ def cxsmiles_to_mol_with_contact(cxsmiles):
         try:
             this_list = [int(val) for val in atom.GetProp("contact").split(";")]
             list_of_contacts[ii] = this_list
-        except:
+        except Exception:
             pass
     max_count = max(sum(list_of_contacts, []) + [-1]) + 1
 
@@ -349,7 +349,7 @@ class PygPCQM4Mv2ContactDataset(InMemoryDataset):
                 assert self._md5sum(path_split2) == self.md5_numatoms_split
             except Exception as e:
                 print(f"Exception while downloading dataset splits: {e}")
-                print(f"...splits will be regenerated.")
+                print("...splits will be regenerated.")
                 self.generate_splits = True
         else:
             print('Stop download.')

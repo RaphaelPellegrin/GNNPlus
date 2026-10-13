@@ -17,20 +17,26 @@ class MLP(nn.Module):
                  residual=False):
         super().__init__()
         self.lins = nn.ModuleList()
-        if use_bn: self.bns = nn.ModuleList()
-        if use_ln: self.lns = nn.ModuleList()
+        if use_bn:
+            self.bns = nn.ModuleList()
+        if use_ln:
+            self.lns = nn.ModuleList()
 
         if num_layers == 1:
             # linear mapping
             self.lins.append(nn.Linear(in_channels, out_channels))
         else:
             self.lins.append(nn.Linear(in_channels, hidden_channels))
-            if use_bn: self.bns.append(nn.BatchNorm1d(hidden_channels))
-            if use_ln: self.lns.append(nn.LayerNorm(hidden_channels))
+            if use_bn:
+                self.bns.append(nn.BatchNorm1d(hidden_channels))
+            if use_ln:
+                self.lns.append(nn.LayerNorm(hidden_channels))
             for layer in range(num_layers - 2):
                 self.lins.append(nn.Linear(hidden_channels, hidden_channels))
-                if use_bn: self.bns.append(nn.BatchNorm1d(hidden_channels))
-                if use_ln: self.lns.append(nn.LayerNorm(hidden_channels))
+                if use_bn:
+                    self.bns.append(nn.BatchNorm1d(hidden_channels))
+                if use_ln:
+                    self.lns.append(nn.LayerNorm(hidden_channels))
             self.lins.append(nn.Linear(hidden_channels, out_channels))
         if activation == 'relu':
             self.activation = nn.ReLU()
@@ -57,8 +63,10 @@ class MLP(nn.Module):
                     x = self.bns[i](x.transpose(2, 1)).transpose(2, 1)
                 else:
                     raise ValueError('invalid dimension of x')
-            if self.use_ln: x = self.lns[i](x)
-            if self.residual and x_prev.shape == x.shape: x = x + x_prev
+            if self.use_ln:
+                x = self.lns[i](x)
+            if self.residual and x_prev.shape == x.shape:
+                x = x + x_prev
             x = F.dropout(x, p=self.dropout, training=self.training)
             x_prev = x
         x = self.lins[-1](x)
@@ -72,7 +80,8 @@ class GIN(nn.Module):
                  use_bn=True, dropout=0.5, activation='relu'):
         super().__init__()
         self.layers = nn.ModuleList()
-        if use_bn: self.bns = nn.ModuleList()
+        if use_bn:
+            self.bns = nn.ModuleList()
         self.use_bn = use_bn
         # input layer
         update_net = MLP(in_channels, hidden_channels, hidden_channels, 2,
@@ -84,12 +93,14 @@ class GIN(nn.Module):
                              2, use_bn=use_bn, dropout=dropout,
                              activation=activation)
             self.layers.append(GINConv(update_net))
-            if use_bn: self.bns.append(nn.BatchNorm1d(hidden_channels))
+            if use_bn:
+                self.bns.append(nn.BatchNorm1d(hidden_channels))
         # output layer
         update_net = MLP(hidden_channels, hidden_channels, out_channels, 2,
                          use_bn=use_bn, dropout=dropout, activation=activation)
         self.layers.append(GINConv(update_net))
-        if use_bn: self.bns.append(nn.BatchNorm1d(hidden_channels))
+        if use_bn:
+            self.bns.append(nn.BatchNorm1d(hidden_channels))
         self.dropout = nn.Dropout(p=dropout)
 
     def forward(self, x, edge_index):
@@ -207,7 +218,7 @@ class SignNetNodeEncoder(torch.nn.Module):
         sign_inv_layers = pecfg.layers  # Num. layers in \phi GNN part
         rho_layers = pecfg.post_layers  # Num. layers in \rho MLP/DeepSet
         if rho_layers < 1:
-            raise ValueError(f"Num layers in rho model has to be positive.")
+            raise ValueError("Num layers in rho model has to be positive.")
         max_freqs = pecfg.eigen.max_freqs  # Num. eigenvectors (frequencies)
         self.pass_as_var = pecfg.pass_as_var  # Pass PE also as a separate variable
 

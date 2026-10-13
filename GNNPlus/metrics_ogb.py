@@ -87,8 +87,8 @@ def eval_F1(seq_ref, seq_pred):
     recall_list = []
     f1_list = []
 
-    for l, p in zip(seq_ref, seq_pred):
-        label = set(l)
+    for ref, p in zip(seq_ref, seq_pred):
+        label = set(ref)
         prediction = set(p)
         true_positive = len(label.intersection(prediction))
         false_positive = len(prediction - label)

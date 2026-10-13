@@ -24,9 +24,15 @@ from torch_geometric.nn import (
     ResGatedGraphConv,
     SAGEConv,
 )
+from torch_geometric.graphgym.config import cfg
 from torch_geometric.utils import to_undirected
 
 from GNNPlus.layer.gate_override import GateOverrideMode, apply_gate_override
+from GNNPlus.layer.gatedgcn_layer import GatedGCNLayer
+from GNNPlus.layer.gcn_conv_layer_e import GCNConvLayer, GCNConvWithEdges
+from GNNPlus.layer.grit_attn_head import _GRITAttnHead
+from GNNPlus.layer.routing_sum_conv import RoutingNormSumConv, RoutingSumConv
+from GNNPlus.layer.unitary_conv_layer import build_unitary_taylor_conv
 
 AttnMaskType = Literal["full", "graph_restricted"]
 AttnType = Literal["vanilla", "grit"]
@@ -92,14 +98,6 @@ def _edge_features_to_dh(
     if in_f == int(edge_proj.in_features):
         return edge_proj(feat).to(dtype=dtype)
     return torch.zeros((num_e, d_h), device=device, dtype=dtype)
-
-
-from GNNPlus.layer.gcn_conv_layer_e import GCNConvLayer, GCNConvWithEdges
-from GNNPlus.layer.routing_sum_conv import RoutingNormSumConv, RoutingSumConv
-from GNNPlus.layer.gatedgcn_layer import GatedGCNLayer
-from GNNPlus.layer.grit_attn_head import _GRITAttnHead
-from GNNPlus.layer.unitary_conv_layer import build_unitary_taylor_conv
-from torch_geometric.graphgym.config import cfg
 
 
 class _EdgeHybridBatch:

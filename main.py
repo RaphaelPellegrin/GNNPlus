@@ -2,7 +2,7 @@ import datetime
 import torch
 import logging
 
-import GNNPlus  # noqa, register custom modules
+import GNNPlus  # noqa: F401  (registers custom modules)
 from GNNPlus.optimizer.extra_optimizers import ExtendedSchedulerConfig
 
 from torch_geometric.graphgym.cmd_args import parse_args

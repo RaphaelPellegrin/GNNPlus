@@ -20,8 +20,8 @@ class SANGraphHead(nn.Module):
         super().__init__()
         self.pooling_fun = register.pooling_dict[cfg.model.graph_pooling]
         list_FC_layers = [
-            nn.Linear(dim_in // 2 ** l, dim_in // 2 ** (l + 1), bias=True)
-            for l in range(L)]
+            nn.Linear(dim_in // 2 ** i, dim_in // 2 ** (i + 1), bias=True)
+            for i in range(L)]
         list_FC_layers.append(
             nn.Linear(dim_in // 2 ** L, dim_out, bias=True))
         self.FC_layers = nn.ModuleList(list_FC_layers)
@@ -33,8 +33,8 @@ class SANGraphHead(nn.Module):
 
     def forward(self, batch):
         graph_emb = self.pooling_fun(batch.x, batch.batch)
-        for l in range(self.L):
-            graph_emb = self.FC_layers[l](graph_emb)
+        for i in range(self.L):
+            graph_emb = self.FC_layers[i](graph_emb)
             graph_emb = self.activation(graph_emb)
         graph_emb = self.FC_layers[self.L](graph_emb)
         batch.graph_feature = graph_emb

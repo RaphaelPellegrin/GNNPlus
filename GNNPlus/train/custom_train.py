@@ -4,14 +4,12 @@ import time
 
 import numpy as np
 import torch
-import torch.nn.functional as F
 
 from torch_geometric.graphgym.checkpoint import load_ckpt, save_ckpt, clean_ckpt
 from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.loss import compute_loss
 from torch_geometric.graphgym.register import register_train
 from torch_geometric.graphgym.utils.epoch import is_eval_epoch, is_ckpt_epoch
-from torch_geometric.utils import to_dense_batch
 
 from GNNPlus.loss.subtoken_prediction_loss import subtoken_cross_entropy
 from GNNPlus.utils import cfg_to_dict, flatten_dict, make_wandb_name, dirichlet_energy, mean_average_distance, mean_norm
@@ -167,7 +165,7 @@ def custom_train(loggers, loaders, model, optimizer, scheduler):
     if cfg.wandb.use:
         try:
             import wandb
-        except:
+        except ImportError:
             raise ImportError('WandB is not installed.')
         if cfg.wandb.name == '':
             wandb_name = make_wandb_name(cfg)
@@ -490,9 +488,9 @@ def log_attn_weights(loggers, loaders, model, optimizer=None, scheduler=None):
     start_time = time.perf_counter()
 
     # The last loader is a test set.
-    l = loaders[-1]
+    test_loader = loaders[-1]
     # To get a random sample, create a new loader that shuffles the test set.
-    loader = DataLoader(l.dataset, batch_size=l.batch_size,
+    loader = DataLoader(test_loader.dataset, batch_size=test_loader.batch_size,
                         shuffle=True, num_workers=0)
 
     output = []

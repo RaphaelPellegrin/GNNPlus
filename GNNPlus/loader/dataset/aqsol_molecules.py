@@ -7,7 +7,6 @@ import torch
 from tqdm import tqdm
 from torch_geometric.data import (InMemoryDataset, Data, download_url,
                                   extract_zip)
-from torch_geometric.utils import add_self_loops
 
 
 class AQSOL(InMemoryDataset):
