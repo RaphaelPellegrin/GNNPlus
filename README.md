@@ -1,5 +1,8 @@
 # SiGMA: Learning under Graph-Level Heterogeneity with Gated Message-Passing and Attention
 
+[![ruff](https://github.com/RaphaelPellegrin/GNNPlus/actions/workflows/ruff.yml/badge.svg)](https://github.com/RaphaelPellegrin/GNNPlus/actions/workflows/ruff.yml)
+[![pytest](https://github.com/RaphaelPellegrin/GNNPlus/actions/workflows/pytest.yml/badge.svg)](https://github.com/RaphaelPellegrin/GNNPlus/actions/workflows/pytest.yml)
+
 *Proceedings of the Fifth Learning on Graphs Conference (LoG 2026)*
 
 This is the official implementation of **SiGMA** (**Si**gmoid **G**ated **M**essage-Passing and
