@@ -98,7 +98,8 @@ class CustomLogger(Logger):
         else:
             auroc_score = 0.
 
-        reformat = lambda x: round(float(x), cfg.round)
+        def reformat(x):
+            return round(float(x), cfg.round)
         res = {
             'accuracy': reformat(accuracy_score(true, pred_int)),
             'precision': reformat(precision_score(true, pred_int)),
@@ -114,7 +115,8 @@ class CustomLogger(Logger):
         true, pred_score = torch.cat(self._true), torch.cat(self._pred)
         true, pred_score = _drop_virtual_node_targets(true, pred_score)
         pred_int = self._get_pred_int(pred_score)
-        reformat = lambda x: round(float(x), cfg.round)
+        def reformat(x):
+            return round(float(x), cfg.round)
 
         res = {
             'accuracy': reformat(accuracy_score(true, pred_int)),
@@ -143,7 +145,8 @@ class CustomLogger(Logger):
 
     def classification_multilabel(self):
         true, pred_score = torch.cat(self._true), torch.cat(self._pred)
-        reformat = lambda x: round(float(x), cfg.round)
+        def reformat(x):
+            return round(float(x), cfg.round)
 
         # MetricWrapper will remove NaNs and apply the metric to each target dim
         acc = MetricWrapper(metric='accuracy',
@@ -205,7 +208,8 @@ class CustomLogger(Logger):
 
     def regression(self):
         true, pred = torch.cat(self._true), torch.cat(self._pred)
-        reformat = lambda x: round(float(x), cfg.round)
+        def reformat(x):
+            return round(float(x), cfg.round)
         # Relative L2 error over the full concatenation of targets.
         pred_f = pred.reshape(1, -1).float()
         true_f = true.reshape(1, -1).float()
@@ -237,7 +241,8 @@ class CustomLogger(Logger):
             # the logits that take significant memory.
             from GNNPlus.loader.ogbg_code2_utils import idx2vocab, \
                 decode_arr_to_seq
-            arr_to_seq = lambda arr: decode_arr_to_seq(arr, idx2vocab)
+            def arr_to_seq(arr):
+                return decode_arr_to_seq(arr, idx2vocab)
             mat = []
             for i in range(len(pred)):
                 mat.append(torch.argmax(pred[i].detach(), dim=1).view(-1, 1))

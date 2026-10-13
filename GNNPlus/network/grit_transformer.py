@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import torch
 import torch.nn as nn
 import torch_geometric.graphgym.models.head  # noqa: F401 — register heads
 import torch_geometric.graphgym.register as register

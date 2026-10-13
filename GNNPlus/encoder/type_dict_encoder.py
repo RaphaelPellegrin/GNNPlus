@@ -2,7 +2,7 @@ import torch
 from torch_geometric.graphgym.config import cfg
 from torch_geometric.graphgym.register import (register_node_encoder,
                                                register_edge_encoder)
-from torch.nn import Module, Embedding, Linear
+from torch.nn import Linear
 """
 Generic Node and Edge encoders for datasets with node/edge features that
 consist of only one type dictionary thus require a single nn.Embedding layer.

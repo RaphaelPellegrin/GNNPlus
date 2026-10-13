@@ -52,10 +52,10 @@ def log_loaded_dataset(dataset, format, name):
     if hasattr(dataset.data, 'y') and dataset.data.y is not None:
         if isinstance(dataset.data.y, list):
             # A special case for ogbg-code2 dataset.
-            logging.info(f"  num classes: n/a")
+            logging.info("  num classes: n/a")
         elif dataset.data.y.numel() == dataset.data.y.size(0) and \
                 torch.is_floating_point(dataset.data.y):
-            logging.info(f"  num classes: (appears to be a regression task)")
+            logging.info("  num classes: (appears to be a regression task)")
         else:
             logging.info(f"  num classes: {dataset.num_classes}")
     elif hasattr(dataset.data, 'train_edge_label') or hasattr(dataset.data, 'edge_label'):
@@ -66,7 +66,7 @@ def log_loaded_dataset(dataset, format, name):
             labels = dataset.data.edge_label  # Inductive link task
         if labels.numel() == labels.size(0) and \
                 torch.is_floating_point(labels):
-            logging.info(f"  num edge classes: (probably a regression task)")
+            logging.info("  num edge classes: (probably a regression task)")
         else:
             logging.info(f"  num edge classes: {len(torch.unique(labels))}")
 
@@ -107,7 +107,7 @@ def load_dataset_master(format, name, dataset_dir):
 
         if pyg_dataset_id == 'Actor':
             if name != 'none':
-                raise ValueError(f"Actor class provides only one dataset.")
+                raise ValueError("Actor class provides only one dataset.")
             dataset = Actor(dataset_dir)
 
         elif pyg_dataset_id == 'GNNBenchmarkDataset':
@@ -127,7 +127,7 @@ def load_dataset_master(format, name, dataset_dir):
 
         elif pyg_dataset_id == 'WikipediaNetwork':
             if name == 'crocodile':
-                raise NotImplementedError(f"crocodile not implemented")
+                raise NotImplementedError("crocodile not implemented")
             dataset = WikipediaNetwork(dataset_dir, name,
                                        geom_gcn_preprocess=True)
 

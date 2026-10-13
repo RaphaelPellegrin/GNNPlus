@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any
 
 import pytest
 import torch
-from torch_geometric.data import Batch, Data
 
 from GNNPlus.layer.gated_hybrid_layer import GatedHybridGraphLayer
 

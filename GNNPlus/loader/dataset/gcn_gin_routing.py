@@ -20,7 +20,6 @@ from typing import Any, Final, Iterator, Literal, Optional, Sequence
 
 import numpy as np
 import torch
-from torch import Tensor
 from torch_geometric.data import Data, InMemoryDataset
 
 GraphType = Literal[0, 1]

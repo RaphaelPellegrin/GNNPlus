@@ -1,0 +1,53 @@
+# Runs the unit tests in unittests/ on CPU.
+
+name: pytest
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TORCH_VERSION: "2.4.1"
+  # PyG publishes torch-scatter wheels per torch minor version.
+  PYG_WHEELS: "https://data.pyg.org/whl/torch-2.4.0+cpu.html"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+
+      - name: Install PyTorch (CPU) and torch-scatter
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          pip install "torch==${TORCH_VERSION}" --index-url https://download.pytorch.org/whl/cpu
+          pip install --only-binary=:all: torch-scatter -f "${PYG_WHEELS}"
+
+      - name: Install package with test extras
+        run: |
+          pip install -e ".[test]"
+
+      - name: Run pytest
+        run: |
+          pytest unittests --cov=GNNPlus --cov-report=term-missing:skip-covered -v

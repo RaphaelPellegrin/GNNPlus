@@ -69,7 +69,7 @@ def setup_standard_split(dataset):
                                  len(mask[:, split_index]))
             else:
                 if split_index != 0:
-                    raise IndexError(f"This dataset has single standard split")
+                    raise IndexError("This dataset has single standard split")
 
     elif task_level == 'graph':
         for split_name in 'train_graph_index', 'val_graph_index', 'test_graph_index':

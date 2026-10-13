@@ -95,6 +95,9 @@ class GCNConvWithEdges(GCNConv):
                     edge_index = cache
 
         x = self.lin(x)
+        # PyG >= 2.5 generates ``propagate`` from this comment; without it the
+        # parent GCNConv signature (x, edge_weight) is used and edge_attr is rejected.
+        # propagate_type: (x: Tensor, edge_attr: OptTensor, edge_weight: OptTensor)
         out = self.propagate(
             edge_index,
             x=x,
