@@ -1,7 +1,8 @@
 """Configuration for SiGMA (Sigmoid Gated Message-Passing and Attention).
 
 Registers the ``cfg.gnn.hybrid.*`` options of the SiGMA model
-(``model.type: hybrid_gnn``); setting ``gate: none`` gives MMA.
+(``model.type: hybrid_gnn``); setting ``gate: none`` gives MMA. Also registers
+``cfg.gnn.sigma_lite.*`` for SiGMA-lite (``model.type: sigma_lite``).
 """
 
 from torch_geometric.graphgym.register import register_config
@@ -46,3 +47,7 @@ def gated_hybrid_cfg(cfg: CN) -> None:
     cfg.gnn.hybrid.grit.use_bias = False
     # When True, RRWP edge encoder pads to the full graph (GRIT full_attn).
     cfg.gnn.hybrid.grit.pad_to_full_graph = True
+    # SiGMA-lite (model.type: sigma_lite): ungated heads from gnn.hybrid, one gate
+    # on the mixed block output. gelu reproduces the Gated-GPS gate.
+    cfg.gnn.sigma_lite = CN()
+    cfg.gnn.sigma_lite.gate_act = "sigmoid"  # sigmoid | gelu

@@ -137,10 +137,12 @@ def make_wandb_name(cfg):
     model_name = cfg.model.type
     if cfg.model.type in ['gnn', 'custom_gnn', 'custom_gnn_gated']:
         model_name += f".{cfg.gnn.layer_type}"
-    elif cfg.model.type == 'hybrid_gnn':
+    elif cfg.model.type in ('hybrid_gnn', 'sigma_lite'):
         ha = cfg.gnn.hybrid.num_attn_heads
         hg = cfg.gnn.hybrid.num_gnn_heads
         model_name += f".hybrid_a{ha}g{hg}"
+        if cfg.model.type == 'sigma_lite':
+            model_name += f".gate_{cfg.gnn.sigma_lite.gate_act}"
         attn_type = str(getattr(cfg.gnn.hybrid, 'attn_type', 'vanilla')).strip().lower()
         if attn_type and attn_type != 'vanilla':
             model_name += f".attn_{attn_type}"
