@@ -9,7 +9,120 @@ Entity/project: [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/webe
 
 ---
 
+## 🛑 Table 5 SiGMA vs MMA — 15 new seeds (after TU arrays)
+
+Depends on TU jobs **`53595181`** / **`53595192`**. 210 tasks · **6 GPUs** · `afterany:53595181,53595192`.
+
+```bash
+bash bash_interface/cluster/submit_paper_table5_sigma_mma_seed15.sh
+```
+
+Detail: [`Paper_table5_sigma_mma_seed15.md`](Paper_table5_sigma_mma_seed15.md). MMA = same SiGMA recipe + `gate=none`.
+
+| JOBID | Status |
+|--|--|
+| | paste after submit |
+
+---
+
+## ✅ TU MMA + SiGMA-lite Tab.17/18/19 (2026-10-17)
+
+Branch/worktree: `cluster/tu-mma-sigma-lite` → `GNNPlus-tu-mma-sigma-lite`.  
+`bash bash_interface/cluster/submit_tu_mma_and_sigma_lite.sh` (3+3 GPUs).
+
+| JOBID | Name | Tasks | What |
+|--|--|--|--|
+| **`53595181`** | `tu_mma` | `1–120%3` | MMA (ungated a2g4); W&B `tu_{hh,1x}_*_MMA_*` |
+| **`53595192`** | `tu_sigma_lite` | `1–120%3` | SiGMA-lite sigmoid; W&B `tu_{hh,1x}_*_SiGMA_lite_*` |
+
+Logs: `logs_gnnplus/tu_mma_53595181_*.log`, `logs_gnnplus/tu_sigma_lite_53595192_*.log`.  
+Outs: `$GNNPLUS_OUT_DIR/tu_mma/`, `$GNNPLUS_OUT_DIR/tu_sigma_lite/`.  
+Detail: `Paper_tu_mma_sigma_lite.md`.
+
+---
+
+## Snapshot before `scancel` (2026-09-13 23:28 ET)
+
+Queue as pasted. `scancel -u rpellegrinext` removes all of these; held jobs do not come back with `scontrol release`.
+
+| Job | Partition | Name | State at snapshot | What it is |
+|--|--|--|--|--|
+| `44930486_[1201-2400]` | `gpu_h200` | `tu_LdhH` | PD `JobHeldUser` | ENZYMES H∈{8,4,2} depth/d_h grid |
+| `44930340_[2662-3600]` | `gpu_h200` | `tu_LdhH` | PD `JobHeldUser` | PROTEINS same grid (started at 2401; 2662+ still held) |
+| `44930491_[3601-4800]` | `gpu_h200` | `tu_LdhH` | PD `JobHeldUser` | COLLAB |
+| `44930489_[6001-7200]` | `gpu_h200` | `tu_LdhH` | PD `JobHeldUser` | REDDIT |
+| `44869251_[431-560%]` | `mweber_gpu` | `tu_erric` | PD `JobHeldUser` | `fixed8_ungated` select, tasks 431–560 still held |
+| `46175660_4,_5,_6` | `mweber_gpu` | `zinc_gin` | **R 48:25** | ZINC GIN+ ladder tasks 4–6 (seeds of level 0) |
+| `46175660_[7-25%3]` | `mweber_gpu` | `zinc_gin` | PD `JobArrayTaskLimit` | rest of ZINC ladder, `%3`, nice=10000, 240h |
+| `46175665_[4-25%3]` | `mweber_gpu` | `mal_gate` | PD `BeginTime` until **2026-09-14T00:48:31** | MalNet GatedGCN+ ladder tasks 4–25 |
+
+Not in that `squeue` (already gone): ZINC/Mal sweeps `46172774` / `46172775`; IMDB `tu_LdhH` `44930487`. ZINC ladder tasks 1–3 and MalNet ladder tasks 1–3 had already finished or exited before this snapshot.
+
+Restore held arrays only if the job IDs still exist (`squeue -j ...`). If `scancel` already removed them, they must be resubmitted; do not `scontrol release` a cancelled id.
+
+```bash
+# Only if these IDs are still pending (not cancelled):
+scontrol release 44930486_[1201-2400]
+scontrol release 44930340_[2662-3600]
+scontrol release 44930491_[3601-4800]
+scontrol release 44930489_[6001-7200]
+scontrol release 44869251_[431-560]
+```
+
+Ladders, if cancelled, resubmit (do not release a dead id):
+
+```bash
+# ZINC: tasks 1–6 already launched once; remaining work is tasks 7–25
+# (level 1 seed 1 onward). Full resubmit repeats finished seeds.
+ZINC_GINPLUS_LADDER_PARTITION=mweber_gpu ZINC_GINPLUS_LADDER_PARALLEL=3 \
+  bash bash_interface/cluster/submit_zinc_ginplus_ladder.sh
+
+MAL_GATEDGCNPLUS_LADDER_PARTITION=mweber_gpu MAL_GATEDGCNPLUS_LADDER_PARALLEL=3 \
+  bash bash_interface/cluster/submit_mal_gatedgcnplus_ladder.sh
+```
+
+---
+
 ## ✅ SUBMITTED (do not re-submit)
+
+### 🧪 ZINC & MalNet-Tiny Bayesian Sweeps (5 GPUs total on gpu_h200)
+
+| | |
+|--|--|
+| **Status** | ✅ **RUNNING** (Submitted 2026-09-12) |
+| **ZINC Job ID** | **`46172774`** (`1-15%3`, 3 concurrent GPUs, runs/agent=3) |
+| **ZINC Sweep** | [`635mfg4v`](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/sweeps/635mfg4v) |
+| **MalNet Job ID** | **`46172775`** (`1-10%2`, 2 concurrent GPUs, runs/agent=4) |
+| **MalNet Sweep** | [`wkzjzbhp`](https://wandb.ai/weber-geoml-harvard-university/GNNPlus/sweeps/wkzjzbhp) |
+| **Partition** | `gpu_h200` (strictly capped at 5 GPUs total) |
+| **Logs** | `logs_gnnplus/sweep_agent_46172774_<TASK>.log`<br>`logs_gnnplus/sweep_agent_46172775_<TASK>.log` |
+
+```bash
+squeue -u $USER -j 46172774,46172775
+# Monitor gate stats
+grep 'Hybrid gate stats: logging' logs_gnnplus/sweep_agent_46172774_1.log
+grep 'Hybrid gate stats: logging' logs_gnnplus/sweep_agent_46172775_1.log
+```
+
+### 🧪 Lukas Staged Ablation Ladders: ZINC (GIN+) & MalNet-Tiny (GatedGCN+)
+
+| | |
+|--|--|
+| **Status** | ⏸️ snapshot 2026-09-13 23:28 ET — ZINC tasks 4–6 **R**, 7–25 queued; MalNet 4–25 `BeginTime` 00:48. See snapshot above if `scancel`ed |
+| **ZINC Job ID** | **`46175660`** (`1-25%3`, 5 levels × 5 seeds, partition `mweber_gpu`, nice=10000, 240h) |
+| **ZINC Group** | [`zinc_ginplus_ladder`](https://wandb.ai/weber-geoml-harvard-university/GNNPlus) |
+| **MalNet Job ID** | **`46175665`** (`1-25%3`, 5 levels × 5 seeds, partition `mweber_gpu`, nice=10000, 240h) |
+| **MalNet Group** | [`mal_gatedgcnplus_ladder`](https://wandb.ai/weber-geoml-harvard-university/GNNPlus) |
+| **Tasks** | 25 jobs per dataset (L0: paper single-head, L1: +gating, L2: +1 attn, L3: +2nd MP, L4: full hybrid) |
+| **Docs** | [`Paper_zinc_mal_seed_repro.md`](Paper_zinc_mal_seed_repro.md) |
+| **Logs** | `logs_gnnplus/zinc_gin_ladder_46175660_<TASK>.log`<br>`logs_gnnplus/mal_gated_ladder_46175665_<TASK>.log` |
+
+```bash
+squeue -u $USER -j 46175660,46175665
+```
+
+
+
 
 ### 🧪 TU preferred-head MASK eval (GCN+SAGE gated)
 
@@ -1282,8 +1395,8 @@ sacct -j 42412053,41709082,41709085 -X --format=JobID,State,ExitCode -n
 | **`native_fair_v2_joint` agg→eval** | **45423667** | 1 → 90 eval | ⏳ `afterok:45423514` |
 | **`native_fair_v2_reddit_reg` select** | **45515660** | **120** | 🚀 `gpu_h200` `%15` · 72h · REDDIT lr×drop |
 | **`native_fair_v2_reddit_reg` UNION→eval** | **45516145** | 1 → **30** | ⏳ `afterok:45515660` |
-| **`proteins_reg` select** | — | **40** | ⏳ `gpu_h200` `%6` · 72h · L∈{8,12}×d_h∈{8,16} · bs=16 · drop=0.5 |
-| **`proteins_reg` UNION→eval** | — | 1 → **30** | ⏳ after select · PROTEINS · `gpu_h200` `%6` |
+| **`proteins_reg` select** | **45588302** | **40** | ✅ **40/40** · `gpu_h200` `%6` · (+6 crash from cancelled 45588081) |
+| **`proteins_reg` UNION→eval** | **45588637** → **45621407** | 1 → **30** | ✅ **72.15±3.55** · below boost **73.68** · keep ᵃ |
 | **`specialist_tiny` select** | **45303391** | **120** | ✅ COMPLETED |
 | **`specialist_tiny` eval** | **45423695** | 90 | 🚀 P/NCI1 done-ish · REDDIT running |
 | **`a0g_pnr` select** | — | **1440** | ⏳ ready later · a0g4/a0g2 · P/NCI1/REDDIT |
