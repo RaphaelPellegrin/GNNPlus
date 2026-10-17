@@ -10,6 +10,8 @@ Paper tables (LoG 2026 App. G):
 
 Recipe (shared with SiGMA hetero ablations): a2g4 = 2 vanilla attn + GCN,GIN,SAGE,GAT; \(L=12\), \(d=64\); random 50/25/25; AdamW; LR ∈ \{1e-3, 1e-2\}; 5 seeds; batch 64 (COLLAB 32, REDDIT-B 16). No other HPs tuned for MMA / SiGMA-lite.
 
+Default SLURM array concurrency is **6 GPUs** (`%6`). Override with `TU_MMA_PARALLEL` / `SIGMA_LITE_PARALLEL`.
+
 ## Scripts
 
 | Model | Submit | Run | Config |
