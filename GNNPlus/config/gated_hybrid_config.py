@@ -60,3 +60,7 @@ def gated_hybrid_cfg(cfg: CN) -> None:
     cfg.gnn.hybrid.physics.slice_num = 32
     cfg.gnn.hybrid.physics.use_gumbel = True
     cfg.gnn.hybrid.physics.temperature_bias = 0.5
+    # SiGMA-lite (model.type: sigma_lite): ungated heads from gnn.hybrid, one gate
+    # on the mixed block output (after concat / out_proj). gelu ≈ Gated-GPS.
+    cfg.gnn.sigma_lite = CN()
+    cfg.gnn.sigma_lite.gate_act = "sigmoid"  # sigmoid | gelu

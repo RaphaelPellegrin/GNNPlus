@@ -9,6 +9,23 @@ Entity/project: [`weber-geoml-harvard-university/GNNPlus`](https://wandb.ai/webe
 
 ---
 
+## 🛑 Table 5 SiGMA-lite (after SiGMA/MMA seed15)
+
+Depends on **`53598773`**. 35 tasks · **6 GPUs** · `afterany:53598773`.
+
+```bash
+bash bash_interface/cluster/submit_paper_table5_sigma_lite.sh
+```
+
+Same Table 5 SiGMA recipes with `model.type=sigma_lite` (gate after concat).  
+Detail: [`Paper_table5_sigma_lite.md`](Paper_table5_sigma_lite.md).
+
+| JOBID | Status |
+|--|--|
+| | paste after submit |
+
+---
+
 ## 🛑 Table 5 SiGMA vs MMA — 15 new seeds (after TU arrays)
 
 Depends on TU jobs **`53595181`** / **`53595192`**. 210 tasks · **6 GPUs** · `afterany:53595181,53595192`.
