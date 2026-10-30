@@ -11,6 +11,8 @@ from ogb.utils.url import decide_download
 from torch_geometric.data import Data, InMemoryDataset, download_url
 from tqdm import tqdm
 
+from GNNPlus.loader.dataset.version_prompt import confirm_dataset_update
+
 
 class PeptidesStructuralDataset(InMemoryDataset):
     def __init__(self, root='datasets', smiles2graph=smiles2graph,
@@ -61,8 +63,7 @@ class PeptidesStructuralDataset(InMemoryDataset):
         # Check version and update if necessary.
         release_tag = osp.join(self.folder, self.version)
         if osp.isdir(self.folder) and (not osp.exists(release_tag)):
-            print(f"{self.__class__.__name__} has been updated.")
-            if input("Will you update the dataset now? (y/N)\n").lower() == 'y':
+            if confirm_dataset_update(self.__class__.__name__):
                 shutil.rmtree(self.folder)
 
         super().__init__(self.folder, transform, pre_transform)

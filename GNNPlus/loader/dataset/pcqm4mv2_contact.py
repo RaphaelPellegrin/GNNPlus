@@ -15,6 +15,7 @@ from torch_geometric.graphgym.models.transform import create_link_label
 from torch_geometric.utils import to_undirected, negative_sampling
 from tqdm import tqdm
 
+from GNNPlus.loader.dataset.version_prompt import confirm_dataset_update
 from GNNPlus.utils import negate_edge_index
 
 
@@ -311,8 +312,7 @@ class PygPCQM4Mv2ContactDataset(InMemoryDataset):
         # Check version and update if necessary.
         release_tag = osp.join(self.folder, self.version)
         if osp.isdir(self.folder) and (not osp.exists(release_tag)):
-            print(f"{self.__class__.__name__} has been updated.")
-            if input("Will you update the dataset now? (y/N)\n").lower() == 'y':
+            if confirm_dataset_update(self.__class__.__name__):
                 shutil.rmtree(self.folder)
 
         super().__init__(self.folder, transform, pre_transform)
